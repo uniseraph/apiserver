@@ -1,6 +1,6 @@
 SHELL = /bin/bash
 
-TARGET       = apisevevr
+TARGET       = apiserver
 PROJECT_NAME = github.com/zanecloud/apiserver
 
 MAJOR_VERSION = $(shell cat VERSION)

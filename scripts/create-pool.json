@@ -1,0 +1,10 @@
+{
+  "Name" : "pool1",
+  "Status" : "normal",
+  "Driver" : "swarm" ,
+  "DriverOpts" : {
+    "Version" : "v1.0" ,
+    "EndPoint" : "unix:///var/run/docker.sock" ,
+    "APIVersion" : "v1.23"
+  }
+}

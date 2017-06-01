@@ -9,6 +9,7 @@ import (
 	"github.com/zanecloud/apiserver/utils"
 	"github.com/Sirupsen/logrus"
 	"fmt"
+	"gopkg.in/mgo.v2/bson"
 )
 
 var mainRoutes = map[string]map[string]Handler{
@@ -55,6 +56,7 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	req := PoolsRegisterRequest{
 		store.PoolInfo{
 			Name:name,
+			Id : bson.NewObjectId(),
 		},
 	}
 
@@ -76,10 +78,22 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		httpError(w, "cant get mgo db" , http.StatusInternalServerError)
 		return
 	}
+
 	c := mgoSession.DB(mgoDB).C("pool" )
 
-	err := c.Insert(&req.PoolInfo)
-	if err!=nil {
+
+	n , err := c.Find(bson.M{"name": name}).Count()
+	if err != nil {
+		httpError(w , err.Error() , http.StatusInternalServerError)
+		return
+	}
+
+	if n>=1 {
+		httpError(w , "the pool is exist" , http.StatusConflict)
+		return
+	}
+
+	if err = c.Insert(&req.PoolInfo) ; err!=nil {
 		httpError(w, err.Error(),http.StatusInternalServerError)
 		return
 	}
@@ -118,7 +132,9 @@ func  mgoSessionAware( h Handler )  Handler {
 
 		session.SetMode(mgo.Monotonic, true)
 
-		c := context.WithValue(ctx, "mgoSession" , ctx)
+		c := context.WithValue(ctx, utils.KEY_MGO_SESSION , session)
+
+		logrus.Debugf("ctx is %#v" , c)
 
 		h(c , w , r)
 

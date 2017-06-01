@@ -3,7 +3,7 @@ package cli
 import (
 	"github.com/codegangsta/cli"
 
-
+	"github.com/zanecloud/apiserver/utils"
 )
 
 
@@ -11,11 +11,18 @@ import (
 
 var (
 
-	flMongoUrls = cli.StringFlag{
-		Name:   "mongodbUrls",
+	flMgoUrls = cli.StringFlag{
+		Name:   utils.KEY_MGO_URLS,
 		Value:  "localhost" ,
-		EnvVar: "MONGODB_URLS",
+		EnvVar: "MGO_URLS",
 		Usage:  "mongodb urls",
+	}
+
+	flMgoDB = cli.StringFlag{
+		Name:   utils.KEY_MGO_DB,
+		Value:  "zanecloud" ,
+		EnvVar: "MGO_DB",
+		Usage:  "mongodb database",
 	}
 
 	//flClusterEndpoint = cli.StringFlag{

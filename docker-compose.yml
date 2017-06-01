@@ -1,0 +1,29 @@
+version: '2'
+services:
+  mongodb:
+    image: omega/openvswitch:2.3.2
+    net: host
+    privileged: true
+    restart: always
+    volumes:
+      - /var/run/openvswitch/:/usr/local/var/run/openvswitch
+    labels:
+      - 'com.github.omega.labels.system=true'
+      - 'com.docker.swarm.affinities=["container!=*openvswitch*"]'
+      - 'com.github.omega.container.plugin=network'
+  apiserver:
+    image: omega/network-plugins:1.0.0
+    command: vlan
+    net: host
+    privileged: true
+    environment:
+      - NP_CLUSTER_STORE=zk://10.210.182.48:2181,10.210.182.52:2181,10.210.182.53:2181
+      # - NP_ETH=bond0
+    restart: always
+    volumes:
+      - /run/docker/plugins:/run/docker/plugins
+      - /var/run/openvswitch/:/usr/local/var/run/openvswitch
+    labels:
+      - 'com.github.omega.labels.system=true'
+      - 'com.docker.swarm.affinities=["container!=*vlan-driver*"]'
+      - 'com.github.omega.container.plugin=network'
