@@ -25,14 +25,14 @@ var mainRoutes = map[string]map[string]Handler{
 	"PUT":    {},
 	"DELETE": {},
 	"OPTIONS": {
-		"": optionsHandler,
+		"": OptionsHandler,
 	},
 }
 
 
 
 func NewMainHandler(ctx context.Context ) http.Handler{
-	return newHandler(ctx , mainRoutes)
+	return NewHandler(ctx , mainRoutes)
 }
 
 type PoolsRegisterRequest struct {
@@ -45,7 +45,7 @@ func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	if err := r.ParseForm(); err != nil {
-		httpError(w, err.Error(), http.StatusBadRequest)
+		HttpError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -63,7 +63,7 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	if err:= json.NewDecoder(r.Body).Decode(&req) ; err!=nil {
-		httpError(w, err.Error(),http.StatusBadRequest)
+		HttpError(w, err.Error(),http.StatusBadRequest)
 		return
 	}
 
@@ -71,13 +71,13 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	if !ok {
 		//走不到这里的
-		httpError(w, "cant get mgo session" , http.StatusInternalServerError)
+		HttpError(w, "cant get mgo session" , http.StatusInternalServerError)
 		return
 	}
 
 	mgoDB  , ok := ctx.Value(utils.KEY_MGO_DB).(string)
 	if !ok {
-		httpError(w, "cant get mgo db" , http.StatusInternalServerError)
+		HttpError(w, "cant get mgo db" , http.StatusInternalServerError)
 		return
 	}
 
@@ -86,17 +86,17 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	n , err := c.Find(bson.M{"name": name}).Count()
 	if err != nil {
-		httpError(w , err.Error() , http.StatusInternalServerError)
+		HttpError(w , err.Error() , http.StatusInternalServerError)
 		return
 	}
 
 	if n>=1 {
-		httpError(w , "the pool is exist" , http.StatusConflict)
+		HttpError(w , "the pool is exist" , http.StatusConflict)
 		return
 	}
 
 	if err = c.Insert(&req.PoolInfo) ; err!=nil {
-		httpError(w, err.Error(),http.StatusInternalServerError)
+		HttpError(w, err.Error(),http.StatusInternalServerError)
 		return
 	}
 
@@ -117,13 +117,13 @@ func  mgoSessionAware( h Handler )  Handler {
 		if !ok {
 			// context 里面没有 mongourl，这是不应该的
 			logrus.Errorf("no mogodburl in ctx , ctx is #%v" , ctx)
-			httpError(w, "no mogodburl in ctx" , http.StatusInternalServerError)
+			HttpError(w, "no mogodburl in ctx" , http.StatusInternalServerError)
 			return
 		}
 
 		session, err := mgo.Dial(mgoURLS)
 		if err !=nil {
-			httpError(w, err.Error(),http.StatusInternalServerError)
+			HttpError(w, err.Error(),http.StatusInternalServerError)
 			return
 		}
 

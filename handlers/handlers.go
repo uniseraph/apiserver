@@ -32,7 +32,7 @@ type Handler func(c context.Context, w http.ResponseWriter, r *http.Request)
 //}
 
 
-func newHandler(ctx  context.Context ,  rs map[string]map[string]Handler ) http.Handler {
+func NewHandler(ctx  context.Context ,  rs map[string]map[string]Handler ) http.Handler {
 
 
 
@@ -231,7 +231,7 @@ func newHandler(ctx  context.Context ,  rs map[string]map[string]Handler ) http.
 //	w.Write(data)
 //}
 
-func httpError(w http.ResponseWriter, err string, status int) {
+func HttpError(w http.ResponseWriter, err string, status int) {
 	log.WithField("status", status).Errorf("HTTP error: %v", err)
 	http.Error(w, err, status)
 }
@@ -443,10 +443,10 @@ func proxyAsync(tlsConfig *tls.Config, endpoint string, w http.ResponseWriter, r
 
 // Default handler for methods not supported by clustering.
 func notImplementedHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	httpError(w, "Not supported in clustering mode.", http.StatusNotImplemented)
+	HttpError(w, "Not supported in clustering mode.", http.StatusNotImplemented)
 }
 
-func optionsHandler(c context.Context, w http.ResponseWriter, r *http.Request) {
+func OptionsHandler(c context.Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 

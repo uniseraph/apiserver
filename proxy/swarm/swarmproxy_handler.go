@@ -1,4 +1,4 @@
-package handlers
+package swarm
 
 import (
 	"context"
@@ -13,9 +13,10 @@ import (
 	"github.com/docker/docker/api/types"
 	"strings"
 	"github.com/gorilla/mux"
+	"github.com/zanecloud/apiserver/handlers"
 )
 
-var swarmProxyRoutes = map[string]map[string]Handler{
+var swarmProxyRoutes = map[string]map[string]handlers.Handler{
 	"HEAD": {},
 	"GET": {
 	},
@@ -27,14 +28,14 @@ var swarmProxyRoutes = map[string]map[string]Handler{
 	"PUT":    {},
 	"DELETE": {},
 	"OPTIONS": {
-		"": optionsHandler,
+		"": handlers.OptionsHandler,
 	},
 }
 
 
 
 func NewSwarmProxyHandler(ctx context.Context) http.Handler {
-	return newHandler(ctx , swarmProxyRoutes)
+	return handlers.NewHandler(ctx , swarmProxyRoutes)
 }
 
 
@@ -45,7 +46,7 @@ type ContainerCreateConfig struct {
 }
 func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		httpError(w, err.Error(), http.StatusBadRequest)
+		handlers.HttpError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -56,14 +57,14 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 	)
 
 	if  err := json.NewDecoder(r.Body).Decode(&config); err!=nil {
-		httpError(w , err.Error() , http.StatusBadRequest)
+		handlers.HttpError(w , err.Error() , http.StatusBadRequest)
 		return
 	}
 
 
-	poolID  , ok := config.Labels[POOL_LABEL];
+	poolID  , ok := config.Labels[handlers.POOL_LABEL];
 	if !ok {
-		httpError(w , "pool label is empty" , http.StatusBadRequest)
+		handlers.HttpError(w , "pool label is empty" , http.StatusBadRequest)
 		return
 	}
 
@@ -93,7 +94,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 		tlsc, err := tlsconfig.Client(*pool.DriverOpts.TlsConfig)
 		if err != nil {
-			httpError(w , err.Error() , http.StatusBadRequest)
+			handlers.HttpError(w , err.Error() , http.StatusBadRequest)
 			return
 		}
 
@@ -108,7 +109,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 	cli , err := dockerclient.NewClient(pool.DriverOpts.EndPoint , pool.DriverOpts.APIVersion , client , nil)
 	defer cli.Close()
 	if err!= nil {
-		httpError(w , err.Error() , http.StatusInternalServerError)
+		handlers.HttpError(w , err.Error() , http.StatusInternalServerError)
 		return
 	}
 
@@ -116,10 +117,10 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 	resp , err := cli.ContainerCreate(ctx, &config.Config , &config.HostConfig , &config.NetworkingConfig, name)
 	if err!= nil {
 		if strings.HasPrefix(err.Error(), "Conflict") {
-			httpError(w, err.Error(), http.StatusConflict)
+			handlers.HttpError(w, err.Error(), http.StatusConflict)
 			return
 		} else {
-			httpError(w, err.Error(), http.StatusInternalServerError)
+			handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
@@ -142,7 +143,7 @@ func postContainersStart(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 	cli ,ok := ctx.Value("dockerclient").(dockerclient.APIClient)
 	if !ok {
-		httpError(w,"cant't find target pool", http.StatusInternalServerError)
+		handlers.HttpError(w,"cant't find target pool", http.StatusInternalServerError)
 		return
 	}
 
@@ -152,7 +153,7 @@ func postContainersStart(ctx context.Context, w http.ResponseWriter, r *http.Req
 	err := cli.ContainerStart(ctx,name , types.ContainerStartOptions{})
 
 	if err !=nil{
-		httpError(w, err.Error(),http.StatusInternalServerError)
+		handlers.HttpError(w, err.Error(),http.StatusInternalServerError)
 	}
 
 
