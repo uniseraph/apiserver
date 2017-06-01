@@ -13,168 +13,26 @@ import (
 	"github.com/gorilla/mux"
 	"context"
 	"github.com/zanecloud/apiserver/utils"
-	dockerclient "github.com/docker/docker/client"
-	"github.com/docker/docker/api/types/container"
-	"encoding/json"
-	"github.com/docker/go-connections/tlsconfig"
-	"github.com/zanecloud/apiserver/store"
-	"github.com/docker/docker/api/types/network"
-	"fmt"
-	"github.com/docker/docker/api/types"
+
 )
-const POOL_LABEL = "com.zanecloud.omega.pool"
+
 
 
 type Handler func(c context.Context, w http.ResponseWriter, r *http.Request)
 
 
-var routes = map[string]map[string]Handler{
-	"HEAD": {},
-	"GET": {
-	},
-	"POST": {
-		"/containers/create":           	postContainersCreate,
-		"/containers/{name:.*}/start":          postContainersStart,
-
-	},
-	"PUT":    {},
-	"DELETE": {},
-	"OPTIONS": {
-		"": optionsHandler,
-	},
-}
-
-func RegisterHandler(regRouter map[string]map[string]Handler) {
-	for method, handlerMap := range regRouter {
-		for url, handler := range handlerMap {
-			routes[method][url] = handler
-		}
-	}
-}
 
 
-type ContainerCreateConfig struct {
-	container.Config
-	HostConfig container.HostConfig
-	NetworkingConfig network.NetworkingConfig
-}
-func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		httpError(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+//func RegisterHandler(regRouter map[string]map[string]Handler) {
+//	for method, handlerMap := range regRouter {
+//		for url, handler := range handlerMap {
+//			swarmProxyRoutes[method][url] = handler
+//		}
+//	}
+//}
 
 
-	var (
-		config  ContainerCreateConfig
-		name                    = r.Form.Get("name")
-	)
-
-	if  err := json.NewDecoder(r.Body).Decode(&config); err!=nil {
-		httpError(w , err.Error() , http.StatusBadRequest)
-		return
-	}
-
-
-	poolID  , ok := config.Labels[POOL_LABEL];
-	if !ok {
-		httpError(w , "pool label is empty" , http.StatusBadRequest)
-		return
-	}
-
-
-	if poolID == "localhost" {
-		//TODO select pool from mongodb
-	}
-
-	pool := &store.PoolInfo{
-		Driver: 	"swarm",
-		DriverOpts: 	&store.DriverOpts{
-			Name:       "swarm",
-			Version:    "1.23",
-			EndPoint:   "unix:///var/run/docker.sock",
-			APIVersion: "1.0",
-			Labels:     []string {},
-			TlsConfig : nil,
-			Opts:       make(map[string]interface{}) ,
-		} ,
-		Labels: 	[]string{},
-
-	}
-
-
-	var client *http.Client
-	if pool.DriverOpts.TlsConfig!=nil  {
-
-		tlsc, err := tlsconfig.Client(*pool.DriverOpts.TlsConfig)
-		if err != nil {
-			httpError(w , err.Error() , http.StatusBadRequest)
-			return
-		}
-
-		client = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: tlsc,
-			},
-			CheckRedirect: client.CheckRedirect,
-		}
-	}
-
-	cli , err := dockerclient.NewClient(pool.DriverOpts.EndPoint , pool.DriverOpts.APIVersion , client , nil)
-	defer cli.Close()
-	if err!= nil {
-		httpError(w , err.Error() , http.StatusInternalServerError)
-		return
-	}
-
-
-	resp , err := cli.ContainerCreate(ctx, &config.Config , &config.HostConfig , &config.NetworkingConfig, name)
-	if err!= nil {
-		if strings.HasPrefix(err.Error(), "Conflict") {
-			httpError(w, err.Error(), http.StatusConflict)
-			return
-		} else {
-			httpError(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-
-	//TODO save to mongodb
-
-
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "{%q:%q}", "Id", resp.ID)
-
-
-	cli.Close()
-}
-
-
-// POST /containers/{name:.*}/start
-func postContainersStart(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-
-	cli ,ok := ctx.Value("dockerclient").(dockerclient.APIClient)
-	if !ok {
-		httpError(w,"cant't find target pool", http.StatusInternalServerError)
-		return
-	}
-
-
-	name := mux.Vars(r)["name"]
-
-	err := cli.ContainerStart(ctx,name , types.ContainerStartOptions{})
-
-	if err !=nil{
-		httpError(w, err.Error(),http.StatusInternalServerError)
-	}
-
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func NewHandler(ctx  context.Context ,  rs map[string]map[string]Handler ) http.Handler {
+func newHandler(ctx  context.Context ,  rs map[string]map[string]Handler ) http.Handler {
 
 
 
@@ -211,15 +69,7 @@ func NewHandler(ctx  context.Context ,  rs map[string]map[string]Handler ) http.
 	return r
 
 }
-func imageWrap(writer http.ResponseWriter, request *http.Request) {
-	
-}
-func networkWrap(writer http.ResponseWriter, request *http.Request) {
-	
-}
-func containerWrap(writer http.ResponseWriter, request *http.Request) {
-	
-}
+
 
 
 //func logs(c *Context, w http.ResponseWriter, r *http.Request) {

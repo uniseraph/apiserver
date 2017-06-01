@@ -11,10 +11,11 @@ import (
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
 )
-
+const POOL_LABEL = "com.zanecloud.omega.pool"
 var mainRoutes = map[string]map[string]Handler{
 	"HEAD": {},
 	"GET": {
+		"/pools/{name:.*}/inspect":        mgoSessionAware(  getPoolJSON),
 	},
 	"POST": {
 
@@ -31,14 +32,15 @@ var mainRoutes = map[string]map[string]Handler{
 
 
 func NewMainHandler(ctx context.Context ) http.Handler{
-	return NewHandler(ctx , mainRoutes)
+	return newHandler(ctx , mainRoutes)
 }
 
 type PoolsRegisterRequest struct {
 	store.PoolInfo
 }
 
-
+func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+}
 
 func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
