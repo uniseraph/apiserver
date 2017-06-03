@@ -14,15 +14,20 @@ import (
 	"strings"
 	"github.com/gorilla/mux"
 	"github.com/zanecloud/apiserver/handlers"
+	"github.com/zanecloud/apiserver/utils"
+	"github.com/Sirupsen/logrus"
+	"github.com/pkg/errors"
+	"gopkg.in/mgo.v2"
+	"time"
 )
 
-var swarmProxyRoutes = map[string]map[string]handlers.Handler{
+var routers = map[string]map[string]handlers.Handler{
 	"HEAD": {},
 	"GET": {
 	},
 	"POST": {
-		"/containers/create":           	postContainersCreate,
-		"/containers/{name:.*}/start":          postContainersStart,
+		"/containers/create":           	handlers.MgoSessionAware(postContainersCreate),
+		"/containers/{name:.*}/start":          handlers.MgoSessionAware(postContainersStart),
 
 	},
 	"PUT":    {},
@@ -34,8 +39,54 @@ var swarmProxyRoutes = map[string]map[string]handlers.Handler{
 
 
 
-func NewSwarmProxyHandler(ctx context.Context) http.Handler {
-	return handlers.NewHandler(ctx , swarmProxyRoutes)
+func NewHandler(ctx context.Context) http.Handler {
+	return handlers.NewHandler(ctx , routers)
+}
+
+
+
+func getMgoSession(ctx context.Context) (*mgo.Session, error){
+	mgoSession  , ok := ctx.Value(utils.KEY_MGO_SESSION).(*mgo.Session)
+
+	if !ok {
+		logrus.Errorf("can't get mgo.session  form ctx:%#v" , ctx)
+		return nil , errors.Errorf("can't get mgo.session form ctx:%#v" , ctx)
+	}
+
+	return mgoSession,nil
+}
+func getMgoDB(ctx context.Context) (string, error){
+	mgoDB , ok := ctx.Value(utils.KEY_MGO_DB).(string)
+
+	if !ok {
+		logrus.Errorf("can't get mgo.db form ctx:%#v" , ctx)
+		return "" , errors.Errorf("can't get mgo.db form ctx:%#v" , ctx)
+	}
+
+	return mgoDB,nil
+}
+
+func getMgoURLs(ctx context.Context) (string, error){
+	mgoURLs , ok := ctx.Value(utils.KEY_MGO_URLS).(string)
+
+	if !ok {
+		logrus.Errorf("can't get mgo.urls form ctx:%#v" , ctx)
+		return "" , errors.Errorf("can't get mgo.urls form ctx:%#v" , ctx)
+	}
+
+	return mgoURLs,nil
+}
+
+
+func getPoolInfo(ctx context.Context) (*store.PoolInfo, error){
+	p , ok := ctx.Value(utils.KEY_PROXY_SELF).(*Proxy)
+
+	if !ok {
+		logrus.Errorf("can't get proxy.self form ctx:%#v" , ctx)
+		return nil , errors.Errorf("can't get proxy.self form ctx:%#v" , ctx)
+	}
+
+	return p.PoolInfo,nil
 }
 
 
@@ -62,37 +113,20 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 	}
 
 
-	poolID  , ok := config.Labels[handlers.POOL_LABEL];
-	if !ok {
-		handlers.HttpError(w , "pool label is empty" , http.StatusBadRequest)
+
+
+	poolInfo , err := getPoolInfo(ctx)
+	if err!=nil {
+		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-
-	if poolID == "localhost" {
-		//TODO select pool from mongodb
-	}
-
-	pool := &store.PoolInfo{
-		Driver: 	"swarm",
-		DriverOpts: 	&store.DriverOpts{
-			Name:       "swarm",
-			Version:    "1.23",
-			EndPoint:   "unix:///var/run/docker.sock",
-			APIVersion: "1.0",
-			Labels:     []string {},
-			TlsConfig : nil,
-			Opts:       make(map[string]interface{}) ,
-		} ,
-		Labels: 	[]string{},
-
-	}
-
+	logrus.Debugf("before create a container , poolInfo is %#v  ", poolInfo)
 
 	var client *http.Client
-	if pool.DriverOpts.TlsConfig!=nil  {
+	if poolInfo.DriverOpts.TlsConfig!=nil  {
 
-		tlsc, err := tlsconfig.Client(*pool.DriverOpts.TlsConfig)
+		tlsc, err := tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
 		if err != nil {
 			handlers.HttpError(w , err.Error() , http.StatusBadRequest)
 			return
@@ -106,7 +140,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		}
 	}
 
-	cli , err := dockerclient.NewClient(pool.DriverOpts.EndPoint , pool.DriverOpts.APIVersion , client , nil)
+	cli , err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint , poolInfo.DriverOpts.APIVersion , client , nil)
 	defer cli.Close()
 	if err!= nil {
 		handlers.HttpError(w , err.Error() , http.StatusInternalServerError)
@@ -125,7 +159,36 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		}
 	}
 
+
 	//TODO save to mongodb
+
+	mgoSession , err := getMgoSession(ctx)
+	if err!=nil {
+
+		//TODO 如果清理容器失败，需要记录一下日志，便于人工干预
+		cli.ContainerRemove(ctx , resp.ID , types.ContainerRemoveOptions{Force:true})
+		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	mgoDB , err := getMgoDB(ctx)
+	if err !=nil {
+		//TODO 如果清理容器失败，需要记录一下日志，便于人工干预
+		cli.ContainerRemove(ctx , resp.ID , types.ContainerRemoveOptions{Force:true})
+		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := mgoSession.DB(mgoDB).C("container").Insert(&Container{Id:resp.ID ,
+		IsDeleted:false,
+		GmtCreated: time.Now().Unix(),
+		GmtDeleted: 0}) ; err!=nil{
+
+		//TODO 如果清理容器失败，需要记录一下日志，便于人工干预
+		cli.ContainerRemove(ctx , resp.ID , types.ContainerRemoveOptions{Force:true})
+		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 
 
@@ -134,7 +197,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 	fmt.Fprintf(w, "{%q:%q}", "Id", resp.ID)
 
 
-	cli.Close()
+
 }
 
 
@@ -159,3 +222,5 @@ func postContainersStart(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+

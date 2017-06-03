@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"gopkg.in/mgo.v2"
 	"github.com/zanecloud/apiserver/utils"
-	"github.com/Sirupsen/logrus"
+	pproxy "github.com/zanecloud/apiserver/proxy"
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
 	"github.com/gorilla/mux"
@@ -60,14 +60,14 @@ const POOL_LABEL = "com.zanecloud.omega.pool"
 
 
 
-var mainRoutes = map[string]map[string]Handler{
+var routes = map[string]map[string]Handler{
 	"HEAD": {},
 	"GET": {
-		"/pools/{name:.*}/inspect":        mgoSessionAware(  getPoolJSON),
+		"/pools/{name:.*}/inspect":        MgoSessionAware(  getPoolJSON),
 	},
 	"POST": {
 
-		"/pools/register":             mgoSessionAware( postPoolsRegister),
+		"/pools/register":             MgoSessionAware( postPoolsRegister),
 
 	},
 	"PUT":    {},
@@ -80,7 +80,7 @@ var mainRoutes = map[string]map[string]Handler{
 
 
 func NewMainHandler(ctx context.Context ) http.Handler{
-	return NewHandler(ctx , mainRoutes)
+	return NewHandler(ctx , routes)
 }
 
 type PoolsRegisterRequest struct {
@@ -142,6 +142,17 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+
+	p, err:= pproxy.NewProxyInstanceAndStart(ctx , &req.PoolInfo)
+	if err!=nil {
+		HttpError(w , err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	req.PoolInfo.Endpoints = make([]string ,1)
+	req.PoolInfo.Endpoints[0] = p.Endpoint()
+	req.PoolInfo.Status = "running"
+
 	if err = c.Insert(&req.PoolInfo) ; err!=nil {
 		HttpError(w, err.Error(),http.StatusInternalServerError)
 		return
@@ -155,40 +166,3 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 
-
-func  mgoSessionAware( h Handler )  Handler {
-
-	return  func(ctx context.Context , w http.ResponseWriter , r *http.Request){
-
-		mgoURLS, ok := ctx.Value(utils.KEY_MGO_URLS).(string)
-		if !ok {
-			// context 里面没有 mongourl，这是不应该的
-			logrus.Errorf("no mogodburl in ctx , ctx is #%v" , ctx)
-			HttpError(w, "no mogodburl in ctx" , http.StatusInternalServerError)
-			return
-		}
-
-		session, err := mgo.Dial(mgoURLS)
-		if err !=nil {
-			HttpError(w, err.Error(),http.StatusInternalServerError)
-			return
-		}
-
-		defer  func() {
-			logrus.Debug("close mgo session")
-			session.Close()
-		} ()
-
-		session.SetMode(mgo.Monotonic, true)
-
-		c := context.WithValue(ctx, utils.KEY_MGO_SESSION , session)
-
-		logrus.Debugf("ctx is %#v" , c)
-
-		h(c , w , r)
-
-
-
-
-	}
-}

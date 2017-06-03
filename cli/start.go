@@ -11,6 +11,7 @@ import (
 	"github.com/zanecloud/apiserver/handlers"
 	"context"
 	"github.com/zanecloud/apiserver/utils"
+	_ "github.com/zanecloud/apiserver/proxy/swarm"
 )
 
 const startCommandName = "start"

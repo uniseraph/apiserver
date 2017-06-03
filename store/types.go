@@ -26,5 +26,5 @@ type PoolInfo struct {
 	Driver        string
 	DriverOpts   *DriverOpts
 	Labels        []string            `json:",omitempty"`
-
+	Endpoints     []string            `json:",omitempty"`
 }

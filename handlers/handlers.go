@@ -14,6 +14,7 @@ import (
 	"context"
 	"github.com/zanecloud/apiserver/utils"
 
+	"gopkg.in/mgo.v2"
 )
 
 
@@ -527,3 +528,40 @@ func OptionsHandler(c context.Context, w http.ResponseWriter, r *http.Request) {
 //
 //	return nil , false
 //}
+
+func  MgoSessionAware( h Handler )  Handler {
+
+	return  func(ctx context.Context , w http.ResponseWriter , r *http.Request){
+
+		mgoURLS, ok := ctx.Value(utils.KEY_MGO_URLS).(string)
+		if !ok {
+			// context 里面没有 mongourl，这是不应该的
+			log.Errorf("no mogodburl in ctx , ctx is #%v" , ctx)
+			HttpError(w, "no mogodburl in ctx" , http.StatusInternalServerError)
+			return
+		}
+
+		session, err := mgo.Dial(mgoURLS)
+		if err !=nil {
+			HttpError(w, err.Error(),http.StatusInternalServerError)
+			return
+		}
+
+		defer  func() {
+			log.Debug("close mgo session")
+			session.Close()
+		} ()
+
+		session.SetMode(mgo.Monotonic, true)
+
+		c := context.WithValue(ctx, utils.KEY_MGO_SESSION , session)
+
+		log.Debugf("ctx is %#v" , c)
+
+		h(c , w , r)
+
+
+
+
+	}
+}
