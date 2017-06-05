@@ -3,7 +3,6 @@ package handlers
 import (
 	"crypto/tls"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
@@ -35,9 +34,13 @@ type Handler func(c context.Context, w http.ResponseWriter, r *http.Request)
 
 func NewHandler(ctx  context.Context ,  rs map[string]map[string]Handler ) http.Handler {
 
-
-
 	r := mux.NewRouter()
+	SetupPrimaryRouter(r,ctx,rs)
+	return r
+
+}
+
+func SetupPrimaryRouter(r *mux.Router , ctx context.Context , rs map[string]map[string]Handler) {
 	for method, mappings := range rs {
 		for route, fct := range mappings {
 			log.WithFields(log.Fields{"method": method, "route": route}).Debug("Registering HTTP route")
@@ -54,24 +57,7 @@ func NewHandler(ctx  context.Context ,  rs map[string]map[string]Handler ) http.
 			r.Path(localRoute).Methods(localMethod).HandlerFunc(wrap)
 		}
 	}
-
-	rootwrap := func(w http.ResponseWriter, r *http.Request) {
-		log.WithFields(log.Fields{"method": r.Method, "uri": r.RequestURI}).Debug("HTTP request received in proxy")
-		//if err:=proxy(context.TlsConfig, context.ClusterScheme, context.ClusterEndpoint, w, r);err!=nil {
-		//	httpError(w,err.Error(),http.StatusInternalServerError)
-		//	return
-		//}
-	}
-
-	r.PathPrefix("/").HandlerFunc(rootwrap)
-	//r.PathPrefix("/containers").HandlerFunc(containerWrap)
-	//r.PathPrefix("/networks").HandlerFunc(networkWrap)
-	//r.PathPrefix("/images").HandlerFunc(imageWrap)
-	return r
-
 }
-
-
 
 //func logs(c *Context, w http.ResponseWriter, r *http.Request) {
 //	client, err := utils.InitDockerClient(c.ClusterScheme, c.ClusterEndpoint, c.TlsConfig)
@@ -378,32 +364,32 @@ func hijack(tlsConfig *tls.Config, addr string, w http.ResponseWriter, r *http.R
 //	}
 //}
 
-func proxy(tlsConfig *tls.Config, scheme string ,  endpoint string, w http.ResponseWriter, r *http.Request) error {
-	log.WithFields(log.Fields{"endpoint": endpoint , "url":r.URL}).Debug("enter proxy")
-
-	body :=  r.Body
-	defer body.Close()
-
-	r.Body = ioutil.NopCloser(r.Body)
-
-	//if scheme=="swarm" {
-	//	index , addrs := selectTargetIndex(scheme, endpoint)
-	//	for i:=index ; i<index+len(addrs) ;i++ {
-	//		//log.WithFields(log.Fields{"endpoint":  addrs[i%len(addrs)]}).Debug("connect the swarm node")
-	//		node := addrs[i%len(addrs)]
-	//		if err := proxyAsync(tlsConfig , node ,w,r,nil) ; err==nil{
-	//			log.WithFields(log.Fields{"node":node , "url":r.URL}).Info("exec swarm api success")
-	//			return nil;
-	//		}else{
-	//			log.WithFields(log.Fields{"node":node ,
-	//										"url":r.URL ,
-	//											"err":err.Error()}).Info("exec swarm api fail")
-	//	}}
-	//	return errors.New( "ALL nodes cann't be connected : " + endpoint)
-	//}else{
-		return proxyAsync(tlsConfig , endpoint ,w,r,nil)
-	//}
-}
+//func proxy(tlsConfig *tls.Config, scheme string ,  endpoint string, w http.ResponseWriter, r *http.Request) error {
+//	log.WithFields(log.Fields{"endpoint": endpoint , "url":r.URL}).Debug("enter proxy")
+//
+//	body :=  r.Body
+//	defer body.Close()
+//
+//	r.Body = ioutil.NopCloser(r.Body)
+//
+//	//if scheme=="swarm" {
+//	//	index , addrs := selectTargetIndex(scheme, endpoint)
+//	//	for i:=index ; i<index+len(addrs) ;i++ {
+//	//		//log.WithFields(log.Fields{"endpoint":  addrs[i%len(addrs)]}).Debug("connect the swarm node")
+//	//		node := addrs[i%len(addrs)]
+//	//		if err := proxyAsync(tlsConfig , node ,w,r,nil) ; err==nil{
+//	//			log.WithFields(log.Fields{"node":node , "url":r.URL}).Info("exec swarm api success")
+//	//			return nil;
+//	//		}else{
+//	//			log.WithFields(log.Fields{"node":node ,
+//	//										"url":r.URL ,
+//	//											"err":err.Error()}).Info("exec swarm api fail")
+//	//	}}
+//	//	return errors.New( "ALL nodes cann't be connected : " + endpoint)
+//	//}else{
+//		return proxyAsync(tlsConfig , endpoint ,w,r,nil)
+//	//}
+//}
 
 func newClientAndScheme(tlsConfig *tls.Config) (*http.Client, string) {
 	if tlsConfig != nil {
@@ -411,36 +397,36 @@ func newClientAndScheme(tlsConfig *tls.Config) (*http.Client, string) {
 	}
 	return &http.Client{}, "http"
 }
-func proxyAsync(tlsConfig *tls.Config, endpoint string, w http.ResponseWriter, r *http.Request, callback func(*http.Response)) error {
-	// Use a new client for each request
-	client, scheme := newClientAndScheme(tlsConfig)
-
-	// RequestURI may not be sent to client
-	r.RequestURI = ""
-
-	r.URL.Scheme = scheme
-	r.URL.Host = endpoint
-
-	//log.WithFields(log.Fields{"method": r.Method, "url": r.URL}).Debug("Proxy request")
-	resp, err := client.Do(r)
-	if err != nil {
-		return err
-	}
-
-	utils.CopyHeader(w.Header(), resp.Header)
-	w.WriteHeader(resp.StatusCode)
-	io.Copy(utils.NewWriteFlusher(w), resp.Body)
-
-	if callback != nil {
-		callback(resp)
-	}
-
-	// cleanup
-	resp.Body.Close()
-	closeIdleConnections(client)
-
-	return nil
-}
+//func proxyAsync(tlsConfig *tls.Config, endpoint string, w http.ResponseWriter, r *http.Request, callback func(*http.Response)) error {
+//	// Use a new client for each request
+//	client, scheme := newClientAndScheme(tlsConfig)
+//
+//	// RequestURI may not be sent to client
+//	r.RequestURI = ""
+//
+//	r.URL.Scheme = scheme
+//	r.URL.Host = endpoint
+//
+//	//log.WithFields(log.Fields{"method": r.Method, "url": r.URL}).Debug("Proxy request")
+//	resp, err := client.Do(r)
+//	if err != nil {
+//		return err
+//	}
+//
+//	utils.CopyHeader(w.Header(), resp.Header)
+//	w.WriteHeader(resp.StatusCode)
+//	io.Copy(utils.NewWriteFlusher(w), resp.Body)
+//
+//	if callback != nil {
+//		callback(resp)
+//	}
+//
+//	// cleanup
+//	resp.Body.Close()
+//	closeIdleConnections(client)
+//
+//	return nil
+//}
 
 // Default handler for methods not supported by clustering.
 func notImplementedHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {

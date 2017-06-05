@@ -19,6 +19,8 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/mgo.v2"
 	"time"
+	"crypto/tls"
+	"io"
 )
 
 var routers = map[string]map[string]handlers.Handler{
@@ -40,7 +42,24 @@ var routers = map[string]map[string]handlers.Handler{
 
 
 func NewHandler(ctx context.Context) http.Handler {
-	return handlers.NewHandler(ctx , routers)
+
+
+	r := mux.NewRouter()
+
+	handlers.SetupPrimaryRouter(r,ctx,routers)
+
+	poolInfo , _ := getPoolInfo(ctx)
+
+	// 作为swarm的代理，默认逻辑是所有请求都是转发给后端的swarm集群
+	rootwrap := func(w http.ResponseWriter, r *http.Request) {
+		logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI , "pool backend endpoint":poolInfo.DriverOpts.EndPoint  }).Debug("HTTP request received in proxy")
+		proxyAsync(ctx,w,r,nil)
+	}
+
+	r.PathPrefix("/").HandlerFunc(rootwrap)
+
+
+	return r
 }
 
 
@@ -224,3 +243,66 @@ func postContainersStart(ctx context.Context, w http.ResponseWriter, r *http.Req
 }
 
 
+func newClientAndScheme(tlsConfig *tls.Config) (*http.Client, string) {
+	if tlsConfig != nil {
+		return &http.Client{Transport: &http.Transport{TLSClientConfig: tlsConfig}}, "https"
+	}
+	return &http.Client{}, "http"
+}
+
+
+func proxyAsync( ctx context.Context , w http.ResponseWriter, r *http.Request, callback func(*http.Response)) error {
+	// Use a new client for each request
+
+	poolInfo , _ := getPoolInfo(ctx)
+
+	var tlsc *tls.Config
+	var err error
+
+	if poolInfo.DriverOpts.TlsConfig!=nil{
+		tlsc, err = tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
+		if err!=nil{
+			return err
+		}
+	}else {
+		tlsc = nil
+	}
+
+
+	//TODO using backend tlsconfig
+	client, scheme := newClientAndScheme(tlsc)
+
+	// RequestURI may not be sent to client
+	r.RequestURI = ""
+
+	r.URL.Scheme = scheme
+	r.URL.Host = poolInfo.DriverOpts.EndPoint
+
+	//log.WithFields(log.Fields{"method": r.Method, "url": r.URL}).Debug("Proxy request")
+	resp, err := client.Do(r)
+	if err != nil {
+		return err
+	}
+
+	utils.CopyHeader(w.Header(), resp.Header)
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(utils.NewWriteFlusher(w), resp.Body)
+
+	if callback != nil {
+		callback(resp)
+	}
+
+	// cleanup
+	resp.Body.Close()
+	closeIdleConnections(client)
+
+	return nil
+}
+
+
+// prevents leak with https
+func closeIdleConnections(client *http.Client) {
+	if tr, ok := client.Transport.(*http.Transport); ok {
+		tr.CloseIdleConnections()
+	}
+}

@@ -42,6 +42,7 @@ func (p *Proxy) Start( opts *proxy.StartProxyOpts) error {
 	ctx := setContext(p)
 
 
+
 	server := http.Server{
 		Handler: NewHandler(ctx),
 	}

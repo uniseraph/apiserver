@@ -29,4 +29,4 @@ shell:
 
 
 
-.PHONY: image build build-local
+.PHONY: image build local
