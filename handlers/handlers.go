@@ -23,14 +23,6 @@ type Handler func(c context.Context, w http.ResponseWriter, r *http.Request)
 
 
 
-//func RegisterHandler(regRouter map[string]map[string]Handler) {
-//	for method, handlerMap := range regRouter {
-//		for url, handler := range handlerMap {
-//			swarmProxyRoutes[method][url] = handler
-//		}
-//	}
-//}
-
 
 func NewHandler(ctx  context.Context ,  rs map[string]map[string]Handler ) http.Handler {
 
@@ -59,34 +51,7 @@ func SetupPrimaryRouter(r *mux.Router , ctx context.Context , rs map[string]map[
 	}
 }
 
-//func logs(c *Context, w http.ResponseWriter, r *http.Request) {
-//	client, err := utils.InitDockerClient(c.ClusterScheme, c.ClusterEndpoint, c.TlsConfig)
-//
-//	if err != nil {
-//		httpError(w, err.Error(), http.StatusInternalServerError)
-//		return
-//	}
-//	cid := mux.Vars(r)["name"]
-//
-//	info, err1 := client.InspectContainer(cid)
-//
-//	if err1 != nil {
-//		httpError(w, err1.Error(), http.StatusNotFound)
-//		return
-//	}
-//
-//	if _ , exits := info.Config.Labels[SYSTEM_LABEL] ; exits == true {
-//		httpError(w, "No such container "+cid, http.StatusNotFound)
-//		return
-//	}
-//
-//
-//	if err:=proxy(c.TlsConfig, c.ClusterScheme, c.ClusterEndpoint, w, r);err!=nil {
-//		httpError(w,err.Error(),http.StatusInternalServerError)
-//		return
-//	}
-//
-//}
+
 
 
 //func getContainersJSON(c *Context, w http.ResponseWriter, r *http.Request) {
@@ -145,16 +110,6 @@ func SetupPrimaryRouter(r *mux.Router , ctx context.Context , rs map[string]map[
 //	}
 //}
 
-//func selectTargetIndex(scheme , endpoint string) (int , []string){
-//
-//	if scheme =="swarm" {
-//		addrs := strings.Split(endpoint, ",")
-//		index := rand.Int31n((int32(len(addrs))))
-//		return int(index) , addrs
-//	}else{
-//		return 0 , []string{endpoint}
-//	}
-//}
 
 // inspect container采用swarm的实现方式，避免dockerclient.APIVersion对版本出现影响
 // 也防止返回数据在反序列化和序列化之后丢失信息

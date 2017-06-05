@@ -19,8 +19,9 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/mgo.v2"
 	"time"
-	"crypto/tls"
 	"io"
+	"net/url"
+	"github.com/docker/go-connections/sockets"
 )
 
 var routers = map[string]map[string]handlers.Handler{
@@ -53,8 +54,12 @@ func NewHandler(ctx context.Context) http.Handler {
 	// 作为swarm的代理，默认逻辑是所有请求都是转发给后端的swarm集群
 	rootwrap := func(w http.ResponseWriter, r *http.Request) {
 		logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI , "pool backend endpoint":poolInfo.DriverOpts.EndPoint  }).Debug("HTTP request received in proxy")
-		proxyAsync(ctx,w,r,nil)
+		if err := proxyAsync(ctx,w,r,nil) ; err!=nil {
+			handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+
+		}
 	}
+	r.Path("/v{version:[0-9.]+}" + "/").HandlerFunc(rootwrap)
 
 	r.PathPrefix("/").HandlerFunc(rootwrap)
 
@@ -243,11 +248,57 @@ func postContainersStart(ctx context.Context, w http.ResponseWriter, r *http.Req
 }
 
 
-func newClientAndScheme(tlsConfig *tls.Config) (*http.Client, string) {
-	if tlsConfig != nil {
-		return &http.Client{Transport: &http.Transport{TLSClientConfig: tlsConfig}}, "https"
+//func newClientAndScheme(tlsConfig *tls.Config) (*http.Client, string) {
+//	if tlsConfig != nil {
+//		return &http.Client{Transport: &http.Transport{TLSClientConfig: tlsConfig}}, "https"
+//	}
+//	return &http.Client{}, "http"
+//}
+
+func newClinetAndSchemeOR(poolInfo *store.PoolInfo) (*http.Client , string ,string, error) {
+	protoAddrParts := strings.SplitN(poolInfo.DriverOpts.EndPoint, "://", 2)
+
+	var proto, addr  string
+
+	if len(protoAddrParts) ==2 {
+		proto = protoAddrParts[0]
+		addr = protoAddrParts[1]
+	}else if len(protoAddrParts) ==1 {
+		proto = "tcp"
+		addr = protoAddrParts[0]
 	}
-	return &http.Client{}, "http"
+	if proto == "tcp" {
+		parsed, err := url.Parse("tcp://" + addr)
+		if err != nil {
+			return nil, "", "", err
+		}
+		addr = parsed.Host
+		//basePath = parsed.Path
+	}
+
+	transport := new(http.Transport)
+	sockets.ConfigureTransport(transport, proto, addr)
+
+	if poolInfo.DriverOpts.TlsConfig!=nil{
+		tlsc, err := tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
+		if err!=nil{
+			return nil,"","",err
+		}
+
+		transport.TLSClientConfig = tlsc
+
+		return &http.Client{
+			Transport:     transport,
+			CheckRedirect: dockerclient.CheckRedirect,
+		}  , "https" , addr, nil
+	}else {
+
+
+		return &http.Client{
+			Transport:     transport,
+			CheckRedirect: dockerclient.CheckRedirect,
+		}  , "http" ,addr , nil
+	}
 }
 
 
@@ -256,27 +307,22 @@ func proxyAsync( ctx context.Context , w http.ResponseWriter, r *http.Request, c
 
 	poolInfo , _ := getPoolInfo(ctx)
 
-	var tlsc *tls.Config
-	var err error
-
-	if poolInfo.DriverOpts.TlsConfig!=nil{
-		tlsc, err = tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
-		if err!=nil{
-			return err
-		}
-	}else {
-		tlsc = nil
-	}
 
 
 	//TODO using backend tlsconfig
-	client, scheme := newClientAndScheme(tlsc)
+	client, scheme ,addr , err := newClinetAndSchemeOR(poolInfo)
+	if err!=nil {
+		//handlers.HttpError(w,err.Error(),http.StatusInternalServerError)
+		return err
+	}
+
+	logrus.WithFields(logrus.Fields{"client":client,"scheme":scheme,"addr":addr}).Debug("get the backend pool info ")
 
 	// RequestURI may not be sent to client
 	r.RequestURI = ""
 
 	r.URL.Scheme = scheme
-	r.URL.Host = poolInfo.DriverOpts.EndPoint
+	r.URL.Host =   addr
 
 	//log.WithFields(log.Fields{"method": r.Method, "url": r.URL}).Debug("Proxy request")
 	resp, err := client.Do(r)

@@ -47,7 +47,7 @@ func (p *Proxy) Start( opts *proxy.StartProxyOpts) error {
 		Handler: NewHandler(ctx),
 	}
 
-	listener, err := net.Listen("tcp4", "0.0.0.0:0")
+	listener, err := net.Listen("tcp4", "127.0.0.1:0")
 	if err != nil {
 		logrus.Fatal(err)
 		return err
