@@ -458,7 +458,7 @@ func OptionsHandler(c context.Context, w http.ResponseWriter, r *http.Request) {
 //	return nil , false
 //}
 
-func MgoSessionAware(h Handler) Handler {
+func MgoSessionInject(h Handler) Handler {
 
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 

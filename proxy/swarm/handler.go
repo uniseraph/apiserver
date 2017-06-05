@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
 )
 
 var routers = map[string]map[string]handlers.Handler{
@@ -32,8 +33,9 @@ var routers = map[string]map[string]handlers.Handler{
 		"/containers/{name:.*}/attach/ws": proxyHijack,
 	},
 	"POST": {
-		"/containers/create":           handlers.MgoSessionAware(postContainersCreate),
-		"/containers/{name:.*}/start":  handlers.MgoSessionAware(postContainersStart),
+		"/containers/create":           handlers.MgoSessionInject(postContainersCreate),
+	//	"/containers/{name:.*}/start":  handlers.MgoSessionInject(dockerClientInject(postContainersStart)),
+		"/exec/{execid:.*}/start":      postExecStart,
 		"/containers/{name:.*}/attach": proxyHijack,
 	},
 	"PUT":    {},
@@ -42,6 +44,48 @@ var routers = map[string]map[string]handlers.Handler{
 		"": handlers.OptionsHandler,
 	},
 }
+
+
+func dockerClientInject(h handlers.Handler) handlers.Handler {
+
+	return func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+		poolInfo, err := getPoolInfo(ctx)
+		if err != nil {
+			handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		logrus.Debugf("before inject a dockerclient , poolInfo is %#v  ", poolInfo)
+
+		var client *http.Client
+		if poolInfo.DriverOpts.TlsConfig != nil {
+
+			tlsc, err := tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
+			if err != nil {
+				handlers.HttpError(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			client = &http.Client{
+				Transport: &http.Transport{
+					TLSClientConfig: tlsc,
+				},
+				CheckRedirect: client.CheckRedirect,
+			}
+		}
+
+		cli, err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint, poolInfo.DriverOpts.APIVersion, client, nil)
+		defer cli.Close()
+		if err != nil {
+			handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		logrus.Debugf("ctx is %#v", ctx)
+		h(context.WithValue(ctx,utils.KEY_POOL_CLIENT , cli) , w , r)
+	}
+}
+
 
 // Proxy a hijack request to the right node
 func proxyHijack(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -160,7 +204,7 @@ func NewHandler(ctx context.Context) http.Handler {
 
 	// 作为swarm的代理，默认逻辑是所有请求都是转发给后端的swarm集群
 	rootwrap := func(w http.ResponseWriter, r *http.Request) {
-		logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI, "pool backend endpoint": poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in proxy")
+		logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI, "pool backend endpoint": poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in rootwrap")
 		if err := proxyAsync(ctx, w, r, nil); err != nil {
 			handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
 
@@ -216,11 +260,33 @@ func getPoolInfo(ctx context.Context) (*store.PoolInfo, error) {
 	return p.PoolInfo, nil
 }
 
+
+func getDockerClient (ctx context.Context) (dockerclient.APIClient, error) {
+	client, ok := ctx.Value(utils.KEY_POOL_CLIENT).(dockerclient.APIClient)
+
+	if !ok {
+		logrus.Errorf("can't get pool.client from ctx:%#v", ctx)
+		return nil, errors.Errorf("can't get pool.client from ctx:%#v", ctx)
+	}
+
+	return client, nil
+}
+
+
 type ContainerCreateConfig struct {
 	container.Config
 	HostConfig       container.HostConfig
 	NetworkingConfig network.NetworkingConfig
 }
+
+// POST /exec/{execid:.*}/start
+func postExecStart(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Connection") == "" {
+		proxyAsync(ctx, w, r ,nil)
+	}
+	proxyHijack(ctx, w, r)
+}
+
 
 func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
@@ -320,18 +386,17 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 // POST /containers/{name:.*}/start
 func postContainersStart(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
-	cli, ok := ctx.Value("dockerclient").(dockerclient.APIClient)
-	if !ok {
-		handlers.HttpError(w, "cant't find target pool", http.StatusInternalServerError)
+	cli, err := getDockerClient(ctx)
+	if err!=nil {
+		handlers.HttpError(w, err.Error(),http.StatusInternalServerError)
 		return
 	}
 
 	name := mux.Vars(r)["name"]
 
-	err := cli.ContainerStart(ctx, name, types.ContainerStartOptions{})
-
-	if err != nil {
+	if err := cli.ContainerStart(ctx, name, types.ContainerStartOptions{}) ; err!=nil{
 		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -344,7 +409,7 @@ func postContainersStart(ctx context.Context, w http.ResponseWriter, r *http.Req
 //	return &http.Client{}, "http"
 //}
 
-func newClinetAndSchemeOR(poolInfo *store.PoolInfo) (*http.Client, string, string, error) {
+func newClientAndSchemeOR(poolInfo *store.PoolInfo) (*http.Client, string, string, error) {
 	protoAddrParts := strings.SplitN(poolInfo.DriverOpts.EndPoint, "://", 2)
 
 	var proto, addr string
@@ -395,13 +460,13 @@ func proxyAsync(ctx context.Context, w http.ResponseWriter, r *http.Request, cal
 	poolInfo, _ := getPoolInfo(ctx)
 
 	//TODO using backend tlsconfig
-	client, scheme, addr, err := newClinetAndSchemeOR(poolInfo)
+	client, scheme, addr, err := newClientAndSchemeOR(poolInfo)
 	if err != nil {
 		//handlers.HttpError(w,err.Error(),http.StatusInternalServerError)
 		return err
 	}
 
-	logrus.WithFields(logrus.Fields{"client": client, "scheme": scheme, "addr": addr}).Debug("get the backend pool info ")
+	logrus.WithFields(logrus.Fields{"client": client, "scheme": scheme, "addr": addr}).Debug("proxyAsync: get the backend pool client info ")
 
 	// RequestURI may not be sent to client
 	r.RequestURI = ""
@@ -414,6 +479,9 @@ func proxyAsync(ctx context.Context, w http.ResponseWriter, r *http.Request, cal
 	if err != nil {
 		return err
 	}
+
+	//logrus.WithField("resp", ).Debug("proxyAysnc : receive a response")
+
 
 	utils.CopyHeader(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)

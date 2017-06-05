@@ -54,11 +54,11 @@ const POOL_LABEL = "com.zanecloud.omega.pool"
 var routes = map[string]map[string]Handler{
 	"HEAD": {},
 	"GET": {
-		"/pools/{name:.*}/inspect": MgoSessionAware(getPoolJSON),
+		"/pools/{name:.*}/inspect": MgoSessionInject(getPoolJSON),
 	},
 	"POST": {
 
-		"/pools/register": MgoSessionAware(postPoolsRegister),
+		"/pools/register": MgoSessionInject(postPoolsRegister),
 	},
 	"PUT":    {},
 	"DELETE": {},
@@ -87,16 +87,16 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	)
 
 	req := PoolsRegisterRequest{
-		store.PoolInfo{
-			Name: name,
-			Id:   bson.NewObjectId(),
-		},
+		store.PoolInfo{	},
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		HttpError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	req.PoolInfo.Name = name
+	req.PoolInfo.Id = bson.NewObjectId()
 
 	mgoSession, ok := ctx.Value(utils.KEY_MGO_SESSION).(*mgo.Session)
 
