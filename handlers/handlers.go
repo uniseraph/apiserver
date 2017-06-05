@@ -391,12 +391,12 @@ func hijack(tlsConfig *tls.Config, addr string, w http.ResponseWriter, r *http.R
 //	//}
 //}
 
-func newClientAndScheme(tlsConfig *tls.Config) (*http.Client, string) {
-	if tlsConfig != nil {
-		return &http.Client{Transport: &http.Transport{TLSClientConfig: tlsConfig}}, "https"
-	}
-	return &http.Client{}, "http"
-}
+//func newClientAndScheme(tlsConfig *tls.Config) (*http.Client, string) {
+//	if tlsConfig != nil {
+//		return &http.Client{Transport: &http.Transport{TLSClientConfig: tlsConfig}}, "https"
+//	}
+//	return &http.Client{}, "http"
+//}
 //func proxyAsync(tlsConfig *tls.Config, endpoint string, w http.ResponseWriter, r *http.Request, callback func(*http.Response)) error {
 //	// Use a new client for each request
 //	client, scheme := newClientAndScheme(tlsConfig)
