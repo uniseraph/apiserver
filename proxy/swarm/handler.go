@@ -2,36 +2,39 @@ package swarm
 
 import (
 	"context"
-	"net/http"
-	dockerclient "github.com/docker/docker/client"
-	"github.com/docker/docker/api/types/container"
+	"crypto/tls"
 	"encoding/json"
-	"github.com/docker/go-connections/tlsconfig"
-	"github.com/zanecloud/apiserver/store"
-	"github.com/docker/docker/api/types/network"
 	"fmt"
-	"github.com/docker/docker/api/types"
-	"strings"
-	"github.com/gorilla/mux"
-	"github.com/zanecloud/apiserver/handlers"
-	"github.com/zanecloud/apiserver/utils"
 	"github.com/Sirupsen/logrus"
-	"github.com/pkg/errors"
-	"gopkg.in/mgo.v2"
-	"time"
-	"io"
-	"net/url"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
+	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/sockets"
+	"github.com/docker/go-connections/tlsconfig"
+	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
+	"github.com/zanecloud/apiserver/handlers"
+	"github.com/zanecloud/apiserver/store"
+	"github.com/zanecloud/apiserver/utils"
+	"gopkg.in/mgo.v2"
+	"io"
+	"net"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
 )
 
 var routers = map[string]map[string]handlers.Handler{
 	"HEAD": {},
 	"GET": {
+		"/containers/{name:.*}/attach/ws": proxyHijack,
 	},
 	"POST": {
-		"/containers/create":           	handlers.MgoSessionAware(postContainersCreate),
-		"/containers/{name:.*}/start":          handlers.MgoSessionAware(postContainersStart),
-
+		"/containers/create":           handlers.MgoSessionAware(postContainersCreate),
+		"/containers/{name:.*}/start":  handlers.MgoSessionAware(postContainersStart),
+		"/containers/{name:.*}/attach": proxyHijack,
 	},
 	"PUT":    {},
 	"DELETE": {},
@@ -40,21 +43,125 @@ var routers = map[string]map[string]handlers.Handler{
 	},
 }
 
+// Proxy a hijack request to the right node
+func proxyHijack(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
+	logrus.WithFields(logrus.Fields{"url": r.URL}).Debug("enter proxyHijack")
+
+	poolInfo, _ := getPoolInfo(ctx)
+
+	var tlsConfig *tls.Config
+	var err error
+
+	if poolInfo.DriverOpts.TlsConfig != nil {
+		tlsConfig, err = tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
+		if err != nil {
+			handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		tlsConfig = nil
+	}
+
+	if err := hijack(tlsConfig, poolInfo.DriverOpts.EndPoint, w, r); err != nil {
+		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+}
+
+// endpoint :  tcp://127.0.0.1:2375
+//             localhost:2375
+//             unix:///var/run/docker.sock
+func hijack(tlsConfig *tls.Config, endpoint string, w http.ResponseWriter, r *http.Request) error {
+
+	var proto, addr string
+	if parts := strings.SplitN(endpoint, "://", 2); len(parts) == 2 {
+		proto, addr = parts[0], parts[1]
+	} else if len(parts) == 1 {
+		proto, addr = "tcp", parts[0]
+	}
+
+	logrus.WithFields(logrus.Fields{"proto": proto, "addr": addr}).Debug("Proxy hijack request")
+
+	var (
+		d   net.Conn
+		err error
+	)
+
+	if tlsConfig != nil {
+		d, err = tls.Dial("tcp", addr, tlsConfig)
+	} else {
+		if proto == "unix" {
+			d, err = net.Dial("unix", addr)
+		} else {
+			d, err = net.Dial("tcp", addr)
+		}
+	}
+	if err != nil {
+		return err
+	}
+	hj, ok := w.(http.Hijacker)
+	if !ok {
+		return err
+	}
+	nc, _, err := hj.Hijack()
+	if err != nil {
+		return err
+	}
+	defer nc.Close()
+	defer d.Close()
+
+	err = r.Write(d)
+	if err != nil {
+		return err
+	}
+
+	cp := func(dst io.Writer, src io.Reader, chDone chan struct{}) {
+		io.Copy(dst, src)
+		if conn, ok := dst.(interface {
+			CloseWrite() error
+		}); ok {
+			conn.CloseWrite()
+		}
+		close(chDone)
+	}
+	inDone := make(chan struct{})
+	outDone := make(chan struct{})
+	go cp(d, nc, inDone)
+	go cp(nc, d, outDone)
+
+	// 1. When stdin is done, wait for stdout always
+	// 2. When stdout is done, close the stream and wait for stdin to finish
+	//
+	// On 2, stdin copy should return immediately now since the out stream is closed.
+	// Note that we probably don't actually even need to wait here.
+	//
+	// If we don't close the stream when stdout is done, in some cases stdin will hange
+	select {
+	case <-inDone:
+		// wait for out to be done
+		<-outDone
+	case <-outDone:
+		// close the conn and wait for stdin
+		nc.Close()
+		<-inDone
+	}
+	return nil
+}
 
 func NewHandler(ctx context.Context) http.Handler {
 
-
 	r := mux.NewRouter()
 
-	handlers.SetupPrimaryRouter(r,ctx,routers)
+	handlers.SetupPrimaryRouter(r, ctx, routers)
 
-	poolInfo , _ := getPoolInfo(ctx)
+	poolInfo, _ := getPoolInfo(ctx)
 
 	// 作为swarm的代理，默认逻辑是所有请求都是转发给后端的swarm集群
 	rootwrap := func(w http.ResponseWriter, r *http.Request) {
-		logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI , "pool backend endpoint":poolInfo.DriverOpts.EndPoint  }).Debug("HTTP request received in proxy")
-		if err := proxyAsync(ctx,w,r,nil) ; err!=nil {
+		logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI, "pool backend endpoint": poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in proxy")
+		if err := proxyAsync(ctx, w, r, nil); err != nil {
 			handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
 
 		}
@@ -63,84 +170,76 @@ func NewHandler(ctx context.Context) http.Handler {
 
 	r.PathPrefix("/").HandlerFunc(rootwrap)
 
-
 	return r
 }
 
-
-
-func getMgoSession(ctx context.Context) (*mgo.Session, error){
-	mgoSession  , ok := ctx.Value(utils.KEY_MGO_SESSION).(*mgo.Session)
+func getMgoSession(ctx context.Context) (*mgo.Session, error) {
+	mgoSession, ok := ctx.Value(utils.KEY_MGO_SESSION).(*mgo.Session)
 
 	if !ok {
-		logrus.Errorf("can't get mgo.session  form ctx:%#v" , ctx)
-		return nil , errors.Errorf("can't get mgo.session form ctx:%#v" , ctx)
+		logrus.Errorf("can't get mgo.session  form ctx:%#v", ctx)
+		return nil, errors.Errorf("can't get mgo.session form ctx:%#v", ctx)
 	}
 
-	return mgoSession,nil
+	return mgoSession, nil
 }
-func getMgoDB(ctx context.Context) (string, error){
-	mgoDB , ok := ctx.Value(utils.KEY_MGO_DB).(string)
+func getMgoDB(ctx context.Context) (string, error) {
+	mgoDB, ok := ctx.Value(utils.KEY_MGO_DB).(string)
 
 	if !ok {
-		logrus.Errorf("can't get mgo.db form ctx:%#v" , ctx)
-		return "" , errors.Errorf("can't get mgo.db form ctx:%#v" , ctx)
+		logrus.Errorf("can't get mgo.db form ctx:%#v", ctx)
+		return "", errors.Errorf("can't get mgo.db form ctx:%#v", ctx)
 	}
 
-	return mgoDB,nil
+	return mgoDB, nil
 }
 
-func getMgoURLs(ctx context.Context) (string, error){
-	mgoURLs , ok := ctx.Value(utils.KEY_MGO_URLS).(string)
+func getMgoURLs(ctx context.Context) (string, error) {
+	mgoURLs, ok := ctx.Value(utils.KEY_MGO_URLS).(string)
 
 	if !ok {
-		logrus.Errorf("can't get mgo.urls form ctx:%#v" , ctx)
-		return "" , errors.Errorf("can't get mgo.urls form ctx:%#v" , ctx)
+		logrus.Errorf("can't get mgo.urls form ctx:%#v", ctx)
+		return "", errors.Errorf("can't get mgo.urls form ctx:%#v", ctx)
 	}
 
-	return mgoURLs,nil
+	return mgoURLs, nil
 }
 
-
-func getPoolInfo(ctx context.Context) (*store.PoolInfo, error){
-	p , ok := ctx.Value(utils.KEY_PROXY_SELF).(*Proxy)
+func getPoolInfo(ctx context.Context) (*store.PoolInfo, error) {
+	p, ok := ctx.Value(utils.KEY_PROXY_SELF).(*Proxy)
 
 	if !ok {
-		logrus.Errorf("can't get proxy.self form ctx:%#v" , ctx)
-		return nil , errors.Errorf("can't get proxy.self form ctx:%#v" , ctx)
+		logrus.Errorf("can't get proxy.self form ctx:%#v", ctx)
+		return nil, errors.Errorf("can't get proxy.self form ctx:%#v", ctx)
 	}
 
-	return p.PoolInfo,nil
+	return p.PoolInfo, nil
 }
-
 
 type ContainerCreateConfig struct {
 	container.Config
-	HostConfig container.HostConfig
+	HostConfig       container.HostConfig
 	NetworkingConfig network.NetworkingConfig
 }
+
 func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		handlers.HttpError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-
 	var (
-		config  ContainerCreateConfig
-		name                    = r.Form.Get("name")
+		config ContainerCreateConfig
+		name   = r.Form.Get("name")
 	)
 
-	if  err := json.NewDecoder(r.Body).Decode(&config); err!=nil {
-		handlers.HttpError(w , err.Error() , http.StatusBadRequest)
+	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
+		handlers.HttpError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-
-
-
-	poolInfo , err := getPoolInfo(ctx)
-	if err!=nil {
+	poolInfo, err := getPoolInfo(ctx)
+	if err != nil {
 		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -148,11 +247,11 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 	logrus.Debugf("before create a container , poolInfo is %#v  ", poolInfo)
 
 	var client *http.Client
-	if poolInfo.DriverOpts.TlsConfig!=nil  {
+	if poolInfo.DriverOpts.TlsConfig != nil {
 
 		tlsc, err := tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
 		if err != nil {
-			handlers.HttpError(w , err.Error() , http.StatusBadRequest)
+			handlers.HttpError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -164,16 +263,15 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		}
 	}
 
-	cli , err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint , poolInfo.DriverOpts.APIVersion , client , nil)
+	cli, err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint, poolInfo.DriverOpts.APIVersion, client, nil)
 	defer cli.Close()
-	if err!= nil {
-		handlers.HttpError(w , err.Error() , http.StatusInternalServerError)
+	if err != nil {
+		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-
-	resp , err := cli.ContainerCreate(ctx, &config.Config , &config.HostConfig , &config.NetworkingConfig, name)
-	if err!= nil {
+	resp, err := cli.ContainerCreate(ctx, &config.Config, &config.HostConfig, &config.NetworkingConfig, name)
+	if err != nil {
 		if strings.HasPrefix(err.Error(), "Conflict") {
 			handlers.HttpError(w, err.Error(), http.StatusConflict)
 			return
@@ -183,70 +281,61 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		}
 	}
 
-
 	//TODO save to mongodb
 
-	mgoSession , err := getMgoSession(ctx)
-	if err!=nil {
+	mgoSession, err := getMgoSession(ctx)
+	if err != nil {
 
 		//TODO 如果清理容器失败，需要记录一下日志，便于人工干预
-		cli.ContainerRemove(ctx , resp.ID , types.ContainerRemoveOptions{Force:true})
+		cli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{Force: true})
 		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	mgoDB , err := getMgoDB(ctx)
-	if err !=nil {
+	mgoDB, err := getMgoDB(ctx)
+	if err != nil {
 		//TODO 如果清理容器失败，需要记录一下日志，便于人工干预
-		cli.ContainerRemove(ctx , resp.ID , types.ContainerRemoveOptions{Force:true})
+		cli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{Force: true})
 		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if err := mgoSession.DB(mgoDB).C("container").Insert(&Container{Id:resp.ID ,
-		IsDeleted:false,
+	if err := mgoSession.DB(mgoDB).C("container").Insert(&Container{Id: resp.ID,
+		IsDeleted:  false,
 		GmtCreated: time.Now().Unix(),
-		GmtDeleted: 0}) ; err!=nil{
+		GmtDeleted: 0}); err != nil {
 
 		//TODO 如果清理容器失败，需要记录一下日志，便于人工干预
-		cli.ContainerRemove(ctx , resp.ID , types.ContainerRemoveOptions{Force:true})
+		cli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{Force: true})
 		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(w, "{%q:%q}", "Id", resp.ID)
 
-
-
 }
-
 
 // POST /containers/{name:.*}/start
 func postContainersStart(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
-	cli ,ok := ctx.Value("dockerclient").(dockerclient.APIClient)
+	cli, ok := ctx.Value("dockerclient").(dockerclient.APIClient)
 	if !ok {
-		handlers.HttpError(w,"cant't find target pool", http.StatusInternalServerError)
+		handlers.HttpError(w, "cant't find target pool", http.StatusInternalServerError)
 		return
 	}
 
-
 	name := mux.Vars(r)["name"]
 
-	err := cli.ContainerStart(ctx,name , types.ContainerStartOptions{})
+	err := cli.ContainerStart(ctx, name, types.ContainerStartOptions{})
 
-	if err !=nil{
-		handlers.HttpError(w, err.Error(),http.StatusInternalServerError)
+	if err != nil {
+		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
 	}
-
 
 	w.WriteHeader(http.StatusNoContent)
 }
-
 
 //func newClientAndScheme(tlsConfig *tls.Config) (*http.Client, string) {
 //	if tlsConfig != nil {
@@ -255,15 +344,15 @@ func postContainersStart(ctx context.Context, w http.ResponseWriter, r *http.Req
 //	return &http.Client{}, "http"
 //}
 
-func newClinetAndSchemeOR(poolInfo *store.PoolInfo) (*http.Client , string ,string, error) {
+func newClinetAndSchemeOR(poolInfo *store.PoolInfo) (*http.Client, string, string, error) {
 	protoAddrParts := strings.SplitN(poolInfo.DriverOpts.EndPoint, "://", 2)
 
-	var proto, addr  string
+	var proto, addr string
 
-	if len(protoAddrParts) ==2 {
+	if len(protoAddrParts) == 2 {
 		proto = protoAddrParts[0]
 		addr = protoAddrParts[1]
-	}else if len(protoAddrParts) ==1 {
+	} else if len(protoAddrParts) == 1 {
 		proto = "tcp"
 		addr = protoAddrParts[0]
 	}
@@ -279,10 +368,10 @@ func newClinetAndSchemeOR(poolInfo *store.PoolInfo) (*http.Client , string ,stri
 	transport := new(http.Transport)
 	sockets.ConfigureTransport(transport, proto, addr)
 
-	if poolInfo.DriverOpts.TlsConfig!=nil{
+	if poolInfo.DriverOpts.TlsConfig != nil {
 		tlsc, err := tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
-		if err!=nil{
-			return nil,"","",err
+		if err != nil {
+			return nil, "", "", err
 		}
 
 		transport.TLSClientConfig = tlsc
@@ -290,39 +379,35 @@ func newClinetAndSchemeOR(poolInfo *store.PoolInfo) (*http.Client , string ,stri
 		return &http.Client{
 			Transport:     transport,
 			CheckRedirect: dockerclient.CheckRedirect,
-		}  , "https" , addr, nil
-	}else {
-
+		}, "https", addr, nil
+	} else {
 
 		return &http.Client{
 			Transport:     transport,
 			CheckRedirect: dockerclient.CheckRedirect,
-		}  , "http" ,addr , nil
+		}, "http", addr, nil
 	}
 }
 
-
-func proxyAsync( ctx context.Context , w http.ResponseWriter, r *http.Request, callback func(*http.Response)) error {
+func proxyAsync(ctx context.Context, w http.ResponseWriter, r *http.Request, callback func(*http.Response)) error {
 	// Use a new client for each request
 
-	poolInfo , _ := getPoolInfo(ctx)
-
-
+	poolInfo, _ := getPoolInfo(ctx)
 
 	//TODO using backend tlsconfig
-	client, scheme ,addr , err := newClinetAndSchemeOR(poolInfo)
-	if err!=nil {
+	client, scheme, addr, err := newClinetAndSchemeOR(poolInfo)
+	if err != nil {
 		//handlers.HttpError(w,err.Error(),http.StatusInternalServerError)
 		return err
 	}
 
-	logrus.WithFields(logrus.Fields{"client":client,"scheme":scheme,"addr":addr}).Debug("get the backend pool info ")
+	logrus.WithFields(logrus.Fields{"client": client, "scheme": scheme, "addr": addr}).Debug("get the backend pool info ")
 
 	// RequestURI may not be sent to client
 	r.RequestURI = ""
 
 	r.URL.Scheme = scheme
-	r.URL.Host =   addr
+	r.URL.Host = addr
 
 	//log.WithFields(log.Fields{"method": r.Method, "url": r.URL}).Debug("Proxy request")
 	resp, err := client.Do(r)
@@ -344,7 +429,6 @@ func proxyAsync( ctx context.Context , w http.ResponseWriter, r *http.Request, c
 
 	return nil
 }
-
 
 // prevents leak with https
 func closeIdleConnections(client *http.Client) {

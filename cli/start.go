@@ -6,12 +6,12 @@ import (
 	"net"
 	"net/http"
 
+	"context"
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/zanecloud/apiserver/handlers"
-	"context"
-	"github.com/zanecloud/apiserver/utils"
 	_ "github.com/zanecloud/apiserver/proxy/swarm"
+	"github.com/zanecloud/apiserver/utils"
 )
 
 const startCommandName = "start"
@@ -49,7 +49,6 @@ func getTlsConfig(c *cli.Context) (*tls.Config, error) {
 }
 
 func startCommand(c *cli.Context) {
-
 
 	//tlsConfig, err := getTlsConfig(c)
 	//if err != nil {

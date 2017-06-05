@@ -6,21 +6,17 @@ import (
 	"github.com/zanecloud/apiserver/utils"
 )
 
-
-
-
 var (
-
 	flMgoUrls = cli.StringFlag{
 		Name:   utils.KEY_MGO_URLS,
-		Value:  "localhost" ,
+		Value:  "localhost",
 		EnvVar: "MGO_URLS",
 		Usage:  "mongodb urls",
 	}
 
 	flMgoDB = cli.StringFlag{
 		Name:   utils.KEY_MGO_DB,
-		Value:  "zanecloud" ,
+		Value:  "zanecloud",
 		EnvVar: "MGO_DB",
 		Usage:  "mongodb database",
 	}

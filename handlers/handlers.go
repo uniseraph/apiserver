@@ -7,32 +7,25 @@ import (
 	"net/http"
 	"strings"
 
-
+	"context"
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
-	"context"
 	"github.com/zanecloud/apiserver/utils"
 
 	"gopkg.in/mgo.v2"
 )
 
-
-
 type Handler func(c context.Context, w http.ResponseWriter, r *http.Request)
 
-
-
-
-
-func NewHandler(ctx  context.Context ,  rs map[string]map[string]Handler ) http.Handler {
+func NewHandler(ctx context.Context, rs map[string]map[string]Handler) http.Handler {
 
 	r := mux.NewRouter()
-	SetupPrimaryRouter(r,ctx,rs)
+	SetupPrimaryRouter(r, ctx, rs)
 	return r
 
 }
 
-func SetupPrimaryRouter(r *mux.Router , ctx context.Context , rs map[string]map[string]Handler) {
+func SetupPrimaryRouter(r *mux.Router, ctx context.Context, rs map[string]map[string]Handler) {
 	for method, mappings := range rs {
 		for route, fct := range mappings {
 			log.WithFields(log.Fields{"method": method, "route": route}).Debug("Registering HTTP route")
@@ -50,9 +43,6 @@ func SetupPrimaryRouter(r *mux.Router , ctx context.Context , rs map[string]map[
 		}
 	}
 }
-
-
-
 
 //func getContainersJSON(c *Context, w http.ResponseWriter, r *http.Request) {
 //
@@ -95,7 +85,6 @@ func SetupPrimaryRouter(r *mux.Router , ctx context.Context , rs map[string]map[
 //	json.NewEncoder(w).Encode(result)
 //}
 
-
 //func selectTarget(scheme , endpoint string) (string){
 //	if scheme=="swarm" {
 //
@@ -109,7 +98,6 @@ func SetupPrimaryRouter(r *mux.Router , ctx context.Context , rs map[string]map[
 //		return endpoint
 //	}
 //}
-
 
 // inspect container采用swarm的实现方式，避免dockerclient.APIVersion对版本出现影响
 // 也防止返回数据在反序列化和序列化之后丢失信息
@@ -470,39 +458,36 @@ func OptionsHandler(c context.Context, w http.ResponseWriter, r *http.Request) {
 //	return nil , false
 //}
 
-func  MgoSessionAware( h Handler )  Handler {
+func MgoSessionAware(h Handler) Handler {
 
-	return  func(ctx context.Context , w http.ResponseWriter , r *http.Request){
+	return func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 		mgoURLS, ok := ctx.Value(utils.KEY_MGO_URLS).(string)
 		if !ok {
 			// context 里面没有 mongourl，这是不应该的
-			log.Errorf("no mogodburl in ctx , ctx is #%v" , ctx)
-			HttpError(w, "no mogodburl in ctx" , http.StatusInternalServerError)
+			log.Errorf("no mogodburl in ctx , ctx is #%v", ctx)
+			HttpError(w, "no mogodburl in ctx", http.StatusInternalServerError)
 			return
 		}
 
 		session, err := mgo.Dial(mgoURLS)
-		if err !=nil {
-			HttpError(w, err.Error(),http.StatusInternalServerError)
+		if err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		defer  func() {
+		defer func() {
 			log.Debug("close mgo session")
 			session.Close()
-		} ()
+		}()
 
 		session.SetMode(mgo.Monotonic, true)
 
-		c := context.WithValue(ctx, utils.KEY_MGO_SESSION , session)
+		c := context.WithValue(ctx, utils.KEY_MGO_SESSION, session)
 
-		log.Debugf("ctx is %#v" , c)
+		log.Debugf("ctx is %#v", c)
 
-		h(c , w , r)
-
-
-
+		h(c, w, r)
 
 	}
 }
