@@ -228,26 +228,16 @@ func getMgoSession(ctx context.Context) (*mgo.Session, error) {
 	return mgoSession, nil
 }
 func getMgoDB(ctx context.Context) (string, error) {
-	mgoDB, ok := ctx.Value(utils.KEY_MGO_DB).(string)
+	config , ok := ctx.Value(utils.KEY_APISERVER_CONFIG).(*store.APIServerConfig)
 
 	if !ok {
 		logrus.Errorf("can't get mgo.db form ctx:%#v", ctx)
 		return "", errors.Errorf("can't get mgo.db form ctx:%#v", ctx)
 	}
 
-	return mgoDB, nil
+	return config.MgoDB, nil
 }
 
-func getMgoURLs(ctx context.Context) (string, error) {
-	mgoURLs, ok := ctx.Value(utils.KEY_MGO_URLS).(string)
-
-	if !ok {
-		logrus.Errorf("can't get mgo.urls form ctx:%#v", ctx)
-		return "", errors.Errorf("can't get mgo.urls form ctx:%#v", ctx)
-	}
-
-	return mgoURLs, nil
-}
 
 func getPoolInfo(ctx context.Context) (*store.PoolInfo, error) {
 	p, ok := ctx.Value(utils.KEY_PROXY_SELF).(*Proxy)

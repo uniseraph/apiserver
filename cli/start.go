@@ -12,6 +12,7 @@ import (
 	"github.com/zanecloud/apiserver/handlers"
 	_ "github.com/zanecloud/apiserver/proxy/swarm"
 	"github.com/zanecloud/apiserver/utils"
+	"github.com/zanecloud/apiserver/store"
 )
 
 const startCommandName = "start"
@@ -55,13 +56,15 @@ func startCommand(c *cli.Context) {
 	//	logrus.Fatal(err)
 	//}
 
-	c1 := setContext(c)
+	config := parserAPIServerConfig(c)
+
+	ctx := context.WithValue(context.Background(),utils.KEY_APISERVER_CONFIG , config)
 
 	server := http.Server{
-		Handler: handlers.NewMainHandler(c1),
+		Handler: handlers.NewMainHandler(ctx),
 	}
 
-	listener, err := net.Listen("tcp", "0.0.0.0:8080")
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d" , config.Addr,config.Port))
 	if err != nil {
 		logrus.Fatal(err)
 		return
@@ -71,11 +74,16 @@ func startCommand(c *cli.Context) {
 		logrus.Fatal(err)
 	}
 }
-func setContext(c *cli.Context) context.Context {
-	mgoURLS := c.String(utils.KEY_MGO_URLS)
-	mgoDB := c.String(utils.KEY_MGO_DB)
-	//ctx := context.WithValue(context.Background(),"tlsConfig",tlsConfig)
-	ctx := context.WithValue(context.Background(), utils.KEY_MGO_URLS, mgoURLS)
-	c1 := context.WithValue(ctx, utils.KEY_MGO_DB, mgoDB)
-	return c1
+
+
+
+func parserAPIServerConfig(c *cli.Context) *store.APIServerConfig {
+
+	return &store.APIServerConfig{
+		MgoDB: c.String(utils.KEY_MGO_DB) ,
+		MgoURLs: c.String(utils.KEY_MGO_URLS) ,
+		Addr: c.String(utils.KEY_LISTENER_ADDR),
+		Port : c.Int(utils.KEY_LISTENER_PORT),
+	}
+
 }

@@ -45,6 +45,8 @@ func Run() {
 			Flags: []cli.Flag{
 				flMgoUrls,
 				flMgoDB,
+				flAddr,
+				flPort,
 				//flClusterTls,
 				//flClusterTlsKeyFile,
 				//flClusterTlsCertFile,

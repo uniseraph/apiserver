@@ -12,8 +12,9 @@ import (
 
 type Proxy struct {
 	PoolInfo *store.PoolInfo
-	mgoDB    string
-	mgoURLs  string
+	APIServerConfig   *store.APIServerConfig
+	//mgoDB    string
+	//mgoURLs  string
 	endpoint string
 }
 
@@ -22,14 +23,15 @@ func init() {
 }
 
 func NewProxy(ctx context.Context, pool *store.PoolInfo) (proxy.Proxy, error) {
+	//
+	//mgoDB, nil := getMgoDB(ctx)
+	//mgoURLs, nil := getMgoURLs(ctx)
 
-	mgoDB, nil := getMgoDB(ctx)
-	mgoURLs, nil := getMgoURLs(ctx)
 
 	return &Proxy{
 		PoolInfo: pool,
-		mgoDB:    mgoDB,
-		mgoURLs:  mgoURLs,
+		APIServerConfig: 	utils.GetAPIServerConfig(ctx) ,
+
 	}, nil
 }
 
@@ -59,11 +61,10 @@ func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 func setContext(p *Proxy) context.Context {
 	ctx := context.WithValue(context.Background(), utils.KEY_PROXY_SELF, p)
 	logrus.Debugf("proxy %s's context is %#v", p.Pool().Name, ctx)
-	c1 := context.WithValue(ctx, utils.KEY_MGO_URLS, p.mgoURLs)
+	c1 := context.WithValue(ctx, utils.KEY_APISERVER_CONFIG, p.APIServerConfig)
 	logrus.Debugf("proxy %s's context is %#v", p.Pool().Name, c1)
-	c2 := context.WithValue(c1, utils.KEY_MGO_DB, p.mgoDB)
-	logrus.Debugf("proxy %s's context is %#v", p.Pool().Name, c2)
-	return c2
+
+	return c1
 }
 
 func (p *Proxy) Stop() error {

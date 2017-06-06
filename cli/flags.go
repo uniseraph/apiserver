@@ -21,6 +21,19 @@ var (
 		Usage:  "mongodb database",
 	}
 
+	flAddr = cli.StringFlag{
+		Name:   utils.KEY_LISTENER_ADDR,
+		Value:  "127.0.0.1",
+		EnvVar: "ADDR",
+		Usage:  "apiserver listener addr",
+	}
+
+	flPort = cli.StringFlag{
+		Name:   utils.KEY_LISTENER_PORT,
+		Value:  "8080",
+		EnvVar: "PORT",
+		Usage:  "apiserver listener port",
+	}
 	//flClusterEndpoint = cli.StringFlag{
 	//	Name:   "clusterEndpoint",
 	//	Value:  "localhost:2375",

@@ -3,7 +3,16 @@ package store
 import (
 	"github.com/docker/go-connections/tlsconfig"
 	"gopkg.in/mgo.v2/bson"
+	"crypto/tls"
 )
+
+type APIServerConfig struct {
+	MgoDB   string
+	MgoURLs string
+	Addr    string
+	Port    int
+	tlsConfig *tls.Config
+}
 
 type DriverOpts struct {
 	Name       string
