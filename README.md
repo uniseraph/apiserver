@@ -21,8 +21,8 @@ make run
 
 在另一个terminal中运行
 ···
-make test
+make test POOL_NAME=pool123
 ···
-则将本机的docker注册为一个pool，并在apiserver中为该pool起一个proxy，通过该proxy暴露docker/swarm接口服务。
+则将本机的docker注册为一个pool，名字在参数中指定；并在apiserver中为该pool起一个proxy，通过该proxy暴露docker/swarm接口服务。
 
 
