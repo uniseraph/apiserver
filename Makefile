@@ -27,6 +27,10 @@ shell:
 	docker build --rm -t ${BUILD_IMAGE} contrib/builder/binary
 	docker run -ti --rm -v $(shell pwd):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} ${BUILD_IMAGE} /bin/bash
 
+run: local
+	MONGO_URLS=127.0.0.1 MONGO_DB=zanecloud ./apiserver -l debug start
 
+test:
+	bash scripts/test.sh ${POOL_NAME}
 
 .PHONY: image build local
