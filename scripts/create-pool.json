@@ -1,5 +1,4 @@
 {
-  "Status" : "normal",
   "Driver" : "swarm" ,
   "DriverOpts" : {
     "Version" : "v1.0" ,

@@ -15,11 +15,10 @@ type APIServerConfig struct {
 }
 
 type DriverOpts struct {
-	Name       string
 	Version    string
 	EndPoint   string
 	APIVersion string
-	Labels     []string               `json:",omitempty"`
+	Labels     map[string]interface{}               `json:",omitempty"`
 	TlsConfig  *tlsconfig.Options     `json:",omitempty"`
 	Opts       map[string]interface{} `json:",omitempty"`
 }
@@ -32,6 +31,6 @@ type PoolInfo struct {
 
 	Driver         string
 	DriverOpts     *DriverOpts
-	Labels         []string `json:",omitempty"`
+	Labels         map[string]interface{} `json:",omitempty"`
 	ProxyEndpoints []string `json:",omitempty"`
 }

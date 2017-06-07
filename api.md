@@ -21,15 +21,14 @@ POST /pools/create HTTP/1.1
 Content-Type: application/json
 
 {
-       "Name": "xxx",
-       "Driver": "swarm",
-       "DriverVersion"" "1.0.0",
-       "Endpoint": "x.x.x.x:2375",
-       "Status": "normal",
-       "Labels": {
-
-       }
+  "Driver" : "swarm" ,
+  "DriverOpts" : {
+    "Version" : "v1.0" ,
+    "EndPoint" : "unix:///var/run/docker.sock" ,
+    "APIVersion" : "v1.23"
   }
+  "Labels" : []
+}
 ```
 
 已经存在的pool，则通过registorPool接口注册到系统中，pool的具体信息通过调用pool的接口去pool中查询，不需要在接口的json中提供。
@@ -42,8 +41,6 @@ Content-Type: application/json
 
 
 
-### Create a pool
-TODO
 
 ### Inspect a pool
 返回pool的详细信息，数据源部分来自mongodb，部分来自线上集群。
@@ -107,6 +104,40 @@ Content-Type: application/json
          ]
      }
     }
+{
+  "Id": "5937b4faaad8c05a285ff6c9",
+  "Name": "100",
+  "Status": "running",
+  "Driver": "swarm",
+  "DriverOpts": {
+    "Version": "v1.0",
+    "EndPoint": "unix:///var/run/docker.sock",
+    "APIVersion": "v1.23"
+  },
+  "ProxyEndpoints": [
+    "tcp://127.0.0.1:59202"
+  ],
+   "Labels": {
+           "Security Options:
+           "Kernel Version": "3.10.0-327.36.3.el7.x86_64"
+           "Operating System": "linux"
+           "Architecture": "amd64"
+           "CPUs": "8"
+           "Total Memory": "7.775 GiB",
+           "IPs": "", //flannel模式下意义不大，ip不是珍稀资源
+           "Discovery": "consul://xxxx/default",
+           "Advertise": "eth0",
+           "Strategy": "spread",
+           "IDC": "idc1",
+           "ASW": "asw1",
+           "RACK": "rack1",
+           "vlans": [
+               "vlan1",
+               "vlan2"
+           ]
+       }
+
+}
 ```
 ### Get pool logs
 TODO 目前不需要，没有pool创建过程

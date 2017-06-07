@@ -73,7 +73,9 @@ func NewMainHandler(ctx context.Context) http.Handler {
 }
 
 type PoolsRegisterRequest struct {
-	store.PoolInfo
+	Driver         string
+	DriverOpts     *store.DriverOpts
+	Labels         map[string]interface{} `json:",omitempty"`
 }
 
 func getPoolsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -111,17 +113,22 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		name = r.Form.Get("name")
 	)
 
-	req := PoolsRegisterRequest{
-		store.PoolInfo{	},
-	}
+	req := PoolsRegisterRequest{}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		HttpError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	req.PoolInfo.Name = name
-	req.PoolInfo.Id = bson.NewObjectId()
+	poolInfo := & store.PoolInfo{
+		Id: bson.NewObjectId(),
+		Name: name ,
+		Driver :req.Driver,
+		DriverOpts:req.DriverOpts,
+		Labels:req.Labels,
+		ProxyEndpoints: make([]string,1),
+	}
+
 
 	mgoSession, err := utils.GetMgoSession(ctx)
 
@@ -146,17 +153,16 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	p, err := proxy.NewProxyInstanceAndStart(ctx, &req.PoolInfo)
+	p, err := proxy.NewProxyInstanceAndStart(ctx, poolInfo)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	req.PoolInfo.ProxyEndpoints = make([]string, 1)
-	req.PoolInfo.ProxyEndpoints[0] = p.Endpoint()
-	req.PoolInfo.Status = "running"
+	poolInfo.ProxyEndpoints[0] = p.Endpoint()
+	poolInfo.Status = "running"
 
-	if err = c.Insert(&req.PoolInfo); err != nil {
+	if err = c.Insert(poolInfo); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
