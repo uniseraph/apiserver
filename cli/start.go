@@ -13,6 +13,9 @@ import (
 	_ "github.com/zanecloud/apiserver/proxy/swarm"
 	"github.com/zanecloud/apiserver/utils"
 	"github.com/zanecloud/apiserver/store"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
+	"github.com/zanecloud/apiserver/proxy"
 )
 
 const startCommandName = "start"
@@ -71,6 +74,8 @@ func startCommand(c *cli.Context) {
 		return
 	}
 
+	go startProxys(ctx)
+
 	if err := server.Serve(listener); err != nil {
 		logrus.Fatal(err)
 	}
@@ -85,6 +90,48 @@ func parserAPIServerConfig(c *cli.Context) *store.APIServerConfig {
 		MgoURLs: c.String(utils.KEY_MGO_URLS) ,
 		Addr: c.String(utils.KEY_LISTENER_ADDR),
 		Port : c.Int(utils.KEY_LISTENER_PORT),
+	}
+
+}
+
+
+
+
+func startProxys(ctx context.Context) {
+
+	config := utils.GetAPIServerConfig(ctx)
+	session, err := mgo.Dial(config.MgoURLs)
+	if err != nil {
+		logrus.Errorf("startProxys::dial mongodb %s  error: %s" , config.MgoURLs,err.Error())
+		return
+	}
+
+	defer func() {
+		logrus.Debug("close mgo session")
+		session.Close()
+	}()
+
+	session.SetMode(mgo.Monotonic, true)
+
+
+	var pools []store.PoolInfo
+	if err:= session.DB(config.MgoDB).C("pool").Find(bson.M{}).All(&pools) ; err!=nil {
+		logrus.Errorf("startProxys::get all pool error : %" , err.Error())
+		return
+	}
+
+	for _ , pool := range pools {
+		logrus.Debugf("startProxys:: start the pool:%#v" , pool)
+
+		proxy , err:=proxy.NewProxyInstanceAndStart(ctx,&pool)
+		if err!=nil{
+			logrus.Errorf("startProxys:: startProxy error:%s", err.Error())
+		}
+
+		pool.ProxyEndpoints =make([]string, 1)
+		pool.ProxyEndpoints[0] = proxy.Endpoint()
+
+
 	}
 
 }

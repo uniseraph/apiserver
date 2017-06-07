@@ -8,6 +8,8 @@ import (
 	"github.com/zanecloud/apiserver/utils"
 	"net"
 	"net/http"
+	"fmt"
+	"strings"
 )
 
 type Proxy struct {
@@ -43,7 +45,27 @@ func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 		Handler: NewHandler(ctx),
 	}
 
-	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	var paddr string
+
+	logrus.Debugf("proxy.Start:: PoolInfo is %#v", p.PoolInfo)
+
+	if len(p.PoolInfo.ProxyEndpoints)!=0 {
+		//有可能apiserver换了一台机器重启，所以proxy的ip会发送变化,这种情况下也没必要保存端口不变
+		//TODO
+
+
+		if parts:=strings.SplitN(p.PoolInfo.ProxyEndpoints[0],"://" ,2) ; len(parts)==2 {
+			paddr = parts[1]
+		}else{
+			paddr = parts[0]
+		}
+	}else{
+		paddr= fmt.Sprintf("%s:%d" , p.APIServerConfig.Addr,0)
+	}
+
+	logrus.Debugf("proxy.Start:: paddr is %s" , paddr)
+
+	listener, err := net.Listen("tcp", paddr)
 	if err != nil {
 		logrus.Fatal(err)
 		return err

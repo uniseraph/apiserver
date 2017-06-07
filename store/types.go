@@ -30,8 +30,8 @@ type PoolInfo struct {
 	Name   string
 	Status string
 
-	Driver     string
-	DriverOpts *DriverOpts
-	Labels     []string `json:",omitempty"`
-	Endpoints  []string `json:",omitempty"`
+	Driver         string
+	DriverOpts     *DriverOpts
+	Labels         []string `json:",omitempty"`
+	ProxyEndpoints []string `json:",omitempty"`
 }

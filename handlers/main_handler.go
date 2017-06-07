@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
-	pproxy "github.com/zanecloud/apiserver/proxy"
+	 "github.com/zanecloud/apiserver/proxy"
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -52,6 +52,10 @@ var routes = map[string]map[string]Handler{
 	"HEAD": {},
 	"GET": {
 		"/pools/{name:.*}/inspect": MgoSessionInject(getPoolJSON),
+		"/pools/ps": MgoSessionInject(getPoolsJSON),
+		"/pools/json": MgoSessionInject(getPoolsJSON),
+
+
 	},
 	"POST": {
 
@@ -70,6 +74,30 @@ func NewMainHandler(ctx context.Context) http.Handler {
 
 type PoolsRegisterRequest struct {
 	store.PoolInfo
+}
+
+func getPoolsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	mgoSession , err := utils.GetMgoSession(ctx)
+
+	if err!=nil {
+		//走不到这里的,ctx中必然有mgoSesson
+		HttpError(w,err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
+
+	c := mgoSession.DB(mgoDB).C("pool")
+
+	var result []*store.PoolInfo
+	if err := c.Find(bson.M{}).All(&result); err != nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+
 }
 
 func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -118,14 +146,14 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	p, err := pproxy.NewProxyInstanceAndStart(ctx, &req.PoolInfo)
+	p, err := proxy.NewProxyInstanceAndStart(ctx, &req.PoolInfo)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	req.PoolInfo.Endpoints = make([]string, 1)
-	req.PoolInfo.Endpoints[0] = p.Endpoint()
+	req.PoolInfo.ProxyEndpoints = make([]string, 1)
+	req.PoolInfo.ProxyEndpoints[0] = p.Endpoint()
 	req.PoolInfo.Status = "running"
 
 	if err = c.Insert(&req.PoolInfo); err != nil {
