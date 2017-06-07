@@ -85,7 +85,7 @@ func MgoSessionInject(h Handler) Handler {
 
 		session.SetMode(mgo.Monotonic, true)
 
-		c := context.WithValue(ctx, utils.KEY_MGO_SESSION, session)
+		c :=  utils.PutMgoSession(ctx,session)
 
 		log.Debugf("ctx is %#v", c)
 

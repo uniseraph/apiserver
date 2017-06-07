@@ -17,7 +17,6 @@ import (
 	"github.com/zanecloud/apiserver/handlers"
 	"github.com/zanecloud/apiserver/store"
 	"github.com/zanecloud/apiserver/utils"
-	"gopkg.in/mgo.v2"
 	"io"
 	"net"
 	"net/http"
@@ -217,24 +216,8 @@ func NewHandler(ctx context.Context) http.Handler {
 	return r
 }
 
-func getMgoSession(ctx context.Context) (*mgo.Session, error) {
-	mgoSession, ok := ctx.Value(utils.KEY_MGO_SESSION).(*mgo.Session)
-
-	if !ok {
-		logrus.Errorf("can't get mgo.session  form ctx:%#v", ctx)
-		return nil, errors.Errorf("can't get mgo.session form ctx:%#v", ctx)
-	}
-
-	return mgoSession, nil
-}
 func getMgoDB(ctx context.Context) (string, error) {
-	config , ok := ctx.Value(utils.KEY_APISERVER_CONFIG).(*store.APIServerConfig)
-
-	if !ok {
-		logrus.Errorf("can't get mgo.db form ctx:%#v", ctx)
-		return "", errors.Errorf("can't get mgo.db form ctx:%#v", ctx)
-	}
-
+	config := utils.GetAPIServerConfig(ctx)
 	return config.MgoDB, nil
 }
 
@@ -339,7 +322,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 	//TODO save to mongodb
 
-	mgoSession, err := getMgoSession(ctx)
+	mgoSession, err := utils.GetMgoSession(ctx)
 	if err != nil {
 
 		//TODO 如果清理容器失败，需要记录一下日志，便于人工干预

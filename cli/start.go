@@ -58,8 +58,9 @@ func startCommand(c *cli.Context) {
 
 	config := parserAPIServerConfig(c)
 
-	ctx := context.WithValue(context.Background(),utils.KEY_APISERVER_CONFIG , config)
+	//ctx := context.WithValue(context.Background(),utils.KEY_APISERVER_CONFIG , config)
 
+	ctx := utils.PutAPIServerConfig(context.Background(),config)
 	server := http.Server{
 		Handler: handlers.NewMainHandler(ctx),
 	}

@@ -61,7 +61,8 @@ func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 func setContext(p *Proxy) context.Context {
 	ctx := context.WithValue(context.Background(), utils.KEY_PROXY_SELF, p)
 	logrus.Debugf("proxy %s's context is %#v", p.Pool().Name, ctx)
-	c1 := context.WithValue(ctx, utils.KEY_APISERVER_CONFIG, p.APIServerConfig)
+	//c1 := context.WithValue(ctx, utils.KEY_APISERVER_CONFIG, p.APIServerConfig)
+	c1 := utils.PutAPIServerConfig(ctx,p.APIServerConfig)
 	logrus.Debugf("proxy %s's context is %#v", p.Pool().Name, c1)
 
 	return c1

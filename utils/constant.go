@@ -5,12 +5,13 @@ import (
 	"github.com/zanecloud/apiserver/store"
 	"github.com/Sirupsen/logrus"
 	"gopkg.in/mgo.v2"
+	"github.com/pkg/errors"
 )
 
 const KEY_MGO_URLS = "mgo.urls"
 const KEY_MGO_SESSION = "mgo.session"
 const KEY_MGO_DB = "mgo.db"
-const KEY_POOL_NAME = "pool.name"
+//const KEY_POOL_NAME = "pool.name"
 const KEY_PROXY_SELF = "proxy.self"
 const KEY_POOL_CLIENT = "pool.client"
 const KEY_LISTENER_ADDR = "addr"
@@ -28,13 +29,21 @@ func GetAPIServerConfig(ctx context.Context) *store.APIServerConfig {
 	return config
 }
 
+func PutAPIServerConfig(ctx context.Context, config *store.APIServerConfig) context.Context {
+	return context.WithValue(ctx , KEY_APISERVER_CONFIG , config)
+}
 
-func GetMgoSession(ctx context.Context) *mgo.Session {
+func GetMgoSession(ctx context.Context) (*mgo.Session , error) {
 	session , ok :=	ctx.Value(KEY_MGO_SESSION).(*mgo.Session)
 	if !ok {
 		logrus.Errorf("can't get mgoSession by %s" , KEY_MGO_SESSION)
-		panic("can't get mgoSession")
+		return nil , errors.New("can't get mgoSession")
 	}
 
-	return session
+	return session ,nil
+}
+
+
+func PutMgoSession(ctx context.Context , mgoSession *mgo.Session) context.Context {
+	return context.WithValue(ctx,KEY_MGO_SESSION,mgoSession)
 }

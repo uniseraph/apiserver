@@ -16,19 +16,16 @@ import (
 
 func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	name := mux.Vars(r)["name"]
-	mgoSession, ok := ctx.Value(utils.KEY_MGO_SESSION).(*mgo.Session)
 
-	if !ok {
+	mgoSession , err := utils.GetMgoSession(ctx)
+
+	if err!=nil {
 		//走不到这里的,ctx中必然有mgoSesson
-		HttpError(w, "cant get mgo session", http.StatusInternalServerError)
+		HttpError(w,err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	mgoDB, ok := ctx.Value(utils.KEY_MGO_DB).(string)
-	if !ok {
-		HttpError(w, "cant get mgo db", http.StatusInternalServerError)
-		return
-	}
+	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
 
 	c := mgoSession.DB(mgoDB).C("pool")
 
@@ -98,19 +95,15 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	req.PoolInfo.Name = name
 	req.PoolInfo.Id = bson.NewObjectId()
 
-	mgoSession, ok := ctx.Value(utils.KEY_MGO_SESSION).(*mgo.Session)
+	mgoSession, err := utils.GetMgoSession(ctx)
 
-	if !ok {
+	if err!=nil  {
 		//走不到这里的
-		HttpError(w, "cant get mgo session", http.StatusInternalServerError)
+		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	mgoDB, ok := ctx.Value(utils.KEY_MGO_DB).(string)
-	if !ok {
-		HttpError(w, "cant get mgo db", http.StatusInternalServerError)
-		return
-	}
+	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
 
 	c := mgoSession.DB(mgoDB).C("pool")
 
