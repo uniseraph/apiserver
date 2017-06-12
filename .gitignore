@@ -21,3 +21,4 @@ _testmain.go
 apiserver
 apiserver.iml
 *.exe
+.DS_Store

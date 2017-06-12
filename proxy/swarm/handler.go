@@ -24,12 +24,18 @@ import (
 	"strings"
 	"time"
 
+	"strconv"
 )
 
+var eventshandler = newEventsHandler()
+
+const LABEL_CPUCOUNT     ="com.zanecloud.omgea.container.cpus"
+const LABEL_CPUEXCLUSIVE ="com.zanecloud.omega.container.exclusive"
 var routers = map[string]map[string]handlers.Handler{
 	"HEAD": {},
 	"GET": {
 		"/containers/{name:.*}/attach/ws": proxyHijack,
+		"/events":                         getEvents,  //docker-1.11.1不需要，之后版本需要
 	},
 	"POST": {
 		"/containers/create":           handlers.MgoSessionInject(postContainersCreate),
@@ -260,7 +266,10 @@ func postExecStart(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 	proxyHijack(ctx, w, r)
 }
 
-
+//TODO
+func validImage(_imageName string) error {
+	return nil
+}
 func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		handlers.HttpError(w, err.Error(), http.StatusBadRequest)
@@ -276,6 +285,13 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		handlers.HttpError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	logrus.Debug("check image valid")
+
+	if err:= validImage(config.Image) ; err!=nil {
+		handlers.HttpError(w, err.Error(),http.StatusInternalServerError)
+	}
+
 
 	poolInfo, err := getPoolInfo(ctx)
 	if err != nil {
@@ -339,10 +355,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if err := mgoSession.DB(mgoDB).C("container").Insert(&Container{Id: resp.ID,
-		IsDeleted:  false,
-		GmtCreated: time.Now().Unix(),
-		GmtDeleted: 0}); err != nil {
+	if err := mgoSession.DB(mgoDB).C("container").Insert(buildContainerInfoForSave(resp.ID,poolInfo,&config)); err != nil {
 
 		//TODO 如果清理容器失败，需要记录一下日志，便于人工干预
 		cli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{Force: true})
@@ -355,6 +368,42 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 	fmt.Fprintf(w, "{%q:%q}", "Id", resp.ID)
 
 }
+
+func  buildContainerInfoForSave(id string , poolInfo *store.PoolInfo,config *ContainerCreateConfig ) (*Container) {
+
+	var cpuCount int64
+	var exclusive bool
+	var err error
+	if lCpuCount, ok := config.Config.Labels[LABEL_CPUCOUNT]; ok {
+		cpuCount  , err =strconv.ParseInt( lCpuCount , 10 , 64)
+		if err!=nil {
+			cpuCount = 0
+		}
+	}else{
+		cpuCount =0
+	}
+
+	if lexclusive, ok := config.Config.Labels[LABEL_CPUEXCLUSIVE] ; ok{
+		exclusive , err = strconv.ParseBool(lexclusive)
+		if err !=nil {
+			exclusive =false
+		}
+	} else{
+		exclusive = false
+	}
+
+	return &Container{
+		Id : id ,
+		PoolName: poolInfo.Name,
+		IsDeleted:  false,
+		GmtCreated: time.Now().Unix(),
+		GmtDeleted: 0 ,
+		Memory : config.HostConfig.Memory ,
+		CPU: cpuCount ,
+		CPUExclusive: exclusive ,
+	}
+}
+
 
 // POST /containers/{name:.*}/start
 func postContainersStart(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -476,4 +525,32 @@ func closeIdleConnections(client *http.Client) {
 	if tr, ok := client.Transport.(*http.Transport); ok {
 		tr.CloseIdleConnections()
 	}
+}
+
+
+func getEvents(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		handlers.HttpError(w, err.Error(), 400)
+		return
+	}
+
+	var until int64 = -1
+	if r.Form.Get("until") != "" {
+		u, err := strconv.ParseInt(r.Form.Get("until"), 10, 64)
+		if err != nil {
+			handlers.HttpError(w, err.Error(), 400)
+			return
+		}
+		until = u
+	}
+
+	eventshandler.Add(r.RemoteAddr, w)
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
+	}
+
+	eventshandler.Wait(r.RemoteAddr, until)
 }
