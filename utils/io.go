@@ -39,6 +39,8 @@ func NewWriteFlusher(w http.ResponseWriter) *WriteFlusher {
 	return &WriteFlusher{ResponseWriter: w, flusher: flusher}
 }
 
+
+
 type NopFlusher struct{}
 
 func (f *NopFlusher) Flush() {}

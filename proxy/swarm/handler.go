@@ -28,6 +28,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"gopkg.in/mgo.v2"
+	"io/ioutil"
 )
 
 var eventshandler = newEventsHandler()
@@ -38,7 +39,7 @@ var routers = map[string]map[string]handlers.Handler{
 	"HEAD": {},
 	"GET": {
 		"/containers/{name:.*}/attach/ws": proxyHijack,
-		"/events":                         getEvents,  //docker-1.11.1不需要，之后版本需要
+		//"/events":                         getEvents,  //docker-1.11.1不需要，之后版本需要
 	},
 	"POST": {
 		"/containers/create":           handlers.MgoSessionInject(postContainersCreate),
@@ -573,18 +574,23 @@ func proxyAsync(ctx context.Context, w http.ResponseWriter, r *http.Request, cal
 	r.URL.Scheme = scheme
 	r.URL.Host = addr
 
-	//log.WithFields(log.Fields{"method": r.Method, "url": r.URL}).Debug("Proxy request")
+	logrus.WithFields(logrus.Fields{"method": r.Method, "url": r.URL, "uri":r.RequestURI}).Debug("Proxy request")
 	resp, err := client.Do(r)
 	if err != nil {
 		return err
 	}
 
-	//logrus.WithField("resp", ).Debug("proxyAysnc : receive a response")
+	data, err := ioutil.ReadAll(resp.Body)
+
+	logrus.WithFields(logrus.Fields{"resp.body":string(data)}).Debug("proxyAysnc : receive a response")
 
 
 	utils.CopyHeader(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(utils.NewWriteFlusher(w), resp.Body)
+
+
+
 
 	if callback != nil {
 		callback(resp)
