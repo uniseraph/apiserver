@@ -28,7 +28,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"gopkg.in/mgo.v2"
-	"io/ioutil"
+	//"io/ioutil"
 )
 
 var eventshandler = newEventsHandler()
@@ -580,9 +580,9 @@ func proxyAsync(ctx context.Context, w http.ResponseWriter, r *http.Request, cal
 		return err
 	}
 
-	data, err := ioutil.ReadAll(resp.Body)
+	//data, err := ioutil.ReadAll(resp.Body)
 
-	logrus.WithFields(logrus.Fields{"resp.body":string(data)}).Debug("proxyAysnc : receive a response")
+	//logrus.WithFields(logrus.Fields{"resp.body":string(data)}).Debug("proxyAysnc : receive a response")
 
 
 	utils.CopyHeader(w.Header(), resp.Header)
