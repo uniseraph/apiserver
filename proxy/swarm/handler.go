@@ -25,6 +25,9 @@ import (
 	"time"
 
 	"strconv"
+	"gopkg.in/mgo.v2/bson"
+
+	"gopkg.in/mgo.v2"
 )
 
 var eventshandler = newEventsHandler()
@@ -39,15 +42,69 @@ var routers = map[string]map[string]handlers.Handler{
 	},
 	"POST": {
 		"/containers/create":           handlers.MgoSessionInject(postContainersCreate),
-	//	"/containers/{name:.*}/start":  handlers.MgoSessionInject(dockerClientInject(postContainersStart)),
+		//"/containers/{name:.*}/kill":   handlers.MgoSessionInject(proxyAsyncWithCallBack(updateContainer)),
+
+		//	"/containers/{name:.*}/start":  handlers.MgoSessionInject(dockerClientInject(postContainersStart)),
 		"/exec/{execid:.*}/start":      postExecStart,
 		"/containers/{name:.*}/attach": proxyHijack,
 	},
 	"PUT":    {},
-	"DELETE": {},
+	"DELETE": {
+		"/containers/{name:.*}":    handlers.MgoSessionInject(proxyAsyncWithCallBack(deleteContainer)),
+	},
 	"OPTIONS": {
 		"": handlers.OptionsHandler,
 	},
+}
+
+func deleteContainer(ctx context.Context, req *http.Request, resp *http.Response) {
+
+	if err := req.ParseForm(); err != nil {
+		logrus.Errorf("parse the request error:%s",err.Error())
+		return
+	}
+
+
+	nameOrId := mux.Vars(req)["name"]
+
+
+	logrus.Debugf("deleteContainer::status code is %d" , resp.StatusCode)
+	logrus.Debugf("deleteContainer::update the container %s",nameOrId)
+	logrus.Debugf("deleteContainer::req is %#v" , req)
+
+	//删除容器失败，则不需要做拦截
+	if(resp.StatusCode != http.StatusNoContent){
+		return
+	}
+	mgoSession, err :=utils.GetMgoSession(ctx)
+	if err!=nil{
+		logrus.Errorf("cant get mgo session")
+		return
+	}
+
+
+	poolInfo , err := getPoolInfo(ctx)
+	if err!=nil{
+		logrus.Errorf("cant get pool info")
+		return
+	}
+
+	mgoDB, err := getMgoDB(ctx)
+	if err != nil {
+		return
+	}
+
+	c := mgoSession.DB(mgoDB).C("container")
+
+	if err := c.Remove(bson.M{ "poolname": poolInfo.Name , "id":nameOrId }) ; err!=nil{
+		if err == mgo.ErrNotFound {
+			err = c.Remove(bson.M{ "poolname": poolInfo.Name , "name":nameOrId })
+			if err != nil {
+				logrus.Errorf("deleteContainer:: delete container from mgodb error:%s",err.Error())
+			}
+		}
+	}
+
 }
 
 
@@ -212,7 +269,6 @@ func NewHandler(ctx context.Context) http.Handler {
 		logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI, "pool backend endpoint": poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in rootwrap")
 		if err := proxyAsync(ctx, w, r, nil); err != nil {
 			handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
-
 		}
 	}
 	r.Path("/v{version:[0-9.]+}" + "/").HandlerFunc(rootwrap)
@@ -220,6 +276,26 @@ func NewHandler(ctx context.Context) http.Handler {
 	r.PathPrefix("/").HandlerFunc(rootwrap)
 
 	return r
+}
+
+
+func proxyAsyncWithCallBack(callback func(context.Context,  *http.Request , *http.Response)) handlers.Handler {
+
+
+	return func(ctx context.Context, w http.ResponseWriter, r *http.Request){
+
+			f := func(resp *http.Response) {
+				callback(ctx,r , resp)
+			}
+
+
+			if err:=proxyAsync(ctx,w,r,f); err!=nil {
+				handlers.HttpError(w,err.Error(),http.StatusInternalServerError)
+			}
+
+	}
+
+
 }
 
 func getMgoDB(ctx context.Context) (string, error) {
@@ -355,7 +431,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if err := mgoSession.DB(mgoDB).C("container").Insert(buildContainerInfoForSave(resp.ID,poolInfo,&config)); err != nil {
+	if err := mgoSession.DB(mgoDB).C("container").Insert(buildContainerInfoForSave(name,resp.ID,poolInfo,&config)); err != nil {
 
 		//TODO 如果清理容器失败，需要记录一下日志，便于人工干预
 		cli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{Force: true})
@@ -369,7 +445,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 }
 
-func  buildContainerInfoForSave(id string , poolInfo *store.PoolInfo,config *ContainerCreateConfig ) (*Container) {
+func  buildContainerInfoForSave(name string, id string , poolInfo *store.PoolInfo,config *ContainerCreateConfig ) (*Container) {
 
 	var cpuCount int64
 	var exclusive bool
@@ -394,6 +470,7 @@ func  buildContainerInfoForSave(id string , poolInfo *store.PoolInfo,config *Con
 
 	return &Container{
 		Id : id ,
+		Name : name,
 		PoolName: poolInfo.Name,
 		IsDeleted:  false,
 		GmtCreated: time.Now().Unix(),
@@ -406,23 +483,23 @@ func  buildContainerInfoForSave(id string , poolInfo *store.PoolInfo,config *Con
 
 
 // POST /containers/{name:.*}/start
-func postContainersStart(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-
-	cli, err := getDockerClient(ctx)
-	if err!=nil {
-		handlers.HttpError(w, err.Error(),http.StatusInternalServerError)
-		return
-	}
-
-	name := mux.Vars(r)["name"]
-
-	if err := cli.ContainerStart(ctx, name, types.ContainerStartOptions{}) ; err!=nil{
-		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
+//func postContainersStart(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+//
+//	cli, err := getDockerClient(ctx)
+//	if err!=nil {
+//		handlers.HttpError(w, err.Error(),http.StatusInternalServerError)
+//		return
+//	}
+//
+//	name := mux.Vars(r)["name"]
+//
+//	if err := cli.ContainerStart(ctx, name, types.ContainerStartOptions{}) ; err!=nil{
+//		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//
+//	w.WriteHeader(http.StatusNoContent)
+//}
 
 //func newClientAndScheme(tlsConfig *tls.Config) (*http.Client, string) {
 //	if tlsConfig != nil {
