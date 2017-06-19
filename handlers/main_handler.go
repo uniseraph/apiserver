@@ -12,6 +12,8 @@ import (
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"time"
+	"github.com/Sirupsen/logrus"
 )
 
 func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -46,7 +48,6 @@ func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 }
 
-const POOL_LABEL = "com.zanecloud.omega.pool"
 
 var routes = map[string]map[string]Handler{
 	"HEAD": {},
@@ -54,12 +55,14 @@ var routes = map[string]map[string]Handler{
 		"/pools/{name:.*}/inspect": MgoSessionInject(getPoolJSON),
 		"/pools/ps": MgoSessionInject(getPoolsJSON),
 		"/pools/json": MgoSessionInject(getPoolsJSON),
+		"/users/{name:.*}/login": MgoSessionInject(RedisClientInject(getUserLogin)),
 
 
 	},
 	"POST": {
 
 		"/pools/register": MgoSessionInject(postPoolsRegister),
+		"/users/register": MgoSessionInject(postUsersRegister),
 	},
 	"PUT":    {},
 	"DELETE": {},
@@ -70,6 +73,116 @@ var routes = map[string]map[string]Handler{
 
 func NewMainHandler(ctx context.Context) http.Handler {
 	return NewHandler(ctx, routes)
+}
+
+
+func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+	if err := r.ParseForm(); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var (
+		pass = r.Form.Get("pass")
+		name = mux.Vars(r)["name"]
+
+	)
+
+	if pass == "" {
+		HttpError(w,"pass can't be empty" , http.StatusBadRequest)
+		return
+	}
+
+	mgoSession , err := utils.GetMgoSession(ctx)
+	if err !=nil {
+		HttpError(w,err.Error() , http.StatusInternalServerError)
+		return
+	}
+	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
+
+	logrus.Debugf("getUserLogoin::name is %s , pass is %s" , name , pass)
+	result := store.User{}
+	if err := mgoSession.DB(mgoDB).C("user").Find(bson.M{"name":name }).One(&result) ; err != nil {
+		HttpError(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	logrus.Debugf("getUserLogin::get the user %#v", result)
+	if result.Pass != pass {
+		HttpError(w, "pass is error", http.StatusUnauthorized)
+		return
+	}
+
+
+	client , err := utils.GetRedisClient(ctx)
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+
+	if  err := client.Set(utils.KEY_REDIS_UID, result.Id.String(),time.Minute * 10 ).Err() ; err != nil {
+		HttpError(w, err.Error(),http.StatusInternalServerError)
+		return
+	}
+
+
+
+	uid_cookie:=&http.Cookie{
+		Name:   "uid",
+		Value:    result.Id.String(),
+		Path:     "/",
+		HttpOnly: false,
+		MaxAge:   600 ,
+	}
+	http.SetCookie(w,uid_cookie)
+	w.WriteHeader(http.StatusOK)
+
+}
+
+type UsersRegisterRequest struct {
+	store.User
+}
+func postUsersRegister(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+	req := UsersRegisterRequest{}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	mgoSession , err :=  utils.GetMgoSession(ctx)
+	if err!=nil {
+		//走不到这里的,ctx中必然有mgoSesson
+		HttpError(w,err.Error(), http.StatusInternalServerError)
+		return
+	}
+	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
+
+	c := mgoSession.DB(mgoDB).C("user")
+
+
+	//TODO mongodb需要在user.name有唯一性索引
+	c.Find(bson.M{"Name":req.Name}).Count()
+
+	//注册用户时候未分配权限
+	if err :=c.Insert(&store.User{Name:req.Name,
+			Id: bson.NewObjectId(),
+			Pass:req.Pass,
+			Mail:req.Mail,
+			Comments: req.Comments,
+	}) ; err!=nil {
+		HttpError(w, err.Error(),http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+
+	w.WriteHeader(http.StatusCreated)
+	fmt.Fprintf(w, "{%q:%q}", "Name", req.Name)
 }
 
 type PoolsRegisterRequest struct {

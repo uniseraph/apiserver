@@ -88,6 +88,7 @@ func parserAPIServerConfig(c *cli.Context) *store.APIServerConfig {
 	return &store.APIServerConfig{
 		MgoDB: c.String(utils.KEY_MGO_DB) ,
 		MgoURLs: c.String(utils.KEY_MGO_URLS) ,
+		RedisAddr: c.String(utils.KEY_REDIS_ADDR),
 		Addr: c.String(utils.KEY_LISTENER_ADDR),
 		Port : c.Int(utils.KEY_LISTENER_PORT),
 	}
@@ -106,8 +107,10 @@ func startProxys(ctx context.Context) {
 		return
 	}
 
+	logrus.Debug("startProxys::start a mgosession")
+
 	defer func() {
-		logrus.Debug("close mgo session")
+		logrus.Debug("startProxys::close mgo session")
 		session.Close()
 	}()
 

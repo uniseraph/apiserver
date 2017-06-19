@@ -39,7 +39,7 @@ var routers = map[string]map[string]handlers.Handler{
 	"HEAD": {},
 	"GET": {
 		"/containers/{name:.*}/attach/ws": proxyHijack,
-		//"/events":                         getEvents,  //docker-1.11.1不需要，之后版本需要
+		"/events":                         getEvents,  //docker-1.11.1不需要，之后版本需要
 	},
 	"POST": {
 		"/containers/create":           handlers.MgoSessionInject(postContainersCreate),

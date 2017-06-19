@@ -9,6 +9,7 @@ import (
 type APIServerConfig struct {
 	MgoDB   string
 	MgoURLs string
+	RedisAddr string
 	Addr    string
 	Port    int
 	tlsConfig *tls.Config
@@ -33,4 +34,20 @@ type PoolInfo struct {
 	DriverOpts     *DriverOpts
 	Labels         map[string]interface{} `json:",omitempty"`
 	ProxyEndpoints []string `json:",omitempty"`
+}
+
+type ROLE_TYPE int64
+
+const (
+	ROLESET_DEFAULT = 0
+ 	ROLESET_ALL =  1<<63 - 1
+)
+
+type User struct {
+	Id   bson.ObjectId "_id"
+	Name string
+	Pass string
+	Roles ROLE_TYPE
+	Mail string
+	Comments  string `json:",omitempty"`
 }

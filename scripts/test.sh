@@ -2,14 +2,6 @@
 
 POOL_NAME=$1
 
-GREP_MONGODB_RESULT=`brew services list | grep mongodb | awk '{{print $2}}' `
-
-if  [[ ${GREP_MONGODB_RESULT} != "started"   ]]; then
-    brew install mongodb
-    rm -rf /usr/local/var/mongodb  && mkdir -p /usr/local/var/mongodb
-    brew services start mongodb
-fi
-
 echo "create the pool"
 curl  -X POST -H "Content-Type: application/json"  -d @scripts/create-pool.json http://localhost:8080/pools/register?name=${POOL_NAME}
 
@@ -26,7 +18,7 @@ DOCKER_HOST=${DOCKER_HOST} docker start test
 DOCKER_HOST=${DOCKER_HOST} docker logs test
 DOCKER_HOST=${DOCKER_HOST} docker inspect test
 DOCKER_HOST=${DOCKER_HOST} docker exec test pwd
-DOCKER_HOST=${DOCKER_HOST} docker exec -ti test bash
+DOCKER_HOST=${DOCKER_HOST} docker exec test bash
 DOCKER_HOST=${DOCKER_HOST} docker network ls
 DOCKER_HOST=${DOCKER_HOST} docker images
 DOCKER_HOST=${DOCKER_HOST} docker info

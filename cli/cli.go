@@ -43,6 +43,7 @@ func Run() {
 			Name:  startCommandName,
 			Usage: "start a zanecloud apiserver ",
 			Flags: []cli.Flag{
+				flRedisAddr,
 				flMgoUrls,
 				flMgoDB,
 				flAddr,

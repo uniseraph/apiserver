@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+
+
+
+
+
 POOL_NAME=$1
 
 DOCKER_HOST=`curl -sSL -X GET http://localhost:8080/pools/${POOL_NAME}/inspect | jq .ProxyEndpoints[0] | tr -d "\"" `

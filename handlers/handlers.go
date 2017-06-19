@@ -11,6 +11,7 @@ import (
 
 	"gopkg.in/mgo.v2"
 
+	"github.com/go-redis/redis"
 )
 
 type Handler func(c context.Context, w http.ResponseWriter, r *http.Request)
@@ -91,5 +92,35 @@ func MgoSessionInject(h Handler) Handler {
 
 		h(c, w, r)
 
+	}
+}
+
+
+
+func RedisClientInject(h Handler) Handler {
+	return func(ctx context.Context , w http.ResponseWriter  , r *http.Request) {
+		config := utils.GetAPIServerConfig(ctx)
+
+
+		client := redis.NewClient(&redis.Options{
+			Addr:     config.RedisAddr,
+			Password: "", // no password set
+			DB:       0,  // use default DB
+		})
+
+
+		_, err := client.Ping().Result()
+		if err != nil {
+			HttpError(w, err.Error() , http.StatusInternalServerError)
+			return
+		}
+
+		defer func() {
+			log.Debugf("close the redis client %#v" , client)
+			client.Close()
+		}()
+
+		c := utils.PutRedisClient(ctx, client)
+		h(c, w , r)
 	}
 }

@@ -8,9 +8,15 @@ GIT_VERSION   = $(shell git log -1 --pretty=format:%h)
 GIT_NOTES     = $(shell git log -1 --oneline)
 
 
-IMAGE_NAME     = github.com/zanecloud/apiserver
+IMAGE_NAME     = registry.cn-hangzhou.aliyuncs.com/zanecloud/apiserver
 BUILD_IMAGE     = golang:1.8
 
+install:
+	brew install mongodb redis
+
+
+init:
+	bash scripts/init.sh
 
 local:
 	CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}" -o ${TARGET}
@@ -30,7 +36,13 @@ shell:
 run: local
 	MONGO_URLS=127.0.0.1 MONGO_DB=zanecloud ./apiserver -l debug start
 
+compose:
+	docker-compose up -d
+
+
+
 test:
+	bash scripts/test-user.sh sadan 123456
 	bash scripts/test.sh ${POOL_NAME}
 
 .PHONY: image build local
