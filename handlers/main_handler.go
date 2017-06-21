@@ -60,7 +60,6 @@ var routes = map[string]map[string]Handler{
 
 	},
 	"POST": {
-
 		"/pools/register": MgoSessionInject(postPoolsRegister),
 		"/users/register": MgoSessionInject(postUsersRegister),
 	},
@@ -146,12 +145,39 @@ type UsersRegisterRequest struct {
 }
 func postUsersRegister(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
+
+	if err := r.ParseForm(); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var (
+		name   = r.Form.Get("name")
+		pass   = r.Form.Get("pass" )
+	)
+
+
 	req := UsersRegisterRequest{}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		HttpError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	if name !="" {
+		req.Name = name
+	}
+
+	if pass !="" {
+		req.Pass = pass
+	}
+
+
+	if req.Name =="" || req.Pass =="" {
+		HttpError(w, "name and pass cant be empty" , http.StatusBadRequest)
+		return
+	}
+
 
 	mgoSession , err :=  utils.GetMgoSession(ctx)
 	if err!=nil {
