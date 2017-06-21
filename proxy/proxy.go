@@ -65,7 +65,7 @@ func NewProxyInstaces(ctx context.Context, poolInfo *store.PoolInfo, n int) ([]P
 
 func NewProxyInstanceAndStart(ctx context.Context, poolInfo *store.PoolInfo) (Proxy, error) {
 
-	ff , ok := driver2FactoryFunc[poolInfo.Driver]
+	ff, ok := driver2FactoryFunc[poolInfo.Driver]
 	if !ok {
 		logrus.Warnf("no such pool proxy driver %s , ", poolInfo.Driver)
 		return nil, errors.Errorf("no such pool proxy driver %s", poolInfo.Driver)

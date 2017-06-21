@@ -1,14 +1,10 @@
 package swarm
 
-
 import (
-
-"io"
-"net/http"
-"sync"
-"time"
-
-
+	"io"
+	"net/http"
+	"sync"
+	"time"
 )
 
 // EventsHandler broadcasts events to multiple client listeners.

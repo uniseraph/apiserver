@@ -43,7 +43,6 @@ func SetupPrimaryRouter(r *mux.Router, ctx context.Context, rs map[string]map[st
 	}
 }
 
-
 func HttpError(w http.ResponseWriter, err string, status int) {
 	log.WithField("status", status).Errorf("HTTP error: %v", err)
 	http.Error(w, err, status)
@@ -54,8 +53,6 @@ func BoolValue(r *http.Request, k string) bool {
 	return !(s == "" || s == "0" || s == "no" || s == "false" || s == "none")
 }
 
-
-
 // Default handler for methods not supported by clustering.
 func notImplementedHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	HttpError(w, "Not supported in clustering mode.", http.StatusNotImplemented)
@@ -65,13 +62,11 @@ func OptionsHandler(c context.Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-
 func MgoSessionInject(h Handler) Handler {
 
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 		config := utils.GetAPIServerConfig(ctx)
-
 
 		session, err := mgo.Dial(config.MgoURLs)
 		if err != nil {
@@ -86,7 +81,7 @@ func MgoSessionInject(h Handler) Handler {
 
 		session.SetMode(mgo.Monotonic, true)
 
-		c :=  utils.PutMgoSession(ctx,session)
+		c := utils.PutMgoSession(ctx, session)
 
 		log.Debugf("ctx is %#v", c)
 
@@ -95,12 +90,9 @@ func MgoSessionInject(h Handler) Handler {
 	}
 }
 
-
-
 func RedisClientInject(h Handler) Handler {
-	return func(ctx context.Context , w http.ResponseWriter  , r *http.Request) {
+	return func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		config := utils.GetAPIServerConfig(ctx)
-
 
 		client := redis.NewClient(&redis.Options{
 			Addr:     config.RedisAddr,
@@ -108,19 +100,18 @@ func RedisClientInject(h Handler) Handler {
 			DB:       0,  // use default DB
 		})
 
-
 		_, err := client.Ping().Result()
 		if err != nil {
-			HttpError(w, err.Error() , http.StatusInternalServerError)
+			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		defer func() {
-			log.Debugf("close the redis client %#v" , client)
+			log.Debugf("close the redis client %#v", client)
 			client.Close()
 		}()
 
 		c := utils.PutRedisClient(ctx, client)
-		h(c, w , r)
+		h(c, w, r)
 	}
 }

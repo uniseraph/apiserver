@@ -24,8 +24,8 @@ import (
 	"strings"
 	"time"
 
-	"strconv"
 	"gopkg.in/mgo.v2/bson"
+	"strconv"
 
 	"gopkg.in/mgo.v2"
 	//"io/ioutil"
@@ -33,25 +33,26 @@ import (
 
 var eventshandler = newEventsHandler()
 
-const LABEL_CPUCOUNT     ="com.zanecloud.omgea.container.cpus"
-const LABEL_CPUEXCLUSIVE ="com.zanecloud.omega.container.exclusive"
+const LABEL_CPUCOUNT = "com.zanecloud.omgea.container.cpus"
+const LABEL_CPUEXCLUSIVE = "com.zanecloud.omega.container.exclusive"
+
 var routers = map[string]map[string]handlers.Handler{
 	"HEAD": {},
 	"GET": {
 		"/containers/{name:.*}/attach/ws": proxyHijack,
-		"/events":                         getEvents,  //docker-1.11.1不需要，之后版本需要
+		"/events":                         getEvents, //docker-1.11.1不需要，之后版本需要
 	},
 	"POST": {
-		"/containers/create":           handlers.MgoSessionInject(postContainersCreate),
+		"/containers/create": handlers.MgoSessionInject(postContainersCreate),
 		//"/containers/{name:.*}/kill":   handlers.MgoSessionInject(proxyAsyncWithCallBack(updateContainer)),
 
 		//	"/containers/{name:.*}/start":  handlers.MgoSessionInject(dockerClientInject(postContainersStart)),
 		"/exec/{execid:.*}/start":      postExecStart,
 		"/containers/{name:.*}/attach": proxyHijack,
 	},
-	"PUT":    {},
+	"PUT": {},
 	"DELETE": {
-		"/containers/{name:.*}":    handlers.MgoSessionInject(proxyAsyncWithCallBack(deleteContainer)),
+		"/containers/{name:.*}": handlers.MgoSessionInject(proxyAsyncWithCallBack(deleteContainer)),
 	},
 	"OPTIONS": {
 		"": handlers.OptionsHandler,
@@ -61,31 +62,28 @@ var routers = map[string]map[string]handlers.Handler{
 func deleteContainer(ctx context.Context, req *http.Request, resp *http.Response) {
 
 	if err := req.ParseForm(); err != nil {
-		logrus.Errorf("parse the request error:%s",err.Error())
+		logrus.Errorf("parse the request error:%s", err.Error())
 		return
 	}
-
 
 	nameOrId := mux.Vars(req)["name"]
 
-
-	logrus.Debugf("deleteContainer::status code is %d" , resp.StatusCode)
-	logrus.Debugf("deleteContainer::update the container %s",nameOrId)
-	logrus.Debugf("deleteContainer::req is %#v" , req)
+	logrus.Debugf("deleteContainer::status code is %d", resp.StatusCode)
+	logrus.Debugf("deleteContainer::update the container %s", nameOrId)
+	logrus.Debugf("deleteContainer::req is %#v", req)
 
 	//删除容器失败，则不需要做拦截
-	if(resp.StatusCode != http.StatusNoContent){
+	if resp.StatusCode != http.StatusNoContent {
 		return
 	}
-	mgoSession, err :=utils.GetMgoSession(ctx)
-	if err!=nil{
+	mgoSession, err := utils.GetMgoSession(ctx)
+	if err != nil {
 		logrus.Errorf("cant get mgo session")
 		return
 	}
 
-
-	poolInfo , err := getPoolInfo(ctx)
-	if err!=nil{
+	poolInfo, err := getPoolInfo(ctx)
+	if err != nil {
 		logrus.Errorf("cant get pool info")
 		return
 	}
@@ -97,17 +95,16 @@ func deleteContainer(ctx context.Context, req *http.Request, resp *http.Response
 
 	c := mgoSession.DB(mgoDB).C("container")
 
-	if err := c.Remove(bson.M{ "poolname": poolInfo.Name , "id":nameOrId }) ; err!=nil{
+	if err := c.Remove(bson.M{"poolname": poolInfo.Name, "id": nameOrId}); err != nil {
 		if err == mgo.ErrNotFound {
-			err = c.Remove(bson.M{ "poolname": poolInfo.Name , "name":nameOrId })
+			err = c.Remove(bson.M{"poolname": poolInfo.Name, "name": nameOrId})
 			if err != nil {
-				logrus.Errorf("deleteContainer:: delete container from mgodb error:%s",err.Error())
+				logrus.Errorf("deleteContainer:: delete container from mgodb error:%s", err.Error())
 			}
 		}
 	}
 
 }
-
 
 func dockerClientInject(h handlers.Handler) handlers.Handler {
 
@@ -145,10 +142,9 @@ func dockerClientInject(h handlers.Handler) handlers.Handler {
 		}
 
 		logrus.Debugf("ctx is %#v", ctx)
-		h(context.WithValue(ctx,utils.KEY_POOL_CLIENT , cli) , w , r)
+		h(context.WithValue(ctx, utils.KEY_POOL_CLIENT, cli), w, r)
 	}
 }
-
 
 // Proxy a hijack request to the right node
 func proxyHijack(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -279,23 +275,19 @@ func NewHandler(ctx context.Context) http.Handler {
 	return r
 }
 
+func proxyAsyncWithCallBack(callback func(context.Context, *http.Request, *http.Response)) handlers.Handler {
 
-func proxyAsyncWithCallBack(callback func(context.Context,  *http.Request , *http.Response)) handlers.Handler {
+	return func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
+		f := func(resp *http.Response) {
+			callback(ctx, r, resp)
+		}
 
-	return func(ctx context.Context, w http.ResponseWriter, r *http.Request){
-
-			f := func(resp *http.Response) {
-				callback(ctx,r , resp)
-			}
-
-
-			if err:=proxyAsync(ctx,w,r,f); err!=nil {
-				handlers.HttpError(w,err.Error(),http.StatusInternalServerError)
-			}
+		if err := proxyAsync(ctx, w, r, f); err != nil {
+			handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+		}
 
 	}
-
 
 }
 
@@ -303,7 +295,6 @@ func getMgoDB(ctx context.Context) (string, error) {
 	config := utils.GetAPIServerConfig(ctx)
 	return config.MgoDB, nil
 }
-
 
 func getPoolInfo(ctx context.Context) (*store.PoolInfo, error) {
 	p, ok := ctx.Value(utils.KEY_PROXY_SELF).(*Proxy)
@@ -316,8 +307,7 @@ func getPoolInfo(ctx context.Context) (*store.PoolInfo, error) {
 	return p.PoolInfo, nil
 }
 
-
-func getDockerClient (ctx context.Context) (dockerclient.APIClient, error) {
+func getDockerClient(ctx context.Context) (dockerclient.APIClient, error) {
 	client, ok := ctx.Value(utils.KEY_POOL_CLIENT).(dockerclient.APIClient)
 
 	if !ok {
@@ -328,7 +318,6 @@ func getDockerClient (ctx context.Context) (dockerclient.APIClient, error) {
 	return client, nil
 }
 
-
 type ContainerCreateConfig struct {
 	container.Config
 	HostConfig       container.HostConfig
@@ -338,7 +327,7 @@ type ContainerCreateConfig struct {
 // POST /exec/{execid:.*}/start
 func postExecStart(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Connection") == "" {
-		proxyAsync(ctx, w, r ,nil)
+		proxyAsync(ctx, w, r, nil)
 	}
 	proxyHijack(ctx, w, r)
 }
@@ -365,10 +354,9 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 	logrus.Debug("check image valid")
 
-	if err:= validImage(config.Image) ; err!=nil {
-		handlers.HttpError(w, err.Error(),http.StatusInternalServerError)
+	if err := validImage(config.Image); err != nil {
+		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
 	}
-
 
 	poolInfo, err := getPoolInfo(ctx)
 	if err != nil {
@@ -432,7 +420,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if err := mgoSession.DB(mgoDB).C("container").Insert(buildContainerInfoForSave(name,resp.ID,poolInfo,&config)); err != nil {
+	if err := mgoSession.DB(mgoDB).C("container").Insert(buildContainerInfoForSave(name, resp.ID, poolInfo, &config)); err != nil {
 
 		//TODO 如果清理容器失败，需要记录一下日志，便于人工干预
 		cli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{Force: true})
@@ -446,42 +434,41 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 }
 
-func  buildContainerInfoForSave(name string, id string , poolInfo *store.PoolInfo,config *ContainerCreateConfig ) (*Container) {
+func buildContainerInfoForSave(name string, id string, poolInfo *store.PoolInfo, config *ContainerCreateConfig) *Container {
 
 	var cpuCount int64
 	var exclusive bool
 	var err error
 	if lCpuCount, ok := config.Config.Labels[LABEL_CPUCOUNT]; ok {
-		cpuCount  , err =strconv.ParseInt( lCpuCount , 10 , 64)
-		if err!=nil {
+		cpuCount, err = strconv.ParseInt(lCpuCount, 10, 64)
+		if err != nil {
 			cpuCount = 0
 		}
-	}else{
-		cpuCount =0
+	} else {
+		cpuCount = 0
 	}
 
-	if lexclusive, ok := config.Config.Labels[LABEL_CPUEXCLUSIVE] ; ok{
-		exclusive , err = strconv.ParseBool(lexclusive)
-		if err !=nil {
-			exclusive =false
+	if lexclusive, ok := config.Config.Labels[LABEL_CPUEXCLUSIVE]; ok {
+		exclusive, err = strconv.ParseBool(lexclusive)
+		if err != nil {
+			exclusive = false
 		}
-	} else{
+	} else {
 		exclusive = false
 	}
 
 	return &Container{
-		Id : id ,
-		Name : name,
-		PoolName: poolInfo.Name,
-		IsDeleted:  false,
-		GmtCreated: time.Now().Unix(),
-		GmtDeleted: 0 ,
-		Memory : config.HostConfig.Memory ,
-		CPU: cpuCount ,
-		CPUExclusive: exclusive ,
+		Id:           id,
+		Name:         name,
+		PoolName:     poolInfo.Name,
+		IsDeleted:    false,
+		GmtCreated:   time.Now().Unix(),
+		GmtDeleted:   0,
+		Memory:       config.HostConfig.Memory,
+		CPU:          cpuCount,
+		CPUExclusive: exclusive,
 	}
 }
-
 
 // POST /containers/{name:.*}/start
 //func postContainersStart(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -574,7 +561,7 @@ func proxyAsync(ctx context.Context, w http.ResponseWriter, r *http.Request, cal
 	r.URL.Scheme = scheme
 	r.URL.Host = addr
 
-	logrus.WithFields(logrus.Fields{"method": r.Method, "url": r.URL, "uri":r.RequestURI}).Debug("Proxy request")
+	logrus.WithFields(logrus.Fields{"method": r.Method, "url": r.URL, "uri": r.RequestURI}).Debug("Proxy request")
 	resp, err := client.Do(r)
 	if err != nil {
 		return err
@@ -584,13 +571,9 @@ func proxyAsync(ctx context.Context, w http.ResponseWriter, r *http.Request, cal
 
 	//logrus.WithFields(logrus.Fields{"resp.body":string(data)}).Debug("proxyAysnc : receive a response")
 
-
 	utils.CopyHeader(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(utils.NewWriteFlusher(w), resp.Body)
-
-
-
 
 	if callback != nil {
 		callback(resp)
@@ -609,7 +592,6 @@ func closeIdleConnections(client *http.Client) {
 		tr.CloseIdleConnections()
 	}
 }
-
 
 func getEvents(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {

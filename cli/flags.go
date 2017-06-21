@@ -14,14 +14,12 @@ var (
 		Usage:  "mongodb urls",
 	}
 
-
 	flRedisAddr = cli.StringFlag{
 		Name:   utils.KEY_REDIS_ADDR,
 		Value:  "127.0.0.1:6379",
 		EnvVar: "REDIS_ADDR",
 		Usage:  "redis addr",
 	}
-
 
 	flMgoDB = cli.StringFlag{
 		Name:   utils.KEY_MGO_DB,
