@@ -39,8 +39,12 @@ func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 
 	ctx := setContext(p)
 
+	h, err := NewHandler(ctx)
+	if err !=nil {
+		return err
+	}
 	server := http.Server{
-		Handler: NewHandler(ctx),
+		Handler: h,
 	}
 
 	var paddr string

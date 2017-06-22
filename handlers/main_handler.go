@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Sirupsen/logrus"
+	"github.com/go-redis/redis"
 	"github.com/gorilla/mux"
 	"github.com/zanecloud/apiserver/proxy"
 	"github.com/zanecloud/apiserver/utils"
@@ -51,14 +52,14 @@ func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 var routes = map[string]map[string]Handler{
 	"HEAD": {},
 	"GET": {
-		"/pools/{name:.*}/inspect": MgoSessionInject(getPoolJSON),
-		"/pools/ps":                MgoSessionInject(getPoolsJSON),
-		"/pools/json":              MgoSessionInject(getPoolsJSON),
-		"/users/{name:.*}/login":   MgoSessionInject(RedisClientInject(getUserLogin)),
+		"/pools/{name:.*}/inspect": getPoolJSON,
+		"/pools/ps":                getPoolsJSON,
+		"/pools/json":              getPoolsJSON,
+		"/users/{name:.*}/login":   getUserLogin,
 	},
 	"POST": {
-		"/pools/register": MgoSessionInject(postPoolsRegister),
-		"/users/register": MgoSessionInject(postUsersRegister),
+		"/pools/register": postPoolsRegister,
+		"/users/register": postUsersRegister,
 	},
 	"PUT":    {},
 	"DELETE": {},
@@ -67,8 +68,29 @@ var routes = map[string]map[string]Handler{
 	},
 }
 
-func NewMainHandler(ctx context.Context) http.Handler {
-	return NewHandler(ctx, routes)
+func NewMainHandler(ctx context.Context) (http.Handler, error) {
+
+	config := utils.GetAPIServerConfig(ctx)
+	session, err := mgo.Dial(config.MgoURLs)
+	if err != nil {
+		return nil, err
+	}
+
+	session.SetMode(mgo.Monotonic, true)
+	c := utils.PutMgoSession(ctx, session)
+
+	client := redis.NewClient(&redis.Options{
+		Addr:     config.RedisAddr,
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+	if _, err := client.Ping().Result(); err != nil {
+		return nil, err
+	}
+
+	c1 := utils.PutRedisClient(c, client)
+
+	return NewHandler(c1, routes), nil
 }
 
 func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -128,7 +150,7 @@ func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, uid_cookie)
 	w.WriteHeader(http.StatusOK)
-
+	fmt.Printf(w,"ok")
 }
 
 type UsersRegisterRequest struct {

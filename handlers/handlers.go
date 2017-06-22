@@ -7,11 +7,6 @@ import (
 	"context"
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
-	"github.com/zanecloud/apiserver/utils"
-
-	"gopkg.in/mgo.v2"
-
-	"github.com/go-redis/redis"
 )
 
 type Handler func(c context.Context, w http.ResponseWriter, r *http.Request)
@@ -62,56 +57,56 @@ func OptionsHandler(c context.Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func MgoSessionInject(h Handler) Handler {
-
-	return func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-
-		config := utils.GetAPIServerConfig(ctx)
-
-		session, err := mgo.Dial(config.MgoURLs)
-		if err != nil {
-			HttpError(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		defer func() {
-			log.Debug("close mgo session")
-			session.Close()
-		}()
-
-		session.SetMode(mgo.Monotonic, true)
-
-		c := utils.PutMgoSession(ctx, session)
-
-		log.Debugf("ctx is %#v", c)
-
-		h(c, w, r)
-
-	}
-}
-
-func RedisClientInject(h Handler) Handler {
-	return func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-		config := utils.GetAPIServerConfig(ctx)
-
-		client := redis.NewClient(&redis.Options{
-			Addr:     config.RedisAddr,
-			Password: "", // no password set
-			DB:       0,  // use default DB
-		})
-
-		_, err := client.Ping().Result()
-		if err != nil {
-			HttpError(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		defer func() {
-			log.Debugf("close the redis client %#v", client)
-			client.Close()
-		}()
-
-		c := utils.PutRedisClient(ctx, client)
-		h(c, w, r)
-	}
-}
+//func MgoSessionInject(h Handler) Handler {
+//
+//	return func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+//
+//		config := utils.GetAPIServerConfig(ctx)
+//
+//		session, err := mgo.Dial(config.MgoURLs)
+//		if err != nil {
+//			HttpError(w, err.Error(), http.StatusInternalServerError)
+//			return
+//		}
+//
+//		defer func() {
+//			log.Debug("close mgo session")
+//			session.Close()
+//		}()
+//
+//		session.SetMode(mgo.Monotonic, true)
+//
+//		c := utils.PutMgoSession(ctx, session)
+//
+//		log.Debugf("ctx is %#v", c)
+//
+//		h(c, w, r)
+//
+//	}
+//}
+//
+//func RedisClientInject(h Handler) Handler {
+//	return func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+//		config := utils.GetAPIServerConfig(ctx)
+//
+//		client := redis.NewClient(&redis.Options{
+//			Addr:     config.RedisAddr,
+//			Password: "", // no password set
+//			DB:       0,  // use default DB
+//		})
+//
+//		_, err := client.Ping().Result()
+//		if err != nil {
+//			HttpError(w, err.Error(), http.StatusInternalServerError)
+//			return
+//		}
+//
+//		defer func() {
+//			log.Debugf("close the redis client %#v", client)
+//			client.Close()
+//		}()
+//
+//		c := utils.PutRedisClient(ctx, client)
+//		h(c, w, r)
+//	}
+//}

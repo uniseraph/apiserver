@@ -43,7 +43,7 @@ var routers = map[string]map[string]handlers.Handler{
 		"/events":                         getEvents, //docker-1.11.1不需要，之后版本需要
 	},
 	"POST": {
-		"/containers/create": handlers.MgoSessionInject(postContainersCreate),
+		"/containers/create": postContainersCreate,
 		//"/containers/{name:.*}/kill":   handlers.MgoSessionInject(proxyAsyncWithCallBack(updateContainer)),
 
 		//	"/containers/{name:.*}/start":  handlers.MgoSessionInject(dockerClientInject(postContainersStart)),
@@ -52,7 +52,7 @@ var routers = map[string]map[string]handlers.Handler{
 	},
 	"PUT": {},
 	"DELETE": {
-		"/containers/{name:.*}": handlers.MgoSessionInject(proxyAsyncWithCallBack(deleteContainer)),
+		"/containers/{name:.*}": proxyAsyncWithCallBack(deleteContainer),
 	},
 	"OPTIONS": {
 		"": handlers.OptionsHandler,
@@ -253,18 +253,32 @@ func hijack(tlsConfig *tls.Config, endpoint string, w http.ResponseWriter, r *ht
 	return nil
 }
 
-func NewHandler(ctx context.Context) http.Handler {
+func NewHandler(ctx context.Context) (http.Handler,error) {
+
+	config := utils.GetAPIServerConfig(ctx)
+
+	session, err := mgo.Dial(config.MgoURLs)
+	if err != nil {
+		return nil, err
+	}
+
+	session.SetMode(mgo.Monotonic, true)
+
+	c1 := utils.PutMgoSession(ctx, session)
+
 
 	r := mux.NewRouter()
 
-	handlers.SetupPrimaryRouter(r, ctx, routers)
+	handlers.SetupPrimaryRouter(r, c1, routers)
 
-	poolInfo, _ := getPoolInfo(ctx)
+	poolInfo, _ := getPoolInfo(c1)
 
 	// 作为swarm的代理，默认逻辑是所有请求都是转发给后端的swarm集群
-	rootwrap := func(w http.ResponseWriter, r *http.Request) {
-		logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI, "pool backend endpoint": poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in rootwrap")
-		if err := proxyAsync(ctx, w, r, nil); err != nil {
+	rootwrap := func(w http.ResponseWriter, req *http.Request) {
+		logrus.WithFields(logrus.Fields{"method": req.Method,
+			"uri": req.RequestURI,
+			"pool backend endpoint": poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in rootwrap")
+		if err := proxyAsync(ctx, w, req, nil); err != nil {
 			handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
 		}
 	}
@@ -272,7 +286,7 @@ func NewHandler(ctx context.Context) http.Handler {
 
 	r.PathPrefix("/").HandlerFunc(rootwrap)
 
-	return r
+	return r ,nil
 }
 
 func proxyAsyncWithCallBack(callback func(context.Context, *http.Request, *http.Response)) handlers.Handler {

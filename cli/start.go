@@ -54,18 +54,16 @@ func getTlsConfig(c *cli.Context) (*tls.Config, error) {
 
 func startCommand(c *cli.Context) {
 
-	//tlsConfig, err := getTlsConfig(c)
-	//if err != nil {
-	//	logrus.Fatal(err)
-	//}
-
 	config := parserAPIServerConfig(c)
 
-	//ctx := context.WithValue(context.Background(),utils.KEY_APISERVER_CONFIG , config)
-
 	ctx := utils.PutAPIServerConfig(context.Background(), config)
+	h, err := handlers.NewMainHandler(ctx)
+	if err != nil {
+		logrus.Fatal(err)
+		return
+	}
 	server := http.Server{
-		Handler: handlers.NewMainHandler(ctx),
+		Handler: h,
 	}
 
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", config.Addr, config.Port))
