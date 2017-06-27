@@ -273,7 +273,7 @@ type TeamJoinRequest struct {
 func postTeamJoin(ctx context.Context, w http.ResponseWriter, r *http.Request)   {
 
 	//不用teamId，
-	name := mux.Vars("name")
+	//name := mux.Vars("name")
 
 	mgoSession , err := utils.GetMgoSessionClone(ctx)
 	if err != nil {
