@@ -282,7 +282,7 @@ func postTeamJoin(ctx context.Context, w http.ResponseWriter, r *http.Request)  
 	}
 	defer mgoSession.Close()
 
-	
+
 
 }
 
