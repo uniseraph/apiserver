@@ -40,7 +40,7 @@ func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 	ctx := setContext(p)
 
 	h, err := NewHandler(ctx)
-	if err !=nil {
+	if err != nil {
 		return err
 	}
 	server := http.Server{
@@ -91,6 +91,8 @@ func setContext(p *Proxy) context.Context {
 }
 
 func (p *Proxy) Stop() error {
+
+	//TODO
 	return nil
 }
 

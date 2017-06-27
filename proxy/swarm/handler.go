@@ -253,7 +253,7 @@ func hijack(tlsConfig *tls.Config, endpoint string, w http.ResponseWriter, r *ht
 	return nil
 }
 
-func NewHandler(ctx context.Context) (http.Handler,error) {
+func NewHandler(ctx context.Context) (http.Handler, error) {
 
 	config := utils.GetAPIServerConfig(ctx)
 
@@ -265,7 +265,6 @@ func NewHandler(ctx context.Context) (http.Handler,error) {
 	session.SetMode(mgo.Monotonic, true)
 
 	c1 := utils.PutMgoSession(ctx, session)
-
 
 	r := mux.NewRouter()
 
@@ -286,7 +285,7 @@ func NewHandler(ctx context.Context) (http.Handler,error) {
 
 	r.PathPrefix("/").HandlerFunc(rootwrap)
 
-	return r ,nil
+	return r, nil
 }
 
 func proxyAsyncWithCallBack(callback func(context.Context, *http.Request, *http.Response)) handlers.Handler {

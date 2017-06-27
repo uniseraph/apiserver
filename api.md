@@ -5,6 +5,69 @@ Zane Pool API v1.0.0
 ZanePool根据pool driver不同，有swarm/k8s等多种实现，其中pool管控部分接口是统一的，对pool操作的接口是不同的。
 
 
+
+# 用户体系
+
+## 创建一个团队
+
+```
+POST /team/create
+```
+
+Example request
+
+```text
+POST /team/create HTTP/1.1
+Content-Type: application/json
+{
+   "Name": "团队名" ,
+   "OwnerId": "主管Id",
+   "OwnerName" : "主管名",
+   "Users": [
+        {
+            "Name":"xxx",
+            "Id":"xxx",
+        }
+   ]
+}
+```
+
+权限: 只有系统管理员可以创建团队
+
+## 创建一个用户
+
+```text
+POST /user/create 
+```
+创建一个用户
+
+Example
+
+```
+POST /user/create HTTP/1.1
+Content-Type: application/json
+{
+}
+```
+
+
+## 用户加入团队
+
+```text
+POST /team/join?userId=xxx&teamId=xxxx
+```
+
+某个用户加入到某个团队
+
+
+权限: 只有本团队主管可以调用该接口
+
+## 设定团队主管
+
+## 设定用户角色
+
+
+
 # Endpoints
 
 ## Pools

@@ -49,6 +49,19 @@ func GetMgoSession(ctx context.Context) (*mgo.Session, error) {
 	return session, nil
 }
 
+// Clone一个mgoSession ， 需要使用者自己close
+func GetMgoSessionClone(ctx context.Context) (*mgo.Session, error) {
+
+	session , err := GetMgoSession(ctx)
+	if err !=nil {
+		return nil ,err
+	}
+
+
+	return session.Clone(),nil
+}
+
+
 func PutMgoSession(ctx context.Context, mgoSession *mgo.Session) context.Context {
 	return context.WithValue(ctx, KEY_MGO_SESSION, mgoSession)
 }

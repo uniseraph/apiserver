@@ -1,7 +1,7 @@
 {
   "Name":"sadan",
   "Pass":"123456",
-  "Roles": 0 ,
+  "RoleSet": 0 ,
   "Mail": "zhengtao.wuzt@gmail.com" ,
   "Comments" : ""
 }
