@@ -26,8 +26,8 @@ var routes = map[string]map[string]Handler{
 
 		"/users/{name:.*}/login":    getUserLogin,
 		"/users/create":             postUsersCreate,
-		"/users/{name:.*}/inspect":  getUserInspect,
-		"/users/{name:.*}/detail":  getUserInspect,
+		"/users/{id:.*}/inspect":  getUserInspect,
+		"/users/{id:.*}/detail":  getUserInspect,
 		"/users/ps":		     getUsersJSON,
 		"/users/list":		     getUsersJSON,
 		"/users/{name:.*}/roles":    postUserRoleSet,

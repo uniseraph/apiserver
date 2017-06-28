@@ -236,23 +236,24 @@ func postTeamsCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := c.Insert(&types.Team{
+	team := &types.Team{
 		Name:        req.Name,
 		Id:          bson.NewObjectId(),
 		Description: req.Description,
-		Leader : types.Leader {
-			Id : req.Leader.Id,
+		Leader: types.Leader{
+			Id:   req.Leader.Id,
 			Name: req.Leader.Name,
-		} ,
-	}); err != nil {
+		},
+	}
+	if err := c.Insert(team); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 
-	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "{%q:%q}", "Name", req.Name)
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "{%q:%q}", "Id", team.Id)
 }
 
 type TeamJoinRequest struct {
@@ -288,7 +289,40 @@ func getTeamsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 }
 
+
 func getUserInspect(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+	id := mux.Vars(r)["id"]
+
+	mgoSession , err := utils.GetMgoSessionClone(ctx)
+	if err != nil {
+		HttpError(w, err.Error() , http.StatusInternalServerError)
+		return
+	}
+	defer mgoSession.Close()
+
+
+	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
+
+	c := mgoSession.DB(mgoDB).C("user")
+
+	result := types.User{}
+
+	if err := c.Find( bson.M{ "$or": []bson.M{ bson.M{"name":id}, bson.M{"_id": bson.ObjectIdHex(id) } }}    ).One(&result) ; err!=nil {
+
+		if err == mgo.ErrNotFound {
+			HttpError(w, fmt.Sprintf("no such a user name or id is %s", id) , http.StatusNotFound)
+			return
+		}
+
+		HttpError(w,err.Error(),http.StatusInternalServerError)
+		return
+	}
+
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(result)
 
 }
 
