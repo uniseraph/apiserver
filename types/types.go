@@ -6,6 +6,14 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+
+const (
+	ROLESET_DEFAULT = 0
+
+	ROLESET_NORMAL   = 1      //普通员工
+	ROLESET_APPADMIN = 1 << 1 //应用管理员
+	ROLESET_SYSADMIN = 1 << 2 //系统管理员
+)
 type APIServerConfig struct {
 	MgoDB     string
 	MgoURLs   string
@@ -36,22 +44,21 @@ type PoolInfo struct {
 	ProxyEndpoints []string               `json:",omitempty"`
 }
 
-type roleset int64
-
+type Roleset uint64
 
 type User struct {
-	Id       bson.ObjectId "_id"
-	Name     string
-	Pass     string
-	RoleSet  roleset
-	Email    string
-	Tel      string
-	CreatedTime int64 `json:",omitempty"`
-	Comments string `json:",omitempty"`
+	Id          bson.ObjectId "_id"
+	Name        string
+	Pass        string `json:",omitempty"`
+	RoleSet     Roleset
+	Email       string
+	Tel         string
+	CreatedTime int64  `json:",omitempty"`
+	Comments    string `json:",omitempty"`
 }
 
 type Leader struct {
-	Id  string
+	Id   string
 	Name string
 }
 

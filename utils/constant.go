@@ -25,14 +25,8 @@ const KEY_LISTENER_ADDR = "addr"
 const KEY_LISTENER_PORT = "port"
 const KEY_APISERVER_CONFIG = "apiserver.config"
 
-
 const (
-	ROLESET_DEFAULT = 0
-	ROLESET_ALL     = 1<<63 - 1
 
-	ROLESET_NORMAL   = 1      //普通员工
-	ROLESET_APPADMIN = 1 << 1 //应用管理员
-	ROLESET_SYSADMIN = 1 << 2 //系统管理员
 )
 
 func GetAPIServerConfig(ctx context.Context) *store.APIServerConfig {
@@ -49,7 +43,7 @@ func PutAPIServerConfig(ctx context.Context, config *store.APIServerConfig) cont
 	return context.WithValue(ctx, KEY_APISERVER_CONFIG, config)
 }
 
-func GetMgoSession(ctx context.Context) (*mgo.Session, error) {
+func getMgoSession(ctx context.Context) (*mgo.Session, error) {
 	session, ok := ctx.Value(KEY_MGO_SESSION).(*mgo.Session)
 	if !ok {
 		logrus.Errorf("can't get mgoSession by %s", KEY_MGO_SESSION)
@@ -62,7 +56,7 @@ func GetMgoSession(ctx context.Context) (*mgo.Session, error) {
 // Clone一个mgoSession ， 需要使用者自己close
 func GetMgoSessionClone(ctx context.Context) (*mgo.Session, error) {
 
-	session, err := GetMgoSession(ctx)
+	session, err := getMgoSession(ctx)
 	if err != nil {
 		return nil, err
 	}

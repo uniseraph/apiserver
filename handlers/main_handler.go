@@ -7,40 +7,48 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
+	"github.com/zanecloud/apiserver/types"
+	"gopkg.in/mgo.v2/bson"
+	"fmt"
+	"github.com/Sirupsen/logrus"
 )
 
-type  ResponseBody struct {
+type ResponseBody struct {
 	Code    int
 	Message string
 }
+
+
 
 
 var routes = map[string]map[string]Handler{
 	"HEAD": {},
 	"GET":  {},
 	"POST": {
-		"/pools/{name:.*}/inspect": getPoolJSON,
-		"/pools/register":          postPoolsRegister,
-		"/pools/ps":                getPoolsJSON,
-		"/pools/json":              getPoolsJSON,
+		"/pools/{name:.*}/inspect": checkUserPermission(getPoolJSON,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN ),
+		"/pools/register":          checkUserPermission(postPoolsRegister,types.ROLESET_SYSADMIN),
+		"/pools/ps":                checkUserPermission(getPoolsJSON,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN),
+		"/pools/json":              checkUserPermission(getPoolsJSON,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN),
 
-		"/users/{name:.*}/login":    getUserLogin,
-		"/users/create":             postUsersCreate,
-		"/users/{id:.*}/inspect":  getUserInspect,
-		"/users/{id:.*}/detail":  getUserInspect,
-		"/users/ps":		     getUsersJSON,
-		"/users/list":		     getUsersJSON,
-		"/users/{name:.*}/roles":    postUserRoleSet,
-		"/users/{name:.*}/remove":   postUserRemove,
+		"/users/{name:.*}/login":   getUserLogin,
+		"/users/create":            checkUserPermission(postUsersCreate,types.ROLESET_SYSADMIN),
+		"/users/{id:.*}/inspect":   checkUserPermission(getUserInspect,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN),
+		"/users/{id:.*}/detail":    checkUserPermission(getUserInspect,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN),
+		"/users/ps":                checkUserPermission(getUsersJSON,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN),
+		"/users/list":              checkUserPermission(getUsersJSON,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN),
+		"/users/{id:.*}/resetpass": checkUserPermission(postUserResetPass,types.ROLESET_SYSADMIN),
+		"/users/{name:.*}/remove":  checkUserPermission(postUserRemove,types.ROLESET_SYSADMIN),
+		"/users/{name:.*}/join":    checkUserPermission(postUserJoin, types.ROLESET_SYSADMIN | types.ROLESET_APPADMIN ),
+		"/users/{name:.*}/quit":    checkUserPermission(postUserQuit, types.ROLESET_SYSADMIN | types.ROLESET_APPADMIN ),
 
+		"/teams/{name:.*}/inspect": checkUserPermission(getTeamJSON,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN),
+		"/teams/ps":                checkUserPermission(getTeamsJSON,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN),
+		"/teams/list":              checkUserPermission(getTeamsJSON,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN),
+		"/teams/create":            checkUserPermission(postTeamsCreate,types.ROLESET_SYSADMIN),
 
-		"/teams/{name:.*}/inspect": getTeamJSON,
-		"/teams/ps":                getTeamsJSON,
-		"/teams/list":              getTeamsJSON,
-		"/teams/create":            postTeamsCreate,
-		"/teams/{name:.*}/join":    postTeamJoin,
-		"/teams/{name:.*}/appoint":  postTeamAppoint,
-		"/teams/{name:.*}/remove" :  postTeamRemove ,
+		"/teams/{name:.*}/appoint": checkUserPermission(postTeamAppoint,types.ROLESET_SYSADMIN),
+
+		"/teams/{name:.*}/remove":  checkUserPermission(postTeamRemove,types.ROLESET_SYSADMIN),
 	},
 	"PUT":    {},
 	"DELETE": {},
@@ -48,6 +56,60 @@ var routes = map[string]map[string]Handler{
 		"": OptionsHandler,
 	},
 }
+
+
+
+func checkUserPermission(handler Handler , roleset types.Roleset) Handler {
+
+
+	wrap := func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+		cookie, err := r.Cookie("uid")
+		if err != nil {
+			HttpError(w, "please login", http.StatusUnauthorized)
+			return
+		}
+
+		uid := cookie.Value
+
+		mgoSession, err := utils.GetMgoSessionClone(ctx)
+		if err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer mgoSession.Close()
+
+		mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
+
+		c := mgoSession.DB(mgoDB).C("user")
+
+		result := types.User{}
+
+		if err := c.Find(bson.M{"$or": []bson.M{bson.M{"_id": bson.ObjectIdHex(uid)}}}).One(&result); err != nil {
+
+			if err == mgo.ErrNotFound {
+				HttpError(w, fmt.Sprintf("no such a user id is %s", uid), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if roleset&result.RoleSet == 0 {
+
+			logrus.Infof("current roleset  is %d ,current user is %#v , so it no permission", roleset, result)
+
+			HttpError(w, "no permission", http.StatusMethodNotAllowed)
+			return
+		}
+
+	}
+
+	return wrap
+}
+
+
 
 func NewMainHandler(ctx context.Context) (http.Handler, error) {
 

@@ -16,13 +16,15 @@ import (
 func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	name := mux.Vars(r)["name"]
 
-	mgoSession, err := utils.GetMgoSession(ctx)
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
 
 	if err != nil {
 		//走不到这里的,ctx中必然有mgoSesson
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	defer mgoSession.Close()
 
 	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
 
@@ -52,13 +54,14 @@ type PoolsRegisterRequest struct {
 }
 
 func getPoolsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	mgoSession, err := utils.GetMgoSession(ctx)
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
 
 	if err != nil {
 		//走不到这里的,ctx中必然有mgoSesson
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	defer mgoSession.Close()
 
 	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
 
@@ -102,13 +105,14 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		ProxyEndpoints: make([]string, 1),
 	}
 
-	mgoSession, err := utils.GetMgoSession(ctx)
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
 
 	if err != nil {
 		//走不到这里的
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	defer mgoSession.Close()
 
 	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
 

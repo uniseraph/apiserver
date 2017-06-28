@@ -76,11 +76,12 @@ func deleteContainer(ctx context.Context, req *http.Request, resp *http.Response
 	if resp.StatusCode != http.StatusNoContent {
 		return
 	}
-	mgoSession, err := utils.GetMgoSession(ctx)
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
 	if err != nil {
 		logrus.Errorf("cant get mgo session")
 		return
 	}
+	defer mgoSession.Close()
 
 	poolInfo, err := getPoolInfo(ctx)
 	if err != nil {
@@ -416,7 +417,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 	//TODO save to mongodb
 
-	mgoSession, err := utils.GetMgoSession(ctx)
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
 	if err != nil {
 
 		//TODO 如果清理容器失败，需要记录一下日志，便于人工干预
@@ -424,6 +425,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	defer mgoSession.Close()
 
 	mgoDB, err := getMgoDB(ctx)
 	if err != nil {

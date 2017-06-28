@@ -24,10 +24,12 @@ func SetupPrimaryRouter(r *mux.Router, ctx context.Context, rs map[string]map[st
 		for route, fct := range mappings {
 			log.WithFields(log.Fields{"method": method, "route": route}).Debug("Registering HTTP route")
 
+
 			localRoute := route
 			localFct := fct
 			wrap := func(w http.ResponseWriter, r *http.Request) {
 				log.WithFields(log.Fields{"method": r.Method, "uri": r.RequestURI}).Debug("HTTP request received")
+
 				localFct(ctx, w, r)
 			}
 			localMethod := method
@@ -56,57 +58,3 @@ func notImplementedHandler(ctx context.Context, w http.ResponseWriter, r *http.R
 func OptionsHandler(c context.Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
-
-//func MgoSessionInject(h Handler) Handler {
-//
-//	return func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-//
-//		config := utils.GetAPIServerConfig(ctx)
-//
-//		session, err := mgo.Dial(config.MgoURLs)
-//		if err != nil {
-//			HttpError(w, err.Error(), http.StatusInternalServerError)
-//			return
-//		}
-//
-//		defer func() {
-//			log.Debug("close mgo session")
-//			session.Close()
-//		}()
-//
-//		session.SetMode(mgo.Monotonic, true)
-//
-//		c := utils.PutMgoSession(ctx, session)
-//
-//		log.Debugf("ctx is %#v", c)
-//
-//		h(c, w, r)
-//
-//	}
-//}
-//
-//func RedisClientInject(h Handler) Handler {
-//	return func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-//		config := utils.GetAPIServerConfig(ctx)
-//
-//		client := redis.NewClient(&redis.Options{
-//			Addr:     config.RedisAddr,
-//			Password: "", // no password set
-//			DB:       0,  // use default DB
-//		})
-//
-//		_, err := client.Ping().Result()
-//		if err != nil {
-//			HttpError(w, err.Error(), http.StatusInternalServerError)
-//			return
-//		}
-//
-//		defer func() {
-//			log.Debugf("close the redis client %#v", client)
-//			client.Close()
-//		}()
-//
-//		c := utils.PutRedisClient(ctx, client)
-//		h(c, w, r)
-//	}
-//}

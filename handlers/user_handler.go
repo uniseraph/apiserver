@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
-	 "github.com/zanecloud/apiserver/types"
+	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -22,7 +22,7 @@ func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	var (
-		pass = r.Form.Get("pass")
+		pass = r.Form.Get("Pass")
 		name = mux.Vars(r)["name"]
 	)
 
@@ -31,14 +31,16 @@ func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mgoSession, err := utils.GetMgoSession(ctx)
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	defer mgoSession.Close()
+
 	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
 
-	logrus.Debugf("getUserLogoin::name is %s , pass is %s", name, pass)
+	logrus.Debugf("getUserLogoin::name is %s ", name)
 	result := types.User{}
 	if err := mgoSession.DB(mgoDB).C("user").Find(bson.M{"name": name}).One(&result); err != nil {
 		HttpError(w, err.Error(), http.StatusNotFound)
@@ -46,7 +48,7 @@ func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	logrus.Debugf("getUserLogin::get the user %#v", result)
-	if result.Pass != pass {
+	if result.Pass != utils.Md5(pass) {
 		HttpError(w, "pass is error", http.StatusUnauthorized)
 		return
 	}
@@ -64,11 +66,14 @@ func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	uid_cookie := &http.Cookie{
 		Name:     "uid",
-		Value:    result.Id.String(),
+		Value:    result.Id.Hex(),
 		Path:     "/",
 		HttpOnly: false,
 		MaxAge:   600,
 	}
+
+	logrus.Debugf("getUserLogin::get the cookie %#v", uid_cookie)
+
 	http.SetCookie(w, uid_cookie)
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "ok")
@@ -87,7 +92,7 @@ func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	var (
 		name = r.Form.Get("Name")
-		pass = r.Form.Get("pass")
+		pass = r.Form.Get("Pass")
 	)
 
 	req := UsersCreateRequest{}
@@ -105,17 +110,21 @@ func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 		req.Pass = pass
 	}
 
+	logrus.Debugf("the new user is %#v", req)
+
 	if req.Name == "" || req.Pass == "" {
-		HttpError(w, "name and pass cant be empty", http.StatusBadRequest)
+		HttpError(w, "name or pass cant be empty", http.StatusBadRequest)
 		return
 	}
 
-	mgoSession, err := utils.GetMgoSession(ctx)
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
 	if err != nil {
 		//走不到这里的,ctx中必然有mgoSesson
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	defer mgoSession.Close()
+
 	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
 
 	c := mgoSession.DB(mgoDB).C("user")
@@ -133,87 +142,42 @@ func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 	}
 
 	//创建用户时候，可以分配角色
-	if err := c.Insert(&types.User{Name: req.Name,
-		Id:                              bson.NewObjectId(),
-		Pass:                            req.Pass,
-		Email:                           req.Email,
-		Comments:                        req.Comments,
-		RoleSet:                         req.RoleSet,
-		CreatedTime:  					 time.Now().Unix(),
-	}); err != nil {
+	user := &types.User{Name: req.Name,
+		Id:          bson.NewObjectId(),
+		Pass:        utils.Md5(req.Pass),
+		Email:       req.Email,
+		Comments:    req.Comments,
+		RoleSet:     req.RoleSet,
+		CreatedTime: time.Now().Unix(),
+		Tel:         req.Tel,
+	}
+	if err := c.Insert(user); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-
-	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "{%q:%q}", "Name", req.Name)
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "{%q:%q}", "Id", user.Id.Hex())
 }
 
-func getTeamJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
-	name := mux.Vars(r)["name"]
-
-	mgoSession, err := utils.GetMgoSessionClone(ctx)
-	if err != nil {
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	defer mgoSession.Close()
-	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
-
-	c := mgoSession.DB(mgoDB).C("team")
-
-	result := types.Team{}
-	if err := c.Find(bson.M{"name": name}).One(&result); err != nil {
-
-		if err == mgo.ErrNotFound {
-			// 对错误类型进行区分，有可能只是没有这个team，不应该用500错误
-			HttpError(w, err.Error(), http.StatusNotFound)
-			return
-		}
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
-
+type UserResetPassRequest struct {
+	Id      string
+	NewPass string
 }
 
-type TeamsCreateRequest struct {
-	types.Team
-}
+//"/users/{id:.*}/reset"
+func postUserResetPass(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
-func postTeamsCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["name"]
 
-	if err := r.ParseForm(); err != nil {
-		HttpError(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var (
-		name = r.Form.Get("name")
-	)
-
-	req := TeamsCreateRequest{}
-
+	req := UserResetPassRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		HttpError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if name != "" {
-		req.Name = name
-	}
-
-	if req.Name == "" {
-		HttpError(w, "The team's name cant be empty", http.StatusBadRequest)
-		return
-	}
-
 	mgoSession, err := utils.GetMgoSessionClone(ctx)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
@@ -221,86 +185,36 @@ func postTeamsCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 	}
 
 	defer mgoSession.Close()
+
 	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
+	c := mgoSession.DB(mgoDB).C("user")
 
-	c := mgoSession.DB(mgoDB).C("team")
+	if err := c.Update(bson.M{"_id": bson.ObjectIdHex(id)}, bson.M{"$set": bson.M{"pass": utils.Md5(req.NewPass)}}); err != nil {
+		if err == mgo.ErrNotFound {
+			HttpError(w, err.Error(), http.StatusNotFound)
+			return
+		}
 
-	n, err := c.Find(bson.M{"Name": req.Name}).Count()
-	if err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	if n != 0 {
-		HttpError(w, err.Error(), http.StatusConflict)
-		return
-	}
-
-	team := &types.Team{
-		Name:        req.Name,
-		Id:          bson.NewObjectId(),
-		Description: req.Description,
-		Leader: types.Leader{
-			Id:   req.Leader.Id,
-			Name: req.Leader.Name,
-		},
-	}
-	if err := c.Insert(team); err != nil {
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
 
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "{%q:%q}", "Id", team.Id)
-}
-
-type TeamJoinRequest struct {
-}
-
-// 一批用户加入某个team
-func postTeamJoin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-
-	//不用teamId，
-	//name := mux.Vars("name")
-
-	mgoSession, err := utils.GetMgoSessionClone(ctx)
-	if err != nil {
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer mgoSession.Close()
 
 }
 
-func postUserRoleSet(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-
-}
-
-func postTeamAppoint(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-
-}
-func postTeamRemove(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-
-}
-
-func getTeamsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-
-}
 
 
 func getUserInspect(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	id := mux.Vars(r)["id"]
 
-	mgoSession , err := utils.GetMgoSessionClone(ctx)
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
 	if err != nil {
-		HttpError(w, err.Error() , http.StatusInternalServerError)
+		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer mgoSession.Close()
-
 
 	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
 
@@ -308,17 +222,19 @@ func getUserInspect(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	result := types.User{}
 
-	if err := c.Find( bson.M{ "$or": []bson.M{ bson.M{"name":id}, bson.M{"_id": bson.ObjectIdHex(id) } }}    ).One(&result) ; err!=nil {
+	if err := c.Find(bson.M{"$or": []bson.M{bson.M{"_id": bson.ObjectIdHex(id)}}}).One(&result); err != nil {
 
 		if err == mgo.ErrNotFound {
-			HttpError(w, fmt.Sprintf("no such a user name or id is %s", id) , http.StatusNotFound)
+			HttpError(w, fmt.Sprintf("no such a user name or id is %s", id), http.StatusNotFound)
 			return
 		}
 
-		HttpError(w,err.Error(),http.StatusInternalServerError)
+		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	//pass不要输出
+	result.Pass = ""
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -328,11 +244,40 @@ func getUserInspect(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 func getUsersJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
-}
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer mgoSession.Close()
 
+	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
+
+	c := mgoSession.DB(mgoDB).C("user")
+
+	var results []types.User
+	if err := c.Find(bson.M{}).All(&results); err != nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	for i, _ := range results {
+		results[i].Pass = ""
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(results)
+
+}
 
 func postUserRemove(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 }
+func postUserJoin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
+}
+func postUserQuit(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+}
 
