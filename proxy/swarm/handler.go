@@ -15,7 +15,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/handlers"
-	"github.com/zanecloud/apiserver/store"
+	store "github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"io"
 	"net"

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/zanecloud/apiserver/proxy"
-	"github.com/zanecloud/apiserver/store"
+	store "github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"net"
 	"net/http"

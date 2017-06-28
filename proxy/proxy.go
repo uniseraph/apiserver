@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
-	"github.com/zanecloud/apiserver/store"
+	"github.com/zanecloud/apiserver/types"
 )
 
 var driver2FactoryFunc = make(map[string]FactoryFunc)
@@ -15,11 +15,11 @@ type StartProxyOpts struct {
 type Proxy interface {
 	Start(opts *StartProxyOpts) error
 	Stop() error
-	Pool() *store.PoolInfo
+	Pool() *types.PoolInfo
 	Endpoint() string
 }
 
-type FactoryFunc func(c context.Context, p *store.PoolInfo) (Proxy, error)
+type FactoryFunc func(c context.Context, p *types.PoolInfo) (Proxy, error)
 
 func Register(driver string, ff FactoryFunc) {
 
@@ -27,12 +27,11 @@ func Register(driver string, ff FactoryFunc) {
 		logrus.Warnf("ignore dup proxy driver %s , ", driver)
 		return
 	}
-
 	driver2FactoryFunc[driver] = ff
 
 }
 
-func NewProxyInstaces(ctx context.Context, poolInfo *store.PoolInfo, n int) ([]Proxy, error) {
+func NewProxyInstaces(ctx context.Context, poolInfo *types.PoolInfo, n int) ([]Proxy, error) {
 
 	ff, ok := driver2FactoryFunc[poolInfo.Driver]
 	if !ok {
@@ -63,7 +62,7 @@ func NewProxyInstaces(ctx context.Context, poolInfo *store.PoolInfo, n int) ([]P
 
 }
 
-func NewProxyInstanceAndStart(ctx context.Context, poolInfo *store.PoolInfo) (Proxy, error) {
+func NewProxyInstanceAndStart(ctx context.Context, poolInfo *types.PoolInfo) (Proxy, error) {
 
 	ff, ok := driver2FactoryFunc[poolInfo.Driver]
 	if !ok {

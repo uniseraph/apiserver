@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
-	"github.com/zanecloud/apiserver/store"
+	 "github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -39,7 +39,7 @@ func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
 
 	logrus.Debugf("getUserLogoin::name is %s , pass is %s", name, pass)
-	result := store.User{}
+	result := types.User{}
 	if err := mgoSession.DB(mgoDB).C("user").Find(bson.M{"name": name}).One(&result); err != nil {
 		HttpError(w, err.Error(), http.StatusNotFound)
 		return
@@ -75,7 +75,7 @@ func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 }
 
 type UsersCreateRequest struct {
-	store.User
+	types.User
 }
 
 func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -86,7 +86,7 @@ func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 	}
 
 	var (
-		name = r.Form.Get("name")
+		name = r.Form.Get("Name")
 		pass = r.Form.Get("pass")
 	)
 
@@ -120,25 +120,26 @@ func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	c := mgoSession.DB(mgoDB).C("user")
 
-	//TODO mongodb需要在user.name有唯一性索引
-	n, err := c.Find(bson.M{"Name": req.Name}).Count()
+	// mongodb需要在user.name有唯一性索引
+	n, err := c.Find(bson.M{"name": req.Name}).Count()
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if n != 0 {
-		HttpError(w, err.Error(), http.StatusConflict)
+		HttpError(w, "the user name is conflict", http.StatusConflict)
 		return
 	}
 
 	//创建用户时候，可以分配角色
-	if err := c.Insert(&store.User{Name: req.Name,
-		Id:       bson.NewObjectId(),
-		Pass:     req.Pass,
-		Mail:     req.Mail,
-		Comments: req.Comments,
-		RoleSet:  req.RoleSet,
+	if err := c.Insert(&types.User{Name: req.Name,
+		Id:                              bson.NewObjectId(),
+		Pass:                            req.Pass,
+		Email:                           req.Email,
+		Comments:                        req.Comments,
+		RoleSet:                         req.RoleSet,
+		CreatedTime:  					 time.Now().Unix(),
 	}); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -165,7 +166,7 @@ func getTeamJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	c := mgoSession.DB(mgoDB).C("team")
 
-	result := store.Team{}
+	result := types.Team{}
 	if err := c.Find(bson.M{"name": name}).One(&result); err != nil {
 
 		if err == mgo.ErrNotFound {
@@ -183,9 +184,7 @@ func getTeamJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 }
 
 type TeamsCreateRequest struct {
-	Name       string
-	Describe   string
-	DirectorId string
+	types.Team
 }
 
 func postTeamsCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -237,11 +236,14 @@ func postTeamsCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := c.Insert(&store.Team{
-		Name:       req.Name,
-		Id:         bson.NewObjectId(),
-		Describe:   req.Describe,
-		DirectorId: req.DirectorId,
+	if err := c.Insert(&types.Team{
+		Name:        req.Name,
+		Id:          bson.NewObjectId(),
+		Description: req.Description,
+		Leader : types.Leader {
+			Id : req.Leader.Id,
+			Name: req.Leader.Name,
+		} ,
 	}); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -12,7 +12,7 @@ import (
 	"github.com/zanecloud/apiserver/handlers"
 	"github.com/zanecloud/apiserver/proxy"
 	_ "github.com/zanecloud/apiserver/proxy/swarm"
-	"github.com/zanecloud/apiserver/store"
+	store "github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"

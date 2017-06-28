@@ -5,7 +5,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/go-redis/redis"
 	"github.com/pkg/errors"
-	"github.com/zanecloud/apiserver/store"
+	store "github.com/zanecloud/apiserver/types"
 	"gopkg.in/mgo.v2"
 )
 
@@ -24,6 +24,16 @@ const KEY_POOL_CLIENT = "pool.client"
 const KEY_LISTENER_ADDR = "addr"
 const KEY_LISTENER_PORT = "port"
 const KEY_APISERVER_CONFIG = "apiserver.config"
+
+
+const (
+	ROLESET_DEFAULT = 0
+	ROLESET_ALL     = 1<<63 - 1
+
+	ROLESET_NORMAL   = 1      //普通员工
+	ROLESET_APPADMIN = 1 << 1 //应用管理员
+	ROLESET_SYSADMIN = 1 << 2 //系统管理员
+)
 
 func GetAPIServerConfig(ctx context.Context) *store.APIServerConfig {
 	config, ok := ctx.Value(KEY_APISERVER_CONFIG).(*store.APIServerConfig)
