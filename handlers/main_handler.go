@@ -9,24 +9,38 @@ import (
 	"gopkg.in/mgo.v2"
 )
 
+type  ResponseBody struct {
+	Code    int
+	Message string
+}
+
 
 var routes = map[string]map[string]Handler{
 	"HEAD": {},
-	"GET": {
+	"GET":  {},
+	"POST": {
 		"/pools/{name:.*}/inspect": getPoolJSON,
-		"/teams/{name:.*}/inspect": getTeamJSON,
-
+		"/pools/register":          postPoolsRegister,
 		"/pools/ps":                getPoolsJSON,
 		"/pools/json":              getPoolsJSON,
-		"/users/{name:.*}/login":   getUserLogin,
-	},
-	"POST": {
-		"/pools/register":         postPoolsRegister,
-		"/users/create":           postUsersCreate,
-		"/users/{name:*}/roles":   postUserRoleSet,
-		"/teams/create":           postTeamsCreate,
-		"/teams/{name:.*}/join":   postTeamJoin,
-		"/teams/{name:*}/appoint": postTeamAppoint,
+
+		"/users/{name:.*}/login":    getUserLogin,
+		"/users/create":             postUsersCreate,
+		"/users/{name:.*}/inspect":  getUserInspect,
+		"/users/{name:.*}/detail":  getUserInspect,
+		"/users/ps":		     getUsersJSON,
+		"/users/list":		     getUsersJSON,
+		"/users/{name:.*}/roles":    postUserRoleSet,
+		"/users/{name:.*}/remove":   postUserRemove,
+
+
+		"/teams/{name:.*}/inspect": getTeamJSON,
+		"/teams/ps":                getTeamsJSON,
+		"/teams/list":              getTeamsJSON,
+		"/teams/create":            postTeamsCreate,
+		"/teams/{name:.*}/join":    postTeamJoin,
+		"/teams/{name:.*}/appoint":  postTeamAppoint,
+		"/teams/{name:.*}/remove" :  postTeamRemove ,
 	},
 	"PUT":    {},
 	"DELETE": {},

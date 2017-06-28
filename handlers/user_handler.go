@@ -8,10 +8,10 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/zanecloud/apiserver/store"
 	"github.com/zanecloud/apiserver/utils"
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
 	"time"
-	"gopkg.in/mgo.v2"
 )
 
 func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -127,7 +127,7 @@ func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if n!=0 {
+	if n != 0 {
 		HttpError(w, err.Error(), http.StatusConflict)
 		return
 	}
@@ -154,8 +154,7 @@ func getTeamJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	name := mux.Vars(r)["name"]
 
-
-	mgoSession , err  := utils.GetMgoSessionClone(ctx)
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -165,7 +164,6 @@ func getTeamJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
 
 	c := mgoSession.DB(mgoDB).C("team")
-
 
 	result := store.Team{}
 	if err := c.Find(bson.M{"name": name}).One(&result); err != nil {
@@ -184,15 +182,13 @@ func getTeamJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 }
 
-
 type TeamsCreateRequest struct {
-	Name        string
-	Describe    string
-	DirectorId  string
+	Name       string
+	Describe   string
+	DirectorId string
 }
 
 func postTeamsCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-
 
 	if err := r.ParseForm(); err != nil {
 		HttpError(w, err.Error(), http.StatusBadRequest)
@@ -205,25 +201,21 @@ func postTeamsCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	req := TeamsCreateRequest{}
 
-
-
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		HttpError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-
 	if name != "" {
 		req.Name = name
 	}
-
 
 	if req.Name == "" {
 		HttpError(w, "The team's name cant be empty", http.StatusBadRequest)
 		return
 	}
 
-	mgoSession , err  := utils.GetMgoSessionClone(ctx)
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -231,7 +223,6 @@ func postTeamsCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	defer mgoSession.Close()
 	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
-
 
 	c := mgoSession.DB(mgoDB).C("team")
 
@@ -241,16 +232,15 @@ func postTeamsCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if n!=0 {
+	if n != 0 {
 		HttpError(w, err.Error(), http.StatusConflict)
 		return
 	}
 
-
 	if err := c.Insert(&store.Team{
-		Name: req.Name,
-		Id:       bson.NewObjectId(),
-		Describe: req.Describe ,
+		Name:       req.Name,
+		Id:         bson.NewObjectId(),
+		Describe:   req.Describe,
 		DirectorId: req.DirectorId,
 	}); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
@@ -263,35 +253,50 @@ func postTeamsCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 	fmt.Fprintf(w, "{%q:%q}", "Name", req.Name)
 }
 
-
-
 type TeamJoinRequest struct {
-
 }
 
 // 一批用户加入某个team
-func postTeamJoin(ctx context.Context, w http.ResponseWriter, r *http.Request)   {
+func postTeamJoin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	//不用teamId，
 	//name := mux.Vars("name")
 
-	mgoSession , err := utils.GetMgoSessionClone(ctx)
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer mgoSession.Close()
 
-
-
 }
-
-
 
 func postUserRoleSet(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 }
 
-func postTeamAppoint (ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func postTeamAppoint(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 }
+func postTeamRemove(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+}
+
+func getTeamsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+}
+
+func getUserInspect(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+}
+
+func getUsersJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+}
+
+
+func postUserRemove(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+}
+
+

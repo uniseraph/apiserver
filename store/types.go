@@ -42,9 +42,9 @@ const (
 	ROLESET_DEFAULT = 0
 	ROLESET_ALL     = 1<<63 - 1
 
-	ROLESET_NORMAL = 1 //普通员工
-	ROLESET_APPADMIN = 1<<1 //应用管理员
-	ROLESET_SYSADMIN = 1<<2 //系统管理员
+	ROLESET_NORMAL   = 1      //普通员工
+	ROLESET_APPADMIN = 1 << 1 //应用管理员
+	ROLESET_SYSADMIN = 1 << 2 //系统管理员
 )
 
 type User struct {
@@ -56,10 +56,9 @@ type User struct {
 	Comments string `json:",omitempty"`
 }
 
-
 type Team struct {
-	Id          bson.ObjectId "_id"
-	Name        string
-	Describe    string
-	DirectorId  string
+	Id         bson.ObjectId "_id"
+	Name       string
+	Describe   string
+	DirectorId string
 }
