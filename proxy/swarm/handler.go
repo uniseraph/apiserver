@@ -255,12 +255,10 @@ func hijack(tlsConfig *tls.Config, endpoint string, w http.ResponseWriter, r *ht
 
 type Handler func(c context.Context, w http.ResponseWriter, r *http.Request)
 
-
 func setupPrimaryRouter(r *mux.Router, ctx context.Context, rs map[string]map[string]Handler) {
 	for method, mappings := range rs {
 		for route, fct := range mappings {
 			logrus.WithFields(logrus.Fields{"method": method, "route": route}).Debug("Registering HTTP route")
-
 
 			localRoute := route
 			localFct := fct
@@ -355,11 +353,9 @@ func getDockerClient(ctx context.Context) (dockerclient.APIClient, error) {
 	return client, nil
 }
 
-
 func httpError(w http.ResponseWriter, err string, status int) {
-	utils.HttpError(w,err,status)
+	utils.HttpError(w, err, status)
 }
-
 
 type ContainerCreateConfig struct {
 	container.Config

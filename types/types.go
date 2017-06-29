@@ -4,17 +4,17 @@ import (
 	"crypto/tls"
 	"github.com/docker/go-connections/tlsconfig"
 	"gopkg.in/mgo.v2/bson"
-
+	"math"
 )
 
-
 const (
-	ROLESET_DEFAULT = 0
+	ROLESET_DEFAULT = math.MaxUint64
 
 	ROLESET_NORMAL   = 1      //普通员工
 	ROLESET_APPADMIN = 1 << 1 //应用管理员
 	ROLESET_SYSADMIN = 1 << 2 //系统管理员
 )
+
 type APIServerConfig struct {
 	MgoDB     string
 	MgoURLs   string
@@ -48,9 +48,9 @@ type PoolInfo struct {
 type Roleset uint64
 
 type User struct {
-	Id          bson.ObjectId "_id"
-	Name        string
-	Pass        string `json:",omitempty"`
+	Id   bson.ObjectId "_id"
+	Name string
+	Pass string `json:",omitempty"`
 	//Pass        string
 	RoleSet     Roleset
 	Email       string
@@ -70,7 +70,6 @@ type Team struct {
 	Description string
 	Leader      Leader
 }
-
 
 type TeamUser struct {
 	UserId string
