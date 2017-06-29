@@ -18,37 +18,54 @@ type ResponseBody struct {
 	Message string
 }
 
-
+type MyHandler struct {
+	h Handler
+	roleset types.Roleset
+}
 
 
 var routes = map[string]map[string]Handler{
 	"HEAD": {},
-	"GET":  {},
+	"GET":  {
+		"/users/{name:.*}/login":   getUserLogin,
+		"/users/{id:.*}/inspect":   checkUserPermission(getUserInspect,types.ROLESET_NORMAL | types.ROLESET_SYSADMIN),
+		"/users/{id:.*}/detail":    checkUserPermission(getUserInspect,types.ROLESET_NORMAL |  types.ROLESET_SYSADMIN),
+		"/users/ps":                checkUserPermission(getUsersJSON,types.ROLESET_NORMAL | types.ROLESET_SYSADMIN),
+		"/users/list":              checkUserPermission(getUsersJSON,types.ROLESET_NORMAL |  types.ROLESET_SYSADMIN),
+		"/users/current":           getUserCurrent,
+
+		"/teams/{name:.*}/inspect": checkUserPermission(getTeamJSON,types.ROLESET_NORMAL |  types.ROLESET_SYSADMIN),
+		"/teams/ps":                checkUserPermission(getTeamsJSON,types.ROLESET_NORMAL | types.ROLESET_SYSADMIN),
+		"/teams/list":              checkUserPermission(getTeamsJSON,types.ROLESET_NORMAL | types.ROLESET_SYSADMIN),
+
+	},
 	"POST": {
-		"/pools/{name:.*}/inspect": checkUserPermission(getPoolJSON,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN ),
+		"/pools/{id:.*}/inspect": checkUserPermission(getPoolJSON,types.ROLESET_NORMAL | types.ROLESET_SYSADMIN ),
 		"/pools/register":          checkUserPermission(postPoolsRegister,types.ROLESET_SYSADMIN),
-		"/pools/ps":                checkUserPermission(getPoolsJSON,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN),
-		"/pools/json":              checkUserPermission(getPoolsJSON,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN),
+		"/pools/ps":                checkUserPermission(getPoolsJSON,types.ROLESET_NORMAL |  types.ROLESET_SYSADMIN),
+		"/pools/json":              checkUserPermission(getPoolsJSON,types.ROLESET_NORMAL |  types.ROLESET_SYSADMIN),
 
 		"/users/{name:.*}/login":   getUserLogin,
+		"/users/current":           getUserCurrent,
 		"/users/create":            checkUserPermission(postUsersCreate,types.ROLESET_SYSADMIN),
-		"/users/{id:.*}/inspect":   checkUserPermission(getUserInspect,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN),
-		"/users/{id:.*}/detail":    checkUserPermission(getUserInspect,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN),
-		"/users/ps":                checkUserPermission(getUsersJSON,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN),
-		"/users/list":              checkUserPermission(getUsersJSON,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN),
+		"/users/{id:.*}/inspect":   checkUserPermission(getUserInspect,types.ROLESET_NORMAL |  types.ROLESET_SYSADMIN),
+		"/users/{id:.*}/detail":    checkUserPermission(getUserInspect,types.ROLESET_NORMAL |  types.ROLESET_SYSADMIN),
+		"/users/ps":                checkUserPermission(getUsersJSON,types.ROLESET_NORMAL |  types.ROLESET_SYSADMIN),
+		"/users/list":              checkUserPermission(getUsersJSON,types.ROLESET_NORMAL | types.ROLESET_SYSADMIN),
 		"/users/{id:.*}/resetpass": checkUserPermission(postUserResetPass,types.ROLESET_SYSADMIN),
-		"/users/{name:.*}/remove":  checkUserPermission(postUserRemove,types.ROLESET_SYSADMIN),
-		"/users/{name:.*}/join":    checkUserPermission(postUserJoin, types.ROLESET_SYSADMIN | types.ROLESET_APPADMIN ),
-		"/users/{name:.*}/quit":    checkUserPermission(postUserQuit, types.ROLESET_SYSADMIN | types.ROLESET_APPADMIN ),
+		"/users/{id:.*}/remove":    checkUserPermission(postUserRemove,types.ROLESET_SYSADMIN),
+		"/users/{id:.*}/update":     checkUserPermission(postUserUpdate,types.ROLESET_SYSADMIN |  types.ROLESET_NORMAL),
+		"/users/{id:.*}/join":    checkUserPermission(postUserJoin, types.ROLESET_SYSADMIN  ),
+		"/users/{id:.*}/quit":    checkUserPermission(postUserQuit, types.ROLESET_SYSADMIN  ),
 
-		"/teams/{name:.*}/inspect": checkUserPermission(getTeamJSON,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN),
-		"/teams/ps":                checkUserPermission(getTeamsJSON,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN),
-		"/teams/list":              checkUserPermission(getTeamsJSON,types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN),
-		"/teams/create":            checkUserPermission(postTeamsCreate,types.ROLESET_SYSADMIN),
-
-		"/teams/{name:.*}/appoint": checkUserPermission(postTeamAppoint,types.ROLESET_SYSADMIN),
-
-		"/teams/{name:.*}/remove":  checkUserPermission(postTeamRemove,types.ROLESET_SYSADMIN),
+		"/teams/{name:.*}/inspect": checkUserPermission(getTeamJSON,types.ROLESET_NORMAL |  types.ROLESET_SYSADMIN),
+		"/teams/ps":                checkUserPermission(getTeamsJSON,types.ROLESET_NORMAL | types.ROLESET_SYSADMIN),
+		"/teams/list":              checkUserPermission(getTeamsJSON,types.ROLESET_NORMAL | types.ROLESET_SYSADMIN),
+		"/teams/create":            checkUserPermission(postTeamsCreate,types.ROLESET_SYSADMIN ),
+		"/teams/{id:.*}/update":     checkUserPermission(postTeamUpdate,types.ROLESET_SYSADMIN ) ,
+		"/teams/{id:.*}/appoint": checkUserPermission(postTeamAppoint,types.ROLESET_SYSADMIN),
+		"/teams/{id:.*}/revoke": checkUserPermission(postTeamRevoke,types.ROLESET_SYSADMIN),
+		"/teams/{id:.*}/remove":  checkUserPermission(postTeamRemove,types.ROLESET_SYSADMIN),
 	},
 	"PUT":    {},
 	"DELETE": {},
@@ -58,15 +75,24 @@ var routes = map[string]map[string]Handler{
 }
 
 
+func checkUserPermission1(h Handler , roleset types.Roleset) Handler {
 
-func checkUserPermission(handler Handler , roleset types.Roleset) Handler {
+	wrap := func(ctx context.Context, w http.ResponseWriter, r *http.Request){
+
+		h(ctx,w,r)
+	}
+	return wrap
+}
+
+
+func checkUserPermission(h Handler , roleset types.Roleset) Handler {
 
 
 	wrap := func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 		cookie, err := r.Cookie("uid")
 		if err != nil {
-			HttpError(w, "please login", http.StatusUnauthorized)
+			HttpError(w, "please login", http.StatusForbidden)
 			return
 		}
 
@@ -103,6 +129,11 @@ func checkUserPermission(handler Handler , roleset types.Roleset) Handler {
 			HttpError(w, "no permission", http.StatusMethodNotAllowed)
 			return
 		}
+
+		c1 := utils.PutCurrentUser(ctx,&result)
+
+		h(c1,w,r)
+
 
 	}
 

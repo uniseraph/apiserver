@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"github.com/docker/go-connections/tlsconfig"
 	"gopkg.in/mgo.v2/bson"
+
 )
 
 
@@ -50,6 +51,7 @@ type User struct {
 	Id          bson.ObjectId "_id"
 	Name        string
 	Pass        string `json:",omitempty"`
+	//Pass        string
 	RoleSet     Roleset
 	Email       string
 	Tel         string
@@ -67,4 +69,10 @@ type Team struct {
 	Name        string
 	Description string
 	Leader      Leader
+}
+
+
+type TeamUser struct {
+	UserId string
+	TeamId string
 }

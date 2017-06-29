@@ -24,10 +24,8 @@ const KEY_POOL_CLIENT = "pool.client"
 const KEY_LISTENER_ADDR = "addr"
 const KEY_LISTENER_PORT = "port"
 const KEY_APISERVER_CONFIG = "apiserver.config"
+const KEY_CURRENT_USER = "user.self"
 
-const (
-
-)
 
 func GetAPIServerConfig(ctx context.Context) *store.APIServerConfig {
 	config, ok := ctx.Value(KEY_APISERVER_CONFIG).(*store.APIServerConfig)
@@ -42,6 +40,20 @@ func GetAPIServerConfig(ctx context.Context) *store.APIServerConfig {
 func PutAPIServerConfig(ctx context.Context, config *store.APIServerConfig) context.Context {
 	return context.WithValue(ctx, KEY_APISERVER_CONFIG, config)
 }
+
+func PutCurrentUser(ctx context.Context, user *store.User)context.Context {
+	return context.WithValue(ctx,KEY_CURRENT_USER,user)
+}
+func GetCurrentUser(ctx context.Context) (*store.User, error) {
+	user, ok := ctx.Value(KEY_CURRENT_USER).(*store.User)
+	if !ok {
+		logrus.Errorf("can't get redisClient by %s", KEY_REDIS_CLIENT)
+		return nil, errors.New("can't get redisClient")
+	}
+
+	return user, nil
+}
+
 
 func getMgoSession(ctx context.Context) (*mgo.Session, error) {
 	session, ok := ctx.Value(KEY_MGO_SESSION).(*mgo.Session)

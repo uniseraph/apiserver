@@ -14,7 +14,7 @@ import (
 )
 
 func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	name := mux.Vars(r)["name"]
+	id := mux.Vars(r)["id"]
 
 	mgoSession, err := utils.GetMgoSessionClone(ctx)
 
@@ -31,7 +31,7 @@ func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	c := mgoSession.DB(mgoDB).C("pool")
 
 	result := store.PoolInfo{}
-	if err := c.Find(bson.M{"name": name}).One(&result); err != nil {
+	if err := c.Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&result); err != nil {
 
 		if err == mgo.ErrNotFound {
 			// 对错误类型进行区分，有可能只是没有这个pool，不应该用500错误

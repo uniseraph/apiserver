@@ -14,7 +14,6 @@ import (
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"github.com/zanecloud/apiserver/handlers"
 	store "github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"io"
@@ -36,7 +35,7 @@ var eventshandler = newEventsHandler()
 const LABEL_CPUCOUNT = "com.zanecloud.omgea.container.cpus"
 const LABEL_CPUEXCLUSIVE = "com.zanecloud.omega.container.exclusive"
 
-var routers = map[string]map[string]handlers.Handler{
+var routers = map[string]map[string]Handler{
 	"HEAD": {},
 	"GET": {
 		"/containers/{name:.*}/attach/ws": proxyHijack,
@@ -55,7 +54,7 @@ var routers = map[string]map[string]handlers.Handler{
 		"/containers/{name:.*}": proxyAsyncWithCallBack(deleteContainer),
 	},
 	"OPTIONS": {
-		"": handlers.OptionsHandler,
+		"": OptionsHandler,
 	},
 }
 
@@ -107,12 +106,12 @@ func deleteContainer(ctx context.Context, req *http.Request, resp *http.Response
 
 }
 
-func dockerClientInject(h handlers.Handler) handlers.Handler {
+func dockerClientInject(h Handler) Handler {
 
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		poolInfo, err := getPoolInfo(ctx)
 		if err != nil {
-			handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+			httpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -123,7 +122,7 @@ func dockerClientInject(h handlers.Handler) handlers.Handler {
 
 			tlsc, err := tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
 			if err != nil {
-				handlers.HttpError(w, err.Error(), http.StatusBadRequest)
+				httpError(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 
@@ -138,7 +137,7 @@ func dockerClientInject(h handlers.Handler) handlers.Handler {
 		cli, err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint, poolInfo.DriverOpts.APIVersion, client, nil)
 		defer cli.Close()
 		if err != nil {
-			handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+			httpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -160,7 +159,7 @@ func proxyHijack(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	if poolInfo.DriverOpts.TlsConfig != nil {
 		tlsConfig, err = tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
 		if err != nil {
-			handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+			httpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	} else {
@@ -168,7 +167,7 @@ func proxyHijack(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := hijack(tlsConfig, poolInfo.DriverOpts.EndPoint, w, r); err != nil {
-		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+		httpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -254,6 +253,30 @@ func hijack(tlsConfig *tls.Config, endpoint string, w http.ResponseWriter, r *ht
 	return nil
 }
 
+type Handler func(c context.Context, w http.ResponseWriter, r *http.Request)
+
+
+func setupPrimaryRouter(r *mux.Router, ctx context.Context, rs map[string]map[string]Handler) {
+	for method, mappings := range rs {
+		for route, fct := range mappings {
+			logrus.WithFields(logrus.Fields{"method": method, "route": route}).Debug("Registering HTTP route")
+
+
+			localRoute := route
+			localFct := fct
+			wrap := func(w http.ResponseWriter, r *http.Request) {
+				logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI}).Debug("HTTP request received")
+
+				localFct(ctx, w, r)
+			}
+			localMethod := method
+
+			r.Path("/v{version:[0-9.]+}" + localRoute).Methods(localMethod).HandlerFunc(wrap)
+			r.Path(localRoute).Methods(localMethod).HandlerFunc(wrap)
+		}
+	}
+}
+
 func NewHandler(ctx context.Context) (http.Handler, error) {
 
 	config := utils.GetAPIServerConfig(ctx)
@@ -269,7 +292,7 @@ func NewHandler(ctx context.Context) (http.Handler, error) {
 
 	r := mux.NewRouter()
 
-	handlers.SetupPrimaryRouter(r, c1, routers)
+	setupPrimaryRouter(r, c1, routers)
 
 	poolInfo, _ := getPoolInfo(c1)
 
@@ -279,7 +302,7 @@ func NewHandler(ctx context.Context) (http.Handler, error) {
 			"uri": req.RequestURI,
 			"pool backend endpoint": poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in rootwrap")
 		if err := proxyAsync(ctx, w, req, nil); err != nil {
-			handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+			httpError(w, err.Error(), http.StatusInternalServerError)
 		}
 	}
 	r.Path("/v{version:[0-9.]+}" + "/").HandlerFunc(rootwrap)
@@ -289,7 +312,7 @@ func NewHandler(ctx context.Context) (http.Handler, error) {
 	return r, nil
 }
 
-func proxyAsyncWithCallBack(callback func(context.Context, *http.Request, *http.Response)) handlers.Handler {
+func proxyAsyncWithCallBack(callback func(context.Context, *http.Request, *http.Response)) Handler {
 
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
@@ -298,7 +321,7 @@ func proxyAsyncWithCallBack(callback func(context.Context, *http.Request, *http.
 		}
 
 		if err := proxyAsync(ctx, w, r, f); err != nil {
-			handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+			httpError(w, err.Error(), http.StatusInternalServerError)
 		}
 
 	}
@@ -332,6 +355,12 @@ func getDockerClient(ctx context.Context) (dockerclient.APIClient, error) {
 	return client, nil
 }
 
+
+func httpError(w http.ResponseWriter, err string, status int) {
+	utils.HttpError(w,err,status)
+}
+
+
 type ContainerCreateConfig struct {
 	container.Config
 	HostConfig       container.HostConfig
@@ -352,7 +381,7 @@ func validImage(_imageName string) error {
 }
 func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		handlers.HttpError(w, err.Error(), http.StatusBadRequest)
+		httpError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -362,19 +391,19 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 	)
 
 	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
-		handlers.HttpError(w, err.Error(), http.StatusBadRequest)
+		httpError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	logrus.Debug("check image valid")
 
 	if err := validImage(config.Image); err != nil {
-		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+		httpError(w, err.Error(), http.StatusInternalServerError)
 	}
 
 	poolInfo, err := getPoolInfo(ctx)
 	if err != nil {
-		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+		httpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -385,7 +414,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 		tlsc, err := tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
 		if err != nil {
-			handlers.HttpError(w, err.Error(), http.StatusBadRequest)
+			httpError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -400,17 +429,17 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 	cli, err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint, poolInfo.DriverOpts.APIVersion, client, nil)
 	defer cli.Close()
 	if err != nil {
-		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+		httpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	resp, err := cli.ContainerCreate(ctx, &config.Config, &config.HostConfig, &config.NetworkingConfig, name)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "Conflict") {
-			handlers.HttpError(w, err.Error(), http.StatusConflict)
+			httpError(w, err.Error(), http.StatusConflict)
 			return
 		} else {
-			handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+			httpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
@@ -422,7 +451,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 		//TODO 如果清理容器失败，需要记录一下日志，便于人工干预
 		cli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{Force: true})
-		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+		httpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer mgoSession.Close()
@@ -431,7 +460,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 	if err != nil {
 		//TODO 如果清理容器失败，需要记录一下日志，便于人工干预
 		cli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{Force: true})
-		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+		httpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -439,7 +468,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 		//TODO 如果清理容器失败，需要记录一下日志，便于人工干预
 		cli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{Force: true})
-		handlers.HttpError(w, err.Error(), http.StatusInternalServerError)
+		httpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -448,7 +477,9 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 	fmt.Fprintf(w, "{%q:%q}", "Id", resp.ID)
 
 }
-
+func OptionsHandler(c context.Context, w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+}
 func buildContainerInfoForSave(name string, id string, poolInfo *store.PoolInfo, config *ContainerCreateConfig) *Container {
 
 	var cpuCount int64
@@ -610,7 +641,7 @@ func closeIdleConnections(client *http.Client) {
 
 func getEvents(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		handlers.HttpError(w, err.Error(), 400)
+		httpError(w, err.Error(), 400)
 		return
 	}
 
@@ -618,7 +649,7 @@ func getEvents(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	if r.Form.Get("until") != "" {
 		u, err := strconv.ParseInt(r.Form.Get("until"), 10, 64)
 		if err != nil {
-			handlers.HttpError(w, err.Error(), 400)
+			httpError(w, err.Error(), 400)
 			return
 		}
 		until = u

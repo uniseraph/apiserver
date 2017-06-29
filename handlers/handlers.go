@@ -7,6 +7,7 @@ import (
 	"context"
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
+	"github.com/zanecloud/apiserver/utils"
 )
 
 type Handler func(c context.Context, w http.ResponseWriter, r *http.Request)
@@ -40,10 +41,6 @@ func SetupPrimaryRouter(r *mux.Router, ctx context.Context, rs map[string]map[st
 	}
 }
 
-func HttpError(w http.ResponseWriter, err string, status int) {
-	log.WithField("status", status).Errorf("HTTP error: %v", err)
-	http.Error(w, err, status)
-}
 
 func BoolValue(r *http.Request, k string) bool {
 	s := strings.ToLower(strings.TrimSpace(r.FormValue(k)))
@@ -52,9 +49,13 @@ func BoolValue(r *http.Request, k string) bool {
 
 // Default handler for methods not supported by clustering.
 func notImplementedHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	HttpError(w, "Not supported in clustering mode.", http.StatusNotImplemented)
+	utils.HttpError(w, "Not supported in clustering mode.", http.StatusNotImplemented)
 }
 
 func OptionsHandler(c context.Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
+}
+
+func HttpError(w http.ResponseWriter, err string, status int) {
+	utils.HttpError(w,err,status)
 }
