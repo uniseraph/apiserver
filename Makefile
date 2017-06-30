@@ -13,8 +13,8 @@ IMAGE_NAME     = registry.cn-hangzhou.aliyuncs.com/zanecloud/apiserver
 BUILD_IMAGE     = golang:1.8
 
 install:
-	brew install mongodb redis
-
+	brew install mongodb redis npm
+	npm install webpack -g
 
 init:
 	bash scripts/init.sh
@@ -25,6 +25,9 @@ local:
 localcli:
 	CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}"  -o ${CLI_TARGET}  client/client.go
 
+
+portal:
+	cd static && npm install && webpack
 
 build:
 	docker run --rm -v $(shell pwd):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} ${BUILD_IMAGE} make local
@@ -40,7 +43,7 @@ shell:
 	docker run -ti --rm -v $(shell pwd):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} ${BUILD_IMAGE} /bin/bash
 
 run: local
-	MONGO_URLS=127.0.0.1 MONGO_DB=zanecloud ./apiserver -l debug start
+	MONGO_URLS=127.0.0.1 MONGO_DB=zanecloud  ROOT_DIR=./static ./apiserver -l debug start
 
 compose:
 	docker-compose up -d

@@ -47,7 +47,6 @@ func main() {
 	}
 
 	fmt.Println("login success ....")
-
 	fmt.Println(string(body))
 
 
@@ -328,7 +327,7 @@ func listUser(client *http.Client   , cookies []*http.Cookie) ([]types.User ,  e
 	}
 
 	var result []types.User
-	if err := json.NewDecoder(resp.Body).Decode(result) ; err !=nil {
+	if err := json.NewDecoder(resp.Body).Decode(&result) ; err !=nil {
 		//log.Errorf("decode the users buf : %s error:%s" , string(body) , err.Error() )
 		return nil , err
 	}
