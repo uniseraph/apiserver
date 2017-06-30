@@ -153,7 +153,7 @@ func main() {
 		return
 	}
 
-	fmt.Printf("update user:%s email success....")
+	fmt.Printf("update user:%s email success....",userId)
 
 }
 
