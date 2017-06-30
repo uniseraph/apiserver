@@ -24,3 +24,4 @@ apiserver.iml
 *.exe
 .DS_Store
 client/client
+static/package-lock.json
