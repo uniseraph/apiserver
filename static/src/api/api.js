@@ -74,11 +74,43 @@ export default {
     },
 
     EnvDirs(params) {
-        return fetch('/env/dirs', params);
+        return fetch('/envs/dirs/list', params);
     },
 
-    EnvList(params) {
-        return fetch('/env/list', params);
+    CreateEnvDir(params) {
+        return fetch('/envs/dirs/create', params);
+    },
+
+    UpdateEnvDir(params) {
+        return fetch('/envs/dirs/' + params.Id + '/update', params);
+    },
+
+    RemoveEnvDir(params) {
+        return fetch('/envs/dirs/' + params.Id + '/remove', params);
+    },
+
+    EnvValues(params) {
+        return fetch('/envs/values/list', params);
+    },
+
+    EnvValue(id) {
+        return fetch('/envs/values/' + id + '/detail', params);
+    },
+
+    CreateEnvValue(params) {
+        return fetch('/envs/values/create', params);
+    },
+
+    UpdateEnvValue(params) {
+        return fetch('/envs/values/' + params.Id + '/update', params);
+    },
+
+    RemoveEnvValue(params) {
+        return fetch('/envs/values/' + params.Id + '/remove', params);
+    },
+
+    UpdateEnvValues(params) {
+        return fetch('/envs/values/update', params);
     },
 
     Teams(params) {
@@ -134,7 +166,7 @@ export default {
     },
 
     ResetPassword(params) {
-        return fetch('/users/' + params.Id + '/resetpass', params);
+        return fetch('/users/' + params.Id + '/resetpass?Pass=' + encodeURIComponent(params.Pass), params);
     }
 
 }

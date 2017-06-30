@@ -11,13 +11,14 @@
           <v-container fluid>
             <v-layout row wrap>
               <v-flex xs2>
-                <v-subheader>名称</v-subheader>
+                <v-subheader>名称<span class="required-star">*</span></v-subheader>
               </v-flex>
               <v-flex xs3>
                 <v-text-field
                   v-model="Name"
-                  required
+                  ref="Name"
                   single-line
+                   :rules="rules.Name"
                 ></v-text-field>
               </v-flex>
               <v-flex xs2>
@@ -28,7 +29,6 @@
               <v-flex xs3>
                 <v-text-field
                   v-model="Description"
-                  required
                   single-line
                 ></v-text-field>
               </v-flex>
@@ -48,7 +48,7 @@
           团队成员
           <v-spacer></v-spacer>
           <v-select
-              v-bind:items="UsersNotInTeam"
+              :items="UsersNotInTeam"
               label="请选择"
               item-text="Name"
               item-value="Id"
@@ -65,8 +65,8 @@
         </v-card-title>
         <div>
           <v-data-table
-            v-bind:headers="headers"
-            v-bind:items="UsersInTeam"
+            :headers="headers"
+            :items="UsersInTeam"
             hide-actions
             class="elevation-1"
             no-data-text=""
@@ -119,7 +119,13 @@
         ],
         UsersInTeam: [],
         UsersNotInTeam: [],
-        UserToJoin: null
+        UserToJoin: null,
+
+        rules: {
+          Name: [
+            v => (v && v.length > 0 ? true : '请输入团队名称')
+          ]
+        }
       }
     },
 
@@ -161,6 +167,14 @@
       },
 
       save() {
+        for (let f in this.$refs) {
+          let e = this.$refs[f];
+          if (e.errorBucket && e.errorBucket.length > 0) {
+            ui.alert('请正确填写团队资料');
+            return;
+          }
+        }
+
         api.UpdateTeam({
           Id: this.Id,
           Name: this.Name,

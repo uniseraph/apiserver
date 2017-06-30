@@ -12,30 +12,28 @@
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="Name" label="名称" v-model="NewPool.Name" required :rules="rules.Name"></v-text-field>
+                <v-text-field ref="Name" label="名称" v-model="NewPool.Name" :rules="rules.Name"></v-text-field>
                 <v-select
-                  v-bind:items="DriverList"
+                  :items="DriverList"
                   v-model="NewPool.Driver"
                   ref="Driver"
                   label="驱动类型"
                   dark
                   single-line
                   auto
-                  required
                   :rules="rules.Driver"
                 ></v-select>
                 <v-select
-                  v-bind:items="NetworkList"
+                  :items="NetworkList"
                   v-model="NewPool.Network"
                   ref="Network"
                   label="网络类型"
                   dark
                   single-line
                   auto
-                  required
                   :rules="rules.Network"
                 ></v-select>
-                <v-text-field ref="EndPoint" label="API地址" v-model="NewPool.EndPoint" required :rules="rules.EndPoint"></v-text-field>
+                <v-text-field ref="EndPoint" label="API地址" v-model="NewPool.EndPoint" :rules="rules.EndPoint"></v-text-field>
               </v-card-text>
             </v-card-row>
             <v-card-row actions>
@@ -64,8 +62,8 @@
         </v-dialog>
       </v-layout>
       <v-data-table
-        v-bind:headers="headers"
-        v-bind:items="items"
+        :headers="headers"
+        :items="items"
         hide-actions
         class="pools-table elevation-1"
         no-data-text=""
@@ -118,18 +116,22 @@
         DriverList: [ 'Swarm', 'Kubernetes' ],
         NetworkList: [ 'Flannel', 'VxLAN' ],
         CreatePoolDlg: false,
-        NewPool: {},
+        NewPool: { Name: '', Driver: '', Network: '', EndPoint: '' },
         RemoveConfirmDlg: false,
         SelectedPool: {},
 
         rules: {
-          NameRules: [
-            v => (v.length > 0 ? true : '请输入集群名称')
+          Name: [
+            v => (v && v.length > 0 ? true : '请输入集群名称')
           ],
-          Driver: [],
-          Network: [],
+          Driver: [
+            v => (v && v.length > 0 ? true : '请选择驱动类型')
+          ],
+          Network: [
+            v => (v && v.length > 0 ? true : '请选择网络类型')
+          ],
           EndPoint: [
-            v => (v.length > 0 ? true : '请输入集群API地址')
+            v => (v && v.length > 0 ? true : '请输入集群API地址')
           ]
         }
       }
@@ -149,6 +151,7 @@
       createPool() {
         for (let f in this.$refs) {
           let e = this.$refs[f];
+          console.log(e);
           if (e.errorBucket && e.errorBucket.length > 0) {
             return;
           }

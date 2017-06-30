@@ -11,43 +11,59 @@
           <v-container fluid>
             <v-layout row wrap>
               <v-flex xs2>
+                <v-subheader>名称</v-subheader>
+              </v-flex>
+              <v-flex xs3>
+                <v-text-field
+                  v-model="Name"
+                  ref="Name"
+                  single-line
+                  :rules="rules.Name"
+                ></v-text-field>
+              </v-flex>
+              <v-flex xs2>
+              </v-flex>
+              <v-flex xs2>
                 <v-subheader>驱动类型</v-subheader>
               </v-flex>
               <v-flex xs3>
                 <v-select
-                  v-bind:items="DriverList"
+                  :items="DriverList"
                   v-model="Driver"
+                  ref="Driver"
                   label="请选择"
                   dark
                   single-line
                   auto
-                  required
+                  :rules="rules.Driver"
                 ></v-select>
-              </v-flex>
-              <v-flex xs2>
               </v-flex>
               <v-flex xs2>
                 <v-subheader>网络类型</v-subheader>
               </v-flex>
               <v-flex xs3>
                 <v-select
-                  v-bind:items="NetworkList"
+                  :items="NetworkList"
                   v-model="Network"
+                  ref="Network"
                   label="请选择"
                   dark
                   single-line
                   auto
-                  required
+                  :rules="rules.Network"
                 ></v-select>
+              </v-flex>
+              <v-flex xs2>
               </v-flex>
               <v-flex xs2>
                 <v-subheader>API地址</v-subheader>
               </v-flex>
-              <v-flex xs10>
+              <v-flex xs3>
                 <v-text-field
                   v-model="EndPoint"
-                  required
+                  ref="EndPoint"
                   single-line
+                  :rules="rules.EndPoint"
                 ></v-text-field>
               </v-flex>
               <v-flex xs3>
@@ -80,7 +96,7 @@
               授权团队
               <v-spacer></v-spacer>
               <v-select
-                  v-bind:items="UnauthorizedTeamList"
+                  :items="UnauthorizedTeamList"
                   label="请选择"
                   item-text="Name"
                   item-value="Id"
@@ -97,7 +113,7 @@
             </v-card-title>
             <div class="auth-teams">
               <v-data-table
-                v-bind:items="AuthorizedTeamList"
+                :items="AuthorizedTeamList"
                 hide-actions
                 class="elevation-1"
                 no-data-text=""
@@ -120,7 +136,7 @@
               授权用户
               <v-spacer></v-spacer>
               <v-select
-                  v-bind:items="UnauthorizedUserList"
+                  :items="UnauthorizedUserList"
                   label="请选择"
                   item-text="Name"
                   item-value="Id"
@@ -137,7 +153,7 @@
             </v-card-title>
             <div class="auth-users">
               <v-data-table
-                v-bind:items="AuthorizedUserList"
+                :items="AuthorizedUserList"
                 hide-actions
                 class="elevation-1"
                 no-data-text=""
@@ -183,7 +199,22 @@
         UnauthorizedTeamList: [],
         UnauthorizedUserList: [],
         AuthorizeToTeam: null,
-        AuthorizeToUser: null
+        AuthorizeToUser: null,
+
+        rules: {
+          Name: [
+            v => (v && v.length > 0 ? true : '请输入集群名称')
+          ],
+          Driver: [
+            v => (v && v.length > 0 ? true : '请选择驱动类型')
+          ],
+          Network: [
+            v => (v && v.length > 0 ? true : '请选择网络类型')
+          ],
+          EndPoint: [
+            v => (v && v.length > 0 ? true : '请输入集群API地址')
+          ]
+        }
       }
     },
 
@@ -223,11 +254,20 @@
       },
 
       save() {
+        for (let f in this.$refs) {
+          let e = this.$refs[f];
+          if (e.errorBucket && e.errorBucket.length > 0) {
+            ui.alert('请正确填写集群信息');
+            return;
+          }
+        }
+
         api.UpdatePool({
           Id: this.Id,
           Name: this.Name,
           Driver: this.Driver,
-          Network: this.Network
+          Network: this.Network,
+          EndPoint: this.EndPoint
         }).then(data => {
           ui.alert('集群资料修改成功', 'success');
         })

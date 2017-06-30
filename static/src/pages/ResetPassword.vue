@@ -14,10 +14,10 @@
           <v-flex xs3>
             <v-text-field
               v-model="Password1"
+              ref="Password1"
               type="password"
-              required
               single-line
-              :rules="[() => { if (Password1.length > 0 && Password1.length < 8) return '密码至少需8位字符'; else return true; }]"
+              :rules="rules.Password1"
             ></v-text-field>
           </v-flex>
           <v-flex xs7>
@@ -28,10 +28,10 @@
           <v-flex xs3>
             <v-text-field
               v-model="Password2"
+              ref="Password2"
               type="password"
-              required
               single-line
-              :rules="[() => { if (Password2.length > 0 && Password1 != Password2) return '两次输入的密码不相同'; else return true; }]"
+              :rules="rules.Password2"
             ></v-text-field>
           </v-flex>
           <v-flex xs7>
@@ -60,7 +60,16 @@
         Id: '',
         Name: '',
         Password1: '',
-        Password2: ''
+        Password2: '',
+
+        rules: {
+          Password1: [
+            () => (this.Password1.length < 8 ? '密码至少需8位字符' : true)
+          ],
+          Password2: [
+            () => (this.Password1 != this.Password2 ? '两次输入的密码不相同' : true)
+          ]
+        }
       }
     },
 
@@ -81,13 +90,16 @@
       },
 
       save() {
-        if (this.Password1.length < 8 || this.Password1 != this.Password2) {
-          return;
+        for (let f in this.$refs) {
+          let e = this.$refs[f];
+          if (e.errorBucket && e.errorBucket.length > 0) {
+            return;
+          }
         }
 
         api.ResetPassword({
           Id: this.Id,
-          Password: this.Password1
+          Pass: this.Password1
         }).then(data => {
           ui.alert('密码修改成功', 'success');
           let that = this;

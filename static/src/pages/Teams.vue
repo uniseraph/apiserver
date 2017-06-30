@@ -12,7 +12,7 @@
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="Name" label="名称" required v-model="NewTeam.Name" :rules="rules.NameRules"></v-text-field>
+                <v-text-field ref="Name" label="名称" v-model="NewTeam.Name" :rules="rules.Name"></v-text-field>
                 <v-text-field label="描述" v-model="NewTeam.Description"></v-text-field>
               </v-card-text>
             </v-card-row>
@@ -42,8 +42,8 @@
         </v-dialog>
       </v-layout>
       <v-data-table
-        v-bind:headers="headers"
-        v-bind:items="items"
+        :headers="headers"
+        :items="items"
         hide-actions
         class="teams-table elevation-1"
         no-data-text=""
@@ -87,8 +87,8 @@
         SelectedTeam: {},
 
         rules: {
-          NameRules: [
-            v => (v.length > 0 ? true : '请输入团队名称')
+          Name: [
+            v => (v && v.length > 0 ? true : '请输入团队名称')
           ]
         }
       }
@@ -142,4 +142,9 @@
   tr:hover
     .btn
       visibility: visible
+
+.dialog
+  .input-group
+    &__details
+      min-height: 22px
 </style>

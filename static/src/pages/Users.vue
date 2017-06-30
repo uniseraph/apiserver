@@ -25,8 +25,8 @@
         </v-dialog>
       </v-layout>
       <v-data-table
-        v-bind:headers="headers"
-        v-bind:items="items"
+        :headers="headers"
+        :items="items"
         hide-actions
         class="users-table elevation-1"
         no-data-text=""
@@ -42,7 +42,7 @@
             <div v-if="props.item.RoleSet == 1">普通用户</div>
           </td>
           <td>{{ props.item.CreatedTime | formatDate }}</td>
-           <td>
+          <td>
             <router-link :to="'/user/' + props.item.Id + '/password'">
               <v-btn outline small icon class="green green--text" title="重置密码">
                 <v-icon>lock</v-icon>
@@ -75,6 +75,7 @@
           { text: '操作', sortable: false, left: true }
         ],
         items: [],
+        
         RemoveConfirmDlg: false,
         SelectedUser: {}
       }

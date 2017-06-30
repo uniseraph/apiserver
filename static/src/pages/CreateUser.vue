@@ -16,7 +16,7 @@
               ref="Name"
               v-model="Name"
               single-line
-              :rules="rules.NameRules"
+              :rules="rules.Name"
             ></v-text-field>
           </v-flex>
           <v-flex xs2>
@@ -29,7 +29,7 @@
               ref="Email"
               v-model="Email"
               single-line
-              :rules="rules.EmailRules"
+              :rules="rules.Email"
             ></v-text-field>
           </v-flex>
           <v-flex xs2>
@@ -40,7 +40,7 @@
               ref="Tel"
               v-model="Tel"
               single-line
-              :rules="rules.TelRules"
+              :rules="rules.Tel"
             ></v-text-field>
           </v-flex>
           <v-flex xs2>
@@ -82,14 +82,14 @@
         IsAppAdmin: false,
 
         rules: {
-          NameRules: [
-            v => (v.length > 0 ? true : '请输入用户名')
+          Name: [
+            v => (v && v.length > 0 ? true : '请输入用户名')
           ],
-          EmailRules: [
-            v => (v.length > 0 ? (this.isEmail(v) ? true : '邮箱格式不正确') : '请输入邮箱')
+          Email: [
+            v => (v && v.length > 0 ? (this.isEmail(v) ? true : '邮箱格式不正确') : '请输入邮箱')
           ],
-          TelRules: [
-            v => (v.length > 0 ? true : '请输入电话')
+          Tel: [
+            v => (v && v.length > 0 ? true : '请输入电话')
           ]
         }
       }
