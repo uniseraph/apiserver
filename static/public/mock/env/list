@@ -1,0 +1,14 @@
+[
+	{ 
+		"Id": "1", 
+		"Name": "MYSQL_USER_SERVER", 
+		"Value": "user.mysql.consul",
+		"Description": "用户数据库域名"
+	},
+	{ 
+		"Id": "2", 
+		"Name": "MYSQL_USER_PORT", 
+		"Value": "3306",
+		"Description": "用户数据库端口"
+	}
+]

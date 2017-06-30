@@ -1,0 +1,5 @@
+{ "Id": "1", "Name": "Team1", "Description": "Team1 Description", "CreatedTime": 111111111111, "Leader": { "Id": "1", "Name": "User1" }, 
+"UsersInTeam": [ 	
+{ "Id": "1", "Name": "User1", "Email": "User1@163.com", "Tel": "1111111", "RoleSet": 2, "CreatedTime": 111111111111 },
+{ "Id": "2", "Name": "User2", "Email": "User2@163.com", "Tel": "2222222", "RoleSet": 3, "CreatedTime": 111111111111 },
+	{ "Id": "3", "Name": "User3", "Email": "User3@163.com", "Tel": "3333333", "RoleSet": 1, "CreatedTime": 111111111111 } ] }
