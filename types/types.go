@@ -55,7 +55,8 @@ type User struct {
 	//Pass        string
 	RoleSet     Roleset
 	Email       string
-	Tel         string
+	TeamIds     []bson.ObjectId
+	Tel         string `json:tel",omitempty"`
 	CreatedTime int64  `json:",omitempty"`
 	Comments    string `json:",omitempty"`
 }
@@ -70,6 +71,7 @@ type Team struct {
 	Name        string
 	Description string
 	Leader      Leader
+	UserIds     []bson.ObjectId
 }
 
 type TeamUser struct {
