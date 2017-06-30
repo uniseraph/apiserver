@@ -21,7 +21,7 @@ init:
 apiserver:clean
 	CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}" -o ${TARGET}
 
-apicli:clean
+apicli:cleancli
 	CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}"  -o ${CLI_TARGET}  client/client.go
 
 portal:
@@ -47,8 +47,10 @@ compose:
 	docker-compose up -d
 
 clean:
-	rm -rf apiserver apicli
+	rm -rf apiserver
 
+cleancli:
+	rm -rf apicli
 
 test:apicli
 	mongo zanecloud --eval "db.user.remove({'name':'sadan'})"

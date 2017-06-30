@@ -375,10 +375,11 @@ func postUserJoin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer mgoSession.Close()
+
 	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
 	c_team := mgoSession.DB(mgoDB).C("team")
 	team := &types.Team{}
-	if err := c_team.FindId(bson.M{"_id": bson.ObjectIdHex(teamId)}).One(team); err != nil {
+	if err := c_team.Find(bson.M{"_id": bson.ObjectIdHex(teamId)}).One(team); err != nil {
 		if err == mgo.ErrNotFound {
 			HttpError(w, fmt.Sprintf("no such a team :%s", teamId), http.StatusNotFound)
 			return
@@ -387,7 +388,8 @@ func postUserJoin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if team.Leader.Id != currentUser.Id.Hex() {
+	//如果当前用户不是改团队的主管并且当前用户不是系统管理员，则没有权限
+	if team.Leader.Id != currentUser.Id.Hex()  && (currentUser.RoleSet & types.ROLESET_SYSADMIN == 0) {
 		HttpError(w, fmt.Sprintf("current user:%s isn't the team:%s  leader", currentUser.Id.Hex(), teamId), http.StatusForbidden)
 		return
 	}
@@ -464,6 +466,9 @@ func postUserQuit(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 }
 
+
+//"/users/{id:.*}/update":    &MyHandler{h: postUserUpdate, opChecker: checkUserPermission,roleset: types.ROLESET_SYSADMIN | types.ROLESET_NORMAL},
+
 type UserUpdateRequest struct {
 	Name     string
 	Roleset  types.Roleset
@@ -503,7 +508,7 @@ func postUserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		data = bson.M{"name": req.Name}
 	}
 
-	//TODO 这里要去roleset必须传
+	//TODO 这里要求roleset必须传
 	data["Roleset"] = req.Roleset
 
 	if req.Pass != "" {
@@ -521,6 +526,8 @@ func postUserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	if req.Comments != "" {
 		data["Comments"] = req.Comments
 	}
+	
+	logrus.Debugf("postUserUpdate::the data is %#v", data)
 
 	if err := c.Update(selector, bson.M{"$set": data}); err != nil {
 		if err == mgo.ErrNotFound {
