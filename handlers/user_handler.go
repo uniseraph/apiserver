@@ -126,6 +126,10 @@ type UsersCreateRequest struct {
 	types.User
 }
 
+type UsersCreateResponse struct {
+	Id string
+}
+
 func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	if err := r.ParseForm(); err != nil {
@@ -201,7 +205,10 @@ func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "{%q:%q}", "Id", user.Id.Hex())
+	//fmt.Fprintf(w, "{%q:%q}", "Id", user.Id.Hex())
+
+	resp := &UsersCreateResponse{Id:user.Id.Hex()}
+	json.NewEncoder(w).Encode(resp)
 }
 
 type UserResetPassRequest struct {

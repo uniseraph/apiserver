@@ -1,6 +1,7 @@
 SHELL = /bin/bash
 
 TARGET       = apiserver
+CLI_TARGET   = apicli
 PROJECT_NAME = github.com/zanecloud/apiserver
 
 MAJOR_VERSION = $(shell cat VERSION)
@@ -20,6 +21,11 @@ init:
 
 local:
 	CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}" -o ${TARGET}
+
+localcli:
+	CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}"  -o ${CLI_TARGET}  client/client.go
+
+
 build:
 	docker run --rm -v $(shell pwd):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} ${BUILD_IMAGE} make local
 image: build
@@ -41,8 +47,9 @@ compose:
 
 
 
-test:
-	bash scripts/test-user.sh sadan 123456
-	bash scripts/test.sh ${POOL_NAME}
+test:localcli
+	mongo zanecloud --eval "db.user.remove({'name':'sadan'})"
+	mongo zanecloud --eval "db.team.remove({'name':'team1'})"
+	./apicli
 
 .PHONY: image build local

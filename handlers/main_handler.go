@@ -58,7 +58,7 @@ var routes = map[string]map[string]*MyHandler{
 		"/users/{id:.*}/join":      &MyHandler{h: postUserJoin, opChecker: checkUserPermission,roleset: types.ROLESET_SYSADMIN},
 		"/users/{id:.*}/quit":      &MyHandler{h: postUserQuit, opChecker: checkUserPermission,roleset: types.ROLESET_SYSADMIN},
 
-		"/teams/{name:.*}/inspect": &MyHandler{h: getTeamJSON, opChecker: checkUserPermission,roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/teams/{id:.*}/inspect": &MyHandler{h: getTeamJSON, opChecker: checkUserPermission,roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/teams/ps":                &MyHandler{h: getTeamsJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/teams/list":              &MyHandler{h: getTeamsJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/teams/create":            &MyHandler{h: postTeamsCreate, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
@@ -172,7 +172,8 @@ func NewMainHandler(ctx context.Context) (http.Handler, error) {
 	})
 
 
-	fsh := http.FileServer(http.Dir(config.RootDir))
+	fsh := http.StripPrefix("/",http.FileServer(http.Dir(config.RootDir)))
+
 	//r.Path("/").Methods(http.MethodGet).Handler(http.StripPrefix("/",fsh))
 
 	r.PathPrefix("/").HandlerFunc( func (w http.ResponseWriter , r * http.Request){
@@ -186,30 +187,6 @@ func NewMainHandler(ctx context.Context) (http.Handler, error) {
 	return r , nil
 
 //	return NewHandler(c1, routes), nil
-}
-func NewHandler(ctx context.Context, rs map[string]map[string]*MyHandler) http.Handler {
-
-	r := mux.NewRouter()
-	SetupPrimaryRouter(r, ctx, rs)
-
-	r.Path("/api/actions/check").Methods(http.MethodPost).HandlerFunc(  func (w http.ResponseWriter , r * http.Request){
-		postActionsCheck(ctx,w,r)
-	})
-
-
-	fsh := http.FileServer(http.Dir("/Users/wuzhengtao/go/src/github.com/zanecloud/apiserver/"))
-	//r.Path("/").Methods(http.MethodGet).Handler(http.StripPrefix("/",fsh))
-
-	r.PathPrefix("/").HandlerFunc( func (w http.ResponseWriter , r * http.Request){
-
-		logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI }).Debug("HTTP request received")
-
-
-		fsh.ServeHTTP(w,r)
-	})
-
-	return r
-
 }
 
 func SetupPrimaryRouter(r *mux.Router, ctx context.Context, rs map[string]map[string]*MyHandler) {

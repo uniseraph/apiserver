@@ -19,6 +19,7 @@ _cgo_export.*
 
 _testmain.go
 apiserver
+apicli
 apiserver.iml
 *.exe
 .DS_Store

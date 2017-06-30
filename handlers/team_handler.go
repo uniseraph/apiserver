@@ -27,8 +27,8 @@ func getTeamsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	c := mgoSession.DB(mgoDB).C("team")
 
-	var results []types.Team
-	if err := c.Find(bson.M{}).All(&results); err != nil {
+	var results []*types.Team
+	if err := c.Find(bson.M{}).All(results); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -40,7 +40,7 @@ func getTeamsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 func getTeamJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
-	name := mux.Vars(r)["name"]
+	id := mux.Vars(r)["id"]
 
 	mgoSession, err := utils.GetMgoSessionClone(ctx)
 	if err != nil {
@@ -54,7 +54,7 @@ func getTeamJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	c := mgoSession.DB(mgoDB).C("team")
 
 	result := types.Team{}
-	if err := c.Find(bson.M{"name": name}).One(&result); err != nil {
+	if err := c.Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&result); err != nil {
 
 		if err == mgo.ErrNotFound {
 			// 对错误类型进行区分，有可能只是没有这个team，不应该用500错误
@@ -215,7 +215,9 @@ func postTeamRemove(ctx context.Context, w http.ResponseWriter, r *http.Request)
 type TeamsCreateRequest struct {
 	types.Team
 }
-
+type TeamsCreateResponse struct {
+	Id string
+}
 func postTeamsCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	if err := r.ParseForm(); err != nil {
@@ -282,7 +284,12 @@ func postTeamsCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 	w.Header().Set("Content-Type", "application/json")
 
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "{%q:%q}", "Id", team.Id.Hex())
+
+	result := & TeamsCreateResponse{
+		Id : team.Id.Hex(),
+	}
+	//fmt.Fprintf(w, "{%q:%q}", "Id", team.Id.Hex())
+	json.NewEncoder(w).Encode(result)
 }
 
 type TeamUpdateRequest struct {
