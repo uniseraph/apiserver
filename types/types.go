@@ -22,6 +22,7 @@ type APIServerConfig struct {
 	Addr      string
 	Port      int
 	tlsConfig *tls.Config
+	RootDir   string
 }
 
 type DriverOpts struct {

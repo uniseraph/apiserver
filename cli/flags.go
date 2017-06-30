@@ -41,6 +41,14 @@ var (
 		EnvVar: "PORT",
 		Usage:  "apiserver listener port",
 	}
+
+	flRootDir = cli.StringFlag{
+		Name:   utils.KEY_ROOT_DIR,
+		Value:  ".",
+		EnvVar: "ROOT_DIR",
+		Usage:  "root dir for js/css/....",
+	}
+
 	//flClusterEndpoint = cli.StringFlag{
 	//	Name:   "clusterEndpoint",
 	//	Value:  "localhost:2375",
