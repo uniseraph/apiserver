@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/zanecloud/apiserver/proxy"
 	store "github.com/zanecloud/apiserver/types"
@@ -54,6 +53,11 @@ type PoolsRegisterRequest struct{
 	Labels     map[string]interface{} `json:",omitempty"`
 }
 
+
+type PoolsRegisterResponse struct {
+	Id   string
+	Name string
+}
 func getPoolsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	mgoSession, err := utils.GetMgoSessionClone(ctx)
 
@@ -87,7 +91,7 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	var (
-		name = r.Form.Get("name")
+		name = r.Form.Get("Name")
 	)
 
 	req := PoolsRegisterRequest{}
@@ -150,8 +154,13 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	result := &PoolsRegisterResponse{
+		Name: poolInfo.Name,
+		Id : poolInfo.Id.Hex(),
+	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "{%q:%q}", "Name", name)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(result)
+	//fmt.Fprintf(w, "{%q:%q}", "Name", name)
 
 }
