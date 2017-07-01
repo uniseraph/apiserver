@@ -275,19 +275,6 @@
         router.go(-1);
       },
 
-      validateForm(refPrefix) {
-        for (let f in this.$refs) {
-          if (f.indexOf(refPrefix) == 0) {
-            let e = this.$refs[f];
-            if (e.errorBucket && e.errorBucket.length > 0) {
-              return false;
-            }
-          }
-        }
-
-        return true;
-      },
-
       save() {
         if (!this.validateForm('all_') || !this.validateForm(this.Driver + '_')) {
           return;

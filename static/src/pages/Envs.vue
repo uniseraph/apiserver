@@ -22,7 +22,7 @@
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="UpdateDir_Name" required v-model="SelectedDir.Name" single-line :rules="rules.Dir.Name"></v-text-field>
+                <v-text-field ref="UpdateDir_Name" required v-model="SelectedDir.Name" :rules="rules.Dir.Name"></v-text-field>
               </v-card-text>
             </v-card-row>
             <v-card-row actions>
@@ -40,7 +40,7 @@
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="NewDir_Name" required v-model="NewDir.Name" single-line :rules="rules.Dir.Name"></v-text-field>
+                <v-text-field ref="NewDir_Name" required v-model="NewDir.Name" :rules="rules.Dir.Name"></v-text-field>
               </v-card-text>
             </v-card-row>
             <v-card-row actions>
@@ -109,8 +109,8 @@
               <v-card-row>
                 <v-card-text>
                   <v-text-field ref="NewValue_Name" label="名称" required v-model="NewValue.Name" :rules="rules.Value.Name"></v-text-field>
-                  <v-text-field ref="NewValue_Value" label="默认值" required v-model="NewValue.Value" :rules="rules.Value.Value"></v-text-field>
-                  <v-text-field label="描述" v-model="NewValue.Description"></v-text-field>
+                  <v-text-field ref="NewValue_Value" label="默认值" required v-model="NewValue.Value" :rules="rules.Value.Value" class="mt-4"></v-text-field>
+                  <v-text-field label="描述" v-model="NewValue.Description" class="mt-4"></v-text-field>
                 </v-card-text>
               </v-card-row>
               <v-card-row actions>
@@ -259,19 +259,6 @@
         } else {
           this.RemoveDirDisabled = false;
         }
-      },
-
-      validateForm(refPrefix) {
-        for (let f in this.$refs) {
-          if (f.indexOf(refPrefix) == 0) {
-            let e = this.$refs[f];
-            if (e.errorBucket && e.errorBucket.length > 0) {
-              return false;
-            }
-          }
-        }
-
-        return true;
       },
 
       createDir() {

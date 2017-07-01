@@ -148,19 +148,6 @@
         router.go(-1);
       },
 
-      validateForm(refPrefix) {
-        for (let f in this.$refs) {
-          if (f.indexOf(refPrefix) == 0) {
-            let e = this.$refs[f];
-            if (e.errorBucket && e.errorBucket.length > 0) {
-              return false;
-            }
-          }
-        }
-
-        return true;
-      },
-
       saveEnvValue() {
         if (!this.validateForm('Env_')) {
           ui.alert('请正确填写参数信息');

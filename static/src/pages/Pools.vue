@@ -16,8 +16,8 @@
                   v-model="NewPool.Name" 
                   ref="all_Name" 
                   label="名称" 
-                  single-line
                   required 
+                  persistent-hint 
                   :rules="rules.Name"
                 ></v-text-field>
                 <v-select
@@ -26,9 +26,9 @@
                   ref="all_Driver"
                   label="驱动类型"
                   dark
-                  single-line
                   required
                   :rules="rules.Driver"
+                  class="mt-4"
                 ></v-select>
                 <v-select
                   v-if="NewPool.Driver == 'swarm'"
@@ -37,18 +37,18 @@
                   ref="swarm_Version"
                   label="驱动版本"
                   dark
-                  single-line
                   required
                   :rules="rules.DriverOpts.swarm.Version"
+                  class="mt-4"
                 ></v-select>
                 <v-text-field 
                   v-if="NewPool.Driver == 'swarm'"
                   v-model="NewPool.DriverOpts.EndPoint" 
                   ref="swarm_EndPoint" 
                   label="API地址" 
-                  single-line
                   required 
                   :rules="rules.DriverOpts.swarm.EndPoint"
+                  class="mt-4"
                 ></v-text-field>
                 <v-select
                   v-if="NewPool.Driver == 'swarm'"
@@ -57,9 +57,9 @@
                   ref="swarm_APIVersion"
                   label="驱动版本"
                   dark
-                  single-line
                   required
                   :rules="rules.DriverOpts.swarm.APIVersion"
+                  class="mt-4"
                 ></v-select>
               </v-card-text>
             </v-card-row>
@@ -182,19 +182,6 @@
         api.Pools().then(data => {
           this.items = data;
         })
-      },
-
-      validateForm(refPrefix) {
-        for (let f in this.$refs) {
-          if (f.indexOf(refPrefix) == 0) {
-            let e = this.$refs[f];
-            if (e.errorBucket && e.errorBucket.length > 0) {
-              return false;
-            }
-          }
-        }
-
-        return true;
       },
 
       createPool() {
