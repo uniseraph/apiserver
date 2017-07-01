@@ -12,7 +12,7 @@
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="Name" label="名称" v-model="NewPool.Name" :rules="rules.Name"></v-text-field>
+                <v-text-field ref="Name" label="名称" required v-model="NewPool.Name" :rules="rules.Name"></v-text-field>
                 <v-select
                   :items="DriverList"
                   v-model="NewPool.Driver"
