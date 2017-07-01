@@ -133,7 +133,7 @@
       >
         <template slot="items" scope="props">
           <td>{{ props.item.Id }}</td>
-          <td><router-link :to="'/envs/values/' + props.item.Id + '/detail'">{{ props.item.Name }}</router-link></td>
+          <td><router-link :to="'/env/' + props.item.Id + '/detail'">{{ props.item.Name }}</router-link></td>
           <td>{{ props.item.Value }}</td>
           <td>{{ props.item.Description }}</td>
           <td>
@@ -339,7 +339,7 @@
           Description: this.NewValue.Description,
           DirId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : null
         };
-        api.CreateEnvDir(params).then(data => {
+        api.CreateEnvValue(params).then(data => {
           this.getDataFromApi();
         });
       },

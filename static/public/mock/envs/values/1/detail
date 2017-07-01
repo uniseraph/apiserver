@@ -4,6 +4,7 @@
 	"Value": "user.mysql.consul",
 	"Description": "用户数据库域名",
 	"Values": [
-		{ "PoolId": "1", "PoolName": "Pool1", "Value": "user.mysql.product" }
+		{ "PoolId": "1", "PoolName": "Pool1", "Value": "user.mysql.product" },
+		{ "PoolId": "2", "PoolName": "Pool2", "Value": "user.mysql.dev" }
 	]
 }

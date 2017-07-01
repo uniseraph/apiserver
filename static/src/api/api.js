@@ -104,7 +104,7 @@ export default {
     },
 
     EnvValue(id) {
-        return fetch('/envs/values/' + id + '/detail', params);
+        return fetch('/envs/values/' + id + '/detail');
     },
 
     CreateEnvValue(params) {
