@@ -375,10 +375,11 @@ func postUserJoin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer mgoSession.Close()
+
 	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
 	c_team := mgoSession.DB(mgoDB).C("team")
 	team := &types.Team{}
-	if err := c_team.FindId(bson.M{"_id": bson.ObjectIdHex(teamId)}).One(team); err != nil {
+	if err := c_team.Find(bson.M{"_id": bson.ObjectIdHex(teamId)}).One(team); err != nil {
 		if err == mgo.ErrNotFound {
 			HttpError(w, fmt.Sprintf("no such a team :%s", teamId), http.StatusNotFound)
 			return
@@ -387,31 +388,38 @@ func postUserJoin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if team.Leader.Id != currentUser.Id.Hex() {
-		HttpError(w, fmt.Sprintf("current user:%s isn't the team:%s  leader", currentUser.Id.Hex(), teamId), http.StatusForbidden)
-		return
-	}
 
-	c := mgoSession.DB(mgoDB).C("userteam")
-
-	n, err := c.Find(bson.M{"teamid": teamId, "userid": userId}).Count()
-	if err != nil {
+	c_user := mgoSession.DB(mgoDB).C("user")
+	user := &types.User{}
+	if err := c_user.Find(bson.M{"_id": bson.ObjectIdHex(userId)}).One(user); err != nil {
+		if err == mgo.ErrNotFound {
+			HttpError(w, fmt.Sprintf("no such a user :%s", userId), http.StatusNotFound)
+			return
+		}
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if n != 0 {
-		HttpError(w, fmt.Sprintf("the user:%s has been in  the team %s", userId, teamId), http.StatusInternalServerError)
+	//如果当前用户不是改团队的主管并且当前用户不是系统管理员，则没有权限
+	if team.Leader.Id != currentUser.Id.Hex()  && (currentUser.RoleSet & types.ROLESET_SYSADMIN == 0) {
+		HttpError(w, fmt.Sprintf("current user:%s isn't the team:%s  leader ，and current user's roleset:%d dont include sysadmin", currentUser.Id.Hex(), teamId,currentUser.RoleSet), http.StatusForbidden)
 		return
 	}
 
-	if err := c.Insert(&types.TeamUser{
-		UserId: userId,
-		TeamId: teamId,
-	}); err != nil {
+	if err:= c_team.Update(bson.M{"_id":bson.ObjectIdHex(teamId)} ,  bson.M{ "$addToSet" : bson.M{"userids":bson.ObjectIdHex(userId)}   } ); err!=nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// TODO没有事务保护
+
+	if err:= c_user.Update(bson.M{"_id":bson.ObjectIdHex(userId)} ,  bson.M{ "$addToSet" : bson.M{"teamids":bson.ObjectIdHex(teamId)}   } ); err!=nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+
+
 
 	w.WriteHeader(http.StatusOK)
 
@@ -464,6 +472,9 @@ func postUserQuit(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 }
 
+
+//"/users/{id:.*}/update":    &MyHandler{h: postUserUpdate, opChecker: checkUserPermission,roleset: types.ROLESET_SYSADMIN | types.ROLESET_NORMAL},
+
 type UserUpdateRequest struct {
 	Name     string
 	Roleset  types.Roleset
@@ -503,24 +514,26 @@ func postUserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		data = bson.M{"name": req.Name}
 	}
 
-	//TODO 这里要去roleset必须传
-	data["Roleset"] = req.Roleset
+	//TODO 这里要求roleset必须传
+	data["roleset"] = req.Roleset
 
 	if req.Pass != "" {
-		data["Pass"] = utils.Md5(req.Pass)
+		data["pass"] = utils.Md5(req.Pass)
 	}
 
 	if req.Tel != "" {
-		data["Tel"] = req.Tel
+		data["tel"] = req.Tel
 	}
 
 	if req.Email != "" {
-		data["Email"] = req.Email
+		data["email"] = req.Email
 	}
 
 	if req.Comments != "" {
-		data["Comments"] = req.Comments
+		data["comments"] = req.Comments
 	}
+	
+	logrus.Debugf("postUserUpdate::the data is %#v", data)
 
 	if err := c.Update(selector, bson.M{"$set": data}); err != nil {
 		if err == mgo.ErrNotFound {
