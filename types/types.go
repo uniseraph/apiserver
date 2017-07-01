@@ -71,7 +71,8 @@ type Team struct {
 	Name        string
 	Description string
 	Leader      Leader
-	UserIds     []bson.ObjectId
+	//UserIds     []bson.ObjectId
+	Users       []User
 }
 
 //type TeamUser struct {

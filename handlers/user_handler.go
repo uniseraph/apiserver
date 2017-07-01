@@ -57,6 +57,7 @@ func getUserCurrent(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 }
 
+
 func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	if err := r.ParseForm(); err != nil {
@@ -119,7 +120,8 @@ func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	http.SetCookie(w, uid_cookie)
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "ok")
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }
 
 type UsersCreateRequest struct {
@@ -406,17 +408,21 @@ func postUserJoin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err:= c_team.Update(bson.M{"_id":bson.ObjectIdHex(teamId)} ,  bson.M{ "$addToSet" : bson.M{"userids":bson.ObjectIdHex(userId)}   } ); err!=nil {
+
+	if err:= c_user.Update(bson.M{"_id":bson.ObjectIdHex(userId)} ,  bson.M{ "$addToSet" : bson.M{"teamids":bson.ObjectIdHex(teamId)}   } ); err!=nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	//if err:= c_team.Update(bson.M{"_id":bson.ObjectIdHex(teamId)} ,  bson.M{ "$addToSet" : bson.M{"userids":bson.ObjectIdHex(userId)}   } ); err!=nil {
+	if err:= c_team.Update(bson.M{"_id":bson.ObjectIdHex(teamId)} ,  bson.M{ "$addToSet" : bson.M{"users":user}   } ); err!=nil {
+
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// TODO没有事务保护
 
-	if err:= c_user.Update(bson.M{"_id":bson.ObjectIdHex(userId)} ,  bson.M{ "$addToSet" : bson.M{"teamids":bson.ObjectIdHex(teamId)}   } ); err!=nil {
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 
 
 
@@ -489,7 +495,7 @@ func postUserQuit(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 
 	if err := c_team.UpdateId(bson.ObjectIdHex(teamId),
-		bson.M{"$pull" : bson.M{ "userids": bson.ObjectIdHex(userId)    } } ) ; err!=nil{
+		bson.M{"$pull" : bson.M{ "users": bson.M{"_id": bson.ObjectIdHex(userId)}  } } ) ; err!=nil{
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

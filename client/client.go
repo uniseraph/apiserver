@@ -43,8 +43,11 @@ func main() {
 		return
 	}
 
-	fmt.Println("\nlogin success ....")
 	fmt.Println(string(body))
+	rootUser:=&types.User{}
+	json.Unmarshal(body,rootUser)
+	fmt.Printf("\nlogin success , the root  user is %#v....",rootUser)
+
 	for _ , cookie := range resp.Cookies(){
 		fmt.Println("cookie:", cookie)
 	}
