@@ -18,7 +18,7 @@
                   v-model="Name"
                   ref="Name"
                   single-line
-                   :rules="rules.Name"
+                  :rules="rules.Name"
                 ></v-text-field>
               </v-flex>
               <v-flex xs2>
@@ -66,7 +66,7 @@
         <div>
           <v-data-table
             :headers="headers"
-            :items="Users"
+            :items="UsersInTeam"
             hide-actions
             class="elevation-1"
             no-data-text=""
@@ -77,9 +77,9 @@
               <td>{{ props.item.Email }}</td>
               <td>{{ props.item.Tel }}</td>
               <td>
-                <div v-if="props.item.Roleset & constants.ROLE_SYS_ADMIN">系统管理员</div>
-                <div v-if="props.item.Roleset & constants.ROLE_APP_ADMIN">应用管理员</div>
-                <div v-if="props.item.Roleset == 1">普通用户</div>
+                <div v-if="props.item.RoleSet & constants.ROLE_SYS_ADMIN">系统管理员</div>
+                <div v-if="props.item.RoleSet & constants.ROLE_APP_ADMIN">应用管理员</div>
+                <div v-if="props.item.RoleSet == 1">普通用户</div>
               </td>
               <td>
                 <v-radio label="" v-model="LeaderId" :value="props.item.Id" dark></v-radio>
@@ -108,7 +108,7 @@
         Id: '',
         Name: '',
         Description: '',
-        LeaderId: null,
+        LeaderId: false,
         headers: [
           { text: 'ID', sortable: false, left: true },
           { text: '用户名', sortable: false, left: true },
@@ -131,9 +131,13 @@
 
     watch: {
       LeaderId(newLeaderId, oldLeaderId) {
+        if (oldLeaderId === false) {
+          return;
+        }
+
         api.AppointLeader({
-          Id: this.Id,
-          LeaderId: newLeaderId
+          TeamId: this.Id,
+          UserId: newLeaderId
         }).then(data => {
         })
         .catch(err => {
@@ -152,8 +156,8 @@
           this.Id = data.Id;
           this.Name = data.Name;
           this.Description = data.Description;
-          this.LeaderId = data.Leader.Id;
-          this.UsersInTeam = data.UsersInTeam;
+          this.LeaderId = data.Leader ? data.Leader.Id : null;
+          this.UsersInTeam = data.Users;
           this.UserToJoin = null,
 
           api.Users().then(data => {
@@ -186,14 +190,14 @@
 
       addUser() {
         if (this.UserToJoin) {
-          api.JoinTeam({ Id: this.Id, UserId: this.UserToJoin }).then(data => {
+          api.JoinTeam({ TeamId: this.Id, UserId: this.UserToJoin }).then(data => {
             this.init();
           })
         }
       },
 
       removeUser(user) {
-        api.QuitTeam({ Id: this.Id, UserId: user.Id }).then(data => {
+        api.QuitTeam({ TeamId: this.Id, UserId: user.Id }).then(data => {
             this.init();
           })
       }

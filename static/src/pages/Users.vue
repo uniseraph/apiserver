@@ -37,9 +37,9 @@
           <td>{{ props.item.Email }}</td>
           <td>{{ props.item.Tel }}</td>
           <td>
-            <div v-if="props.item.Roleset & constants.ROLE_SYS_ADMIN">系统管理员</div>
-            <div v-if="props.item.Roleset & constants.ROLE_APP_ADMIN">应用管理员</div>
-            <div v-if="props.item.Roleset == 1">普通用户</div>
+            <div v-if="props.item.RoleSet & constants.ROLE_SYS_ADMIN">系统管理员</div>
+            <div v-if="props.item.RoleSet & constants.ROLE_APP_ADMIN">应用管理员</div>
+            <div v-if="props.item.RoleSet == 1">普通用户</div>
           </td>
           <td>{{ props.item.CreatedTime | formatDate }}</td>
           <td>

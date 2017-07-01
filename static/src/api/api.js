@@ -6,8 +6,10 @@ import * as ui from '../util/ui'
 // axios默认配置
 axios.defaults.timeout = 5000;
 axios.defaults.baseURL = 'http://localhost:8080/public/mock';
+//axios.defaults.baseURL = 'http://localhost:8080/api';
 
 // 仅测试用
+//*
 axios.interceptors.request.use((config) => {
     if(config.method === 'post'){
         config.method = 'get';
@@ -16,6 +18,7 @@ axios.interceptors.request.use((config) => {
 
     return config;
 });
+//*/
 
 export function fetch(url, params) {
     return new Promise((resolve, reject) => {
@@ -44,11 +47,11 @@ export default {
     },
 
     Login(params) {
-        return fetch('/user/' + encodeURIComponent(params.Name) + '/login', params);
+        return fetch('/users/' + encodeURIComponent(params.Name) + '/login?Pass=' + encodeURIComponent(params.Password), params);
     },
 
     Pools(params) {
-        return fetch('/pools/list', params);
+        return fetch('/pools/ps', params);
     },
 
     Pool(id) {
@@ -56,7 +59,7 @@ export default {
     },
 
     CreatePool(params) {
-        return fetch('/pools/create', params); 
+        return fetch('/pools/register', params); 
     },
 
     RemovePool(params) {
@@ -128,7 +131,7 @@ export default {
     },
 
     Team(id) {
-        return fetch('/teams/' + id + '/detail');
+        return fetch('/teams/' + id + '/inspect');
     },
 
     CreateTeam(params) {
@@ -144,15 +147,15 @@ export default {
     },
 
     AppointLeader(params) {
-        return fetch('/teams/' + params.Id + '/appoint', params);
+        return fetch('/teams/' + params.TeamId + '/appoint?UserId=' + params.UserId, params);
     },
 
     JoinTeam(params) {
-        return fetch('/users/' + params.Id + '/join', params);
+        return fetch('/users/' + params.UserId + '/join?TeamId=' + params.TeamId, params);
     },
 
     QuitTeam(params) {
-        return fetch('/users/' + params.Id + '/quit', params);
+        return fetch('/users/' + params.UserId + '/quit?TeamId=' + params.TeamId, params);
     },
 
     Users(params) {

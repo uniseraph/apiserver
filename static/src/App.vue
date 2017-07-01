@@ -40,6 +40,7 @@
                       required
                       single-line
                       type="password"
+                      @keydown.enter.native="login"
                     ></v-text-field>
                   </v-flex>
                   <v-flex xs4>

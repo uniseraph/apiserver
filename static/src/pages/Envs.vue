@@ -22,7 +22,7 @@
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="UpdateDir_Name" required v-model="SelectedDir.Name" :rules="rules.Dir.Name"></v-text-field>
+                <v-text-field ref="UpdateDir_Name" required v-model="SelectedDir.Name" single-line :rules="rules.Dir.Name"></v-text-field>
               </v-card-text>
             </v-card-row>
             <v-card-row actions>
@@ -40,7 +40,7 @@
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="NewDir_Name" required v-model="NewDir.Name" :rules="rules.Dir.Name"></v-text-field>
+                <v-text-field ref="NewDir_Name" required v-model="NewDir.Name" single-line :rules="rules.Dir.Name"></v-text-field>
               </v-card-text>
             </v-card-row>
             <v-card-row actions>

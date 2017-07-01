@@ -12,28 +12,55 @@
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="Name" label="名称" required v-model="NewPool.Name" :rules="rules.Name"></v-text-field>
+                <v-text-field 
+                  v-model="NewPool.Name" 
+                  ref="all_Name" 
+                  label="名称" 
+                  single-line
+                  required 
+                  :rules="rules.Name"
+                ></v-text-field>
                 <v-select
                   :items="DriverList"
                   v-model="NewPool.Driver"
-                  ref="Driver"
+                  ref="all_Driver"
                   label="驱动类型"
                   dark
                   single-line
-                  auto
+                  required
                   :rules="rules.Driver"
                 ></v-select>
                 <v-select
-                  :items="NetworkList"
-                  v-model="NewPool.Network"
-                  ref="Network"
-                  label="网络类型"
+                  v-if="NewPool.Driver == 'swarm'"
+                  :items="SwarmVersionList"
+                  v-model="NewPool.DriverOpts.Version"
+                  ref="swarm_Version"
+                  label="驱动版本"
                   dark
                   single-line
-                  auto
-                  :rules="rules.Network"
+                  required
+                  :rules="rules.DriverOpts.swarm.Version"
                 ></v-select>
-                <v-text-field ref="EndPoint" label="API地址" v-model="NewPool.EndPoint" :rules="rules.EndPoint"></v-text-field>
+                <v-text-field 
+                  v-if="NewPool.Driver == 'swarm'"
+                  v-model="NewPool.DriverOpts.EndPoint" 
+                  ref="swarm_EndPoint" 
+                  label="API地址" 
+                  single-line
+                  required 
+                  :rules="rules.DriverOpts.swarm.EndPoint"
+                ></v-text-field>
+                <v-select
+                  v-if="NewPool.Driver == 'swarm'"
+                  :items="SwarmAPIVersionList"
+                  v-model="NewPool.DriverOpts.APIVersion"
+                  ref="swarm_APIVersion"
+                  label="驱动版本"
+                  dark
+                  single-line
+                  required
+                  :rules="rules.DriverOpts.swarm.APIVersion"
+                ></v-select>
               </v-card-text>
             </v-card-row>
             <v-card-row actions>
@@ -72,7 +99,6 @@
           <td>{{ props.item.Id }}</td>
           <td><router-link :to="'/pool/' + props.item.Id + '/detail'">{{ props.item.Name }}</router-link></td>
           <td>{{ props.item.Driver }}</td>
-          <td>{{ props.item.Network }}</td>
           <td class="text-xs-right">{{ props.item.Nodes }}</td>
           <td class="text-xs-right">
             {{ props.item.Cpus }}
@@ -105,7 +131,6 @@
           { text: 'ID', sortable: false, left: true },
           { text: '名称', sortable: false, left: true },
           { text: '驱动类型', sortable: false, left: true },
-          { text: '网络类型', sortable: false, left: true },
           { text: '节点', sortable: false },
           { text: 'CPU', sortable: false },
           { text: '内存 (GB)', sortable: false },
@@ -113,10 +138,14 @@
           { text: '操作', sortable: false, left: true }
         ],
         items: [],
-        DriverList: [ 'Swarm', 'Kubernetes' ],
-        NetworkList: [ 'Flannel', 'VxLAN' ],
+
+        DriverList: [ 'swarm' ],
+        SwarmVersionList: [ 'v1.0' ],
+        SwarmAPIVersionList: [ 'v1.23' ],
+
         CreatePoolDlg: false,
-        NewPool: { Name: '', Driver: '', Network: '', EndPoint: '' },
+        NewPool: { Name: '', Driver: 'swarm', DriverOpts: { Version: 'v1.0', EndPoint: '', APIVersion: 'v1.23' } },
+
         RemoveConfirmDlg: false,
         SelectedPool: {},
 
@@ -127,12 +156,19 @@
           Driver: [
             v => (v && v.length > 0 ? true : '请选择驱动类型')
           ],
-          Network: [
-            v => (v && v.length > 0 ? true : '请选择网络类型')
-          ],
-          EndPoint: [
-            v => (v && v.length > 0 ? true : '请输入集群API地址')
-          ]
+          DriverOpts: {
+            swarm: {
+              Version: [
+                v => (v && v.length > 0 ? true : '请选择集群驱动版本')
+              ],
+              EndPoint: [
+                v => (v && v.length > 0 ? true : '请输入集群API地址')
+              ],
+              APIVersion: [
+                v => (v && v.length > 0 ? true : '请选择集群API版本')
+              ]
+            }
+          }
         }
       }
     },
@@ -148,13 +184,22 @@
         })
       },
 
-      createPool() {
+      validateForm(refPrefix) {
         for (let f in this.$refs) {
-          let e = this.$refs[f];
-          console.log(e);
-          if (e.errorBucket && e.errorBucket.length > 0) {
-            return;
+          if (f.indexOf(refPrefix) == 0) {
+            let e = this.$refs[f];
+            if (e.errorBucket && e.errorBucket.length > 0) {
+              return false;
+            }
           }
+        }
+
+        return true;
+      },
+
+      createPool() {
+        if (!this.validateForm('all_') || !this.validateForm(this.Driver + '_')) {
+          return;
         }
 
         this.CreatePoolDlg = false;
