@@ -47,9 +47,10 @@ func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 }
 
-type PoolsRegisterRequest struct {
+type PoolsRegisterRequest struct{
+	Name       string
 	Driver     string
-	DriverOpts *store.DriverOpts
+	DriverOpts store.DriverOpts
 	Labels     map[string]interface{} `json:",omitempty"`
 }
 
@@ -96,13 +97,19 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+//	{Name: "a", Driver: "swarm", DriverOpts: {Version: "v1.0", EndPoint: "bbbb", APIVersion: "v1.23"}}
+
 	poolInfo := &store.PoolInfo{
 		Id:             bson.NewObjectId(),
-		Name:           name,
 		Driver:         req.Driver,
 		DriverOpts:     req.DriverOpts,
 		Labels:         req.Labels,
 		ProxyEndpoints: make([]string, 1),
+	}
+
+
+	if name!= "" {
+		poolInfo.Name = name
 	}
 
 	mgoSession, err := utils.GetMgoSessionClone(ctx)
