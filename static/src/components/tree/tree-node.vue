@@ -121,7 +121,8 @@ export default {
   }
   
   .halo-tree .node-label.node-selected {
-    background: rgba(0, 0, 0, .035)
+    background: #64b5f6;
+    color: #FFF;
   }
   
   .halo-tree li:after,

@@ -5,7 +5,16 @@
       <v-card-title>
         参数目录
         <v-spacer></v-spacer>
-        <v-layout row justify-center style="margin-right:0;">
+        <div>
+          <v-btn icon class="blue--text text--lighten-2" @click.native="CreateDirDlg = true">
+            <v-icon light>add</v-icon>
+          </v-btn>
+          <v-btn ref="RemoveDir" :disabled="RemoveDirDisabled" icon class="red--text text--lighten-2" @click.native="confirmBeforeRemoveDir">
+            <v-icon light>remove</v-icon>
+          </v-btn>
+        </div>
+      </v-card-title>
+      <v-layout row justify-center>
         <v-dialog v-model="UpdateDirDlg" persistent>
           <v-card>
             <v-card-row>
@@ -13,7 +22,7 @@
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="DirName" v-model="SelectedDir.Name" :rules="rules.Dir.Name"></v-text-field>
+                <v-text-field ref="UpdateDirName" v-model="SelectedDir.Name" :rules="rules.Dir.Name"></v-text-field>
               </v-card-text>
             </v-card-row>
             <v-card-row actions>
@@ -23,7 +32,40 @@
           </v-card>
         </v-dialog>
       </v-layout>
-      </v-card-title>
+      <v-layout row justify-center>
+        <v-dialog v-model="CreateDirDlg" persistent>
+          <v-card>
+            <v-card-row>
+              <v-card-title>新建子目录</v-card-title>
+            </v-card-row>
+            <v-card-row>
+              <v-card-text>
+                <v-text-field ref="NewDirName" v-model="NewDirName" :rules="rules.Dir.Name"></v-text-field>
+              </v-card-text>
+            </v-card-row>
+            <v-card-row actions>
+              <v-btn class="blue--text darken-1" flat @click.native="createDir">确认</v-btn>
+              <v-btn class="blue--text darken-1" flat @click.native="CreateDirDlg = false">取消</v-btn>
+            </v-card-row>
+          </v-card>
+        </v-dialog>
+      </v-layout>
+      <v-layout row justify-center>
+        <v-dialog v-model="RemoveDirConfirmDlg" persistent>
+          <v-card>
+            <v-card-row>
+              <v-card-title>提示</v-card-title>
+            </v-card-row>
+            <v-card-row>
+              <v-card-text>你确认要删除目录“{{ SelectedDir.Name }}”吗？</v-card-text>
+            </v-card-row>
+            <v-card-row actions>
+              <v-btn class="green--text darken-1" flat="flat" @click.native="removeDir">确认</v-btn>
+              <v-btn class="green--text darken-1" flat="flat" @click.native="RemoveDirConfirmDlg = false">取消</v-btn>
+            </v-card-row>
+          </v-card>
+        </v-dialog>
+      </v-layout>
       <div class="pl-4 pr-4 pb-2">
         <tree ref="tree" :options="treeOptions" :treeData="treeData" @node-click="nodeClicked" />
       </div>
@@ -31,7 +73,7 @@
   </v-flex>
   <v-flex xs8>
     <v-layout row justify-center>
-      <v-dialog v-model="RemoveConfirmDlg" persistent>
+      <v-dialog v-model="RemoveValueConfirmDlg" persistent>
         <v-card>
           <v-card-row>
             <v-card-title>提示</v-card-title>
@@ -41,7 +83,7 @@
           </v-card-row>
           <v-card-row actions>
             <v-btn class="green--text darken-1" flat="flat" @click.native="removeValue">确认</v-btn>
-            <v-btn class="green--text darken-1" flat="flat" @click.native="RemoveConfirmDlg = false">取消</v-btn>
+            <v-btn class="green--text darken-1" flat="flat" @click.native="RemoveValueConfirmDlg = false">取消</v-btn>
           </v-card-row>
         </v-card>
       </v-dialog>
@@ -75,7 +117,7 @@
           <td>{{ props.item.Value }}</td>
           <td>{{ props.item.Description }}</td>
           <td>
-            <v-btn outline small icon class="orange orange--text" @click.native="confirmBeforeRemove(props.item)" title="删除参数">
+            <v-btn outline small icon class="orange orange--text" @click.native="confirmBeforeRemoveValue(props.item)" title="删除参数">
               <v-icon>close</v-icon>
             </v-btn>
           </td>
@@ -110,13 +152,20 @@
         totalItems: 0,
         pagination: { rowsPerPage: 2, totalItems: 0, page: 1, sortBy: null, descending: false },
 
-        SelectedDir: { Id: "0" },
+        SelectedDir: { Id: '0', Name: '全部' },
         Keyword: '',
 
         UpdateDirDlg: false,
+        RemoveDirConfirmDlg: false,
+        RemoveDirDisabled: true,
 
-        RemoveConfirmDlg: false,
+        CreateDirDlg: false,
+        NewDirName: '',
+
+        RemoveValueConfirmDlg: false,
         SelectedValue: {},
+
+        ParentIdMap: {},
 
         rules: {
           Dir: {
@@ -144,27 +193,51 @@
 
     methods: {
       init() {
+        this.ParentIdMap = {};
         api.EnvDirs().then(data => {
           let treeData = [{
-            id: "0",
+            id: '0',
             label: '全部',
             open: true,
             visible: true,
             checked: false,
-            children: conv2TreeData(data)
+            children: conv2TreeData('id', data, this.ParentIdMap)
           }];
 
           this.treeData = treeData;
+
+          
         })
       },
 
       nodeClicked(node) {
-        if (this.SelectedDir.Id == node.id && node.id != "0") {
+        this.Keyword = '';
+
+        if (this.SelectedDir.Id == node.id && node.id != '0') {
           this.UpdateDirDlg = true;
         } else {
           this.SelectedDir = { Id: node.id, Name: node.label, ParentId: node.parentId };
           this.getDataFromApi();
         }
+
+        if (this.SelectedDir.Id == '0') {
+          this.RemoveDirDisabled = true;
+        } else {
+          this.RemoveDirDisabled = false;
+        }
+      },
+
+      createDir() {
+        this.CreateDirDlg = false;
+        let params = {
+          Name: this.NewDirName,
+          ParentId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : null
+        };
+        api.CreateEnvDir(this.SelectedDir).then(data => {
+          this.init();
+        });
+
+        this.NewDirName = '';
       },
 
       updateDir() {
@@ -174,9 +247,20 @@
         });
       },
 
+      confirmBeforeRemoveDir() {
+        this.RemoveDirConfirmDlg = true;
+      },
+
+      removeDir() {
+        this.RemoveDirConfirmDlg = false;
+        api.RemoveEnvDir({ Id: this.SelectedDir.Id }).then(data => {
+          this.init();
+        })
+      },
+
       getDataFromApi() {
         let params = {
-          DirId: this.SelectedDir.Id != "0" ? this.SelectedDir.Id : null, 
+          DirId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : null, 
           Name: this.Name,
           PageSize: this.pagination.rowsPerPage, 
           Page: this.pagination.page
@@ -190,15 +274,15 @@
         })
       },
 
-      confirmBeforeRemove(v) {
+      confirmBeforeRemoveValue(v) {
         this.SelectedValue = v;
-        this.RemoveConfirmDlg = true;
+        this.RemoveValueConfirmDlg = true;
       },
 
       removeValue() {
-        this.RemoveConfirmDlg = false;
+        this.RemoveValueConfirmDlg = false;
         api.RemoveEnvValue({ Id: this.SelectedValue.Id }).then(data => {
-          this.init();
+          this.getDataFromApi();
         })
       }
     },
@@ -208,21 +292,23 @@
     }
   }
 
-  function conv2TreeData(list) {
+  function conv2TreeData(pid, list, pidMap) {
     let arr = [];
     for (let e of list) {
       let a = {
         id: e.Id,
         label: e.Name,
-        parentId: e.ParentId ? e.ParentId : "0",
+        parentId: e.ParentId ? e.ParentId : '0',
         open: false,
         visible: true,
         checked: false
       };
       arr.push(a);
       if (e.Children) {
-        a.children = conv2TreeData(e.Children);
+        a.children = conv2TreeData(a.id, e.Children, pidMap);
       }
+
+      pidMap[a.id] = pid;
     }
 
     return arr;
