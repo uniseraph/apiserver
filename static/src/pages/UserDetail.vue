@@ -113,8 +113,8 @@
           this.Email = data.Email;
           this.Tel = data.Tel;
           this.CreatedTime = data.CreatedTime;
-          this.IsSysAdmin = (data.RoleSet & this.constants.ROLE_SYS_ADMIN) != 0;
-          this.IsAppAdmin = (data.RoleSet & this.constants.ROLE_APP_ADMIN) != 0;
+          this.IsSysAdmin = (data.Roleset & this.constants.ROLE_SYS_ADMIN) != 0;
+          this.IsAppAdmin = (data.Roleset & this.constants.ROLE_APP_ADMIN) != 0;
         })
       },
 
@@ -131,12 +131,12 @@
           }
         }
 
-        let roleSet = this.constants.ROLE_NORMAL_USER;
+        let roleset = this.constants.ROLE_NORMAL_USER;
         if (this.IsSysAdmin) {
-          roleSet |= this.constants.ROLE_SYS_ADMIN;
+          roleset |= this.constants.ROLE_SYS_ADMIN;
         }
         if (this.IsAppAdmin) {
-          roleSet |= this.constants.ROLE_APP_ADMIN;
+          roleset |= this.constants.ROLE_APP_ADMIN;
         }
 
         api.UpdateUser({
@@ -144,7 +144,7 @@
           Name: this.Name,
           Email: this.Email,
           Tel: this.Tel,
-          RoleSet: roleSet
+          Roleset: roleset
         }).then(data => {
           ui.alert('用户资料修改成功', 'success');
           let that = this;

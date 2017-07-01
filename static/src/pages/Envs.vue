@@ -22,7 +22,7 @@
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="UpdateDirName" v-model="SelectedDir.Name" :rules="rules.Dir.Name"></v-text-field>
+                <v-text-field ref="UpdateDir_Name" v-model="SelectedDir.Name" :rules="rules.Dir.Name"></v-text-field>
               </v-card-text>
             </v-card-row>
             <v-card-row actions>
@@ -36,11 +36,11 @@
         <v-dialog v-model="CreateDirDlg" persistent>
           <v-card>
             <v-card-row>
-              <v-card-title>新建子目录</v-card-title>
+              <v-card-title>新建“{{ SelectedDir.Name }}”的子目录</v-card-title>
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="NewDirName" v-model="NewDirName" :rules="rules.Dir.Name"></v-text-field>
+                <v-text-field ref="NewDir_Name" v-model="NewDirName" :rules="rules.Dir.Name"></v-text-field>
               </v-card-text>
             </v-card-row>
             <v-card-row actions>
@@ -228,7 +228,24 @@
         }
       },
 
+      validateForm(refPrefix) {
+        for (let f in this.$refs) {
+          if (f.indexOf(refPrefix) == 0) {
+            let e = this.$refs[f];
+            if (e.errorBucket && e.errorBucket.length > 0) {
+              return false;
+            }
+          }
+        }
+
+        return true;
+      },
+
       createDir() {
+        if (!this.validateForm('NewDir_')) {
+          return;
+        }
+
         this.CreateDirDlg = false;
         let params = {
           Name: this.NewDirName,
@@ -242,6 +259,10 @@
       },
 
       updateDir() {
+        if (!this.validateForm('UpdateDir_')) {
+          return;
+        }
+
         this.UpdateDirDlg = false;
         api.UpdateEnvDir(this.SelectedDir).then(data => {
           this.init();
