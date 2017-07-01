@@ -1,4 +1,5 @@
 const pinyin = require('chinese-to-pinyin')
+
 export default class TreeStore {
     constructor(options) {
         for (let option in options) {
@@ -6,13 +7,16 @@ export default class TreeStore {
                 this[option] = options[option]
             }
         }
+
         this.datas = new Map()
+
         const _traverseNodes = (root) => {
             for (let node of root) {
                 this.datas.set(node.id, node)
                 if (node.children && node.children.length > 0) _traverseNodes(node.children)
             }
         }
+
         _traverseNodes(this.root)
     }
 
@@ -41,9 +45,11 @@ export default class TreeStore {
                 }
             }
         }
+
         _traverseUp(node)
         _traverseDown(node)
     }
+
     changeCheckHalfStatus(node) {
         let flag = false;
         //如果勾选的是子节点，父节点默认打上勾
@@ -76,6 +82,7 @@ export default class TreeStore {
                 }
             }
         }
+
         const _traverseDown = (node) => {
             if (node.children && node.children.length > 0) {
                 if (node.nodeSelectNotAll) { //节点没勾选
@@ -87,24 +94,31 @@ export default class TreeStore {
                 }
             }
         }
+
         _traverseUp(node)
         _traverseDown(node)
     }
+
     sameSilibingChecked(parentId, currentId) {
         let parent = this.datas.get(parentId)
         let sbIds = []
+
         parent.children.forEach(x => {
             if (x.id !== currentId) sbIds.push(x.id)
         })
+
         for (let id of sbIds) {
             let node = this.getNode(id)
             if (!node.checked) return false
         }
+
         return true
     }
+
     sameSilibingHalfChecked(status, parent, parentId, currentId) {
         let sbIds = []
         let currentNode = this.getNode(currentId)
+
         parent.children.forEach(x => {
             if (!currentNode.nodeSelectNotAll && x.id !== currentId) sbIds.push(x.id) //除去当前节点的剩下节点
         })
@@ -122,6 +136,7 @@ export default class TreeStore {
                     return "half" //表示全钩的状态
                 }
             }
+
             return "all" //表示全钩的状态
         } else { //去钩
             if (sbIds.length !== 0) {
@@ -136,21 +151,27 @@ export default class TreeStore {
                     return "half" //表示全钩的状态
                 }
             }
+
             return "none"
         }
     }
+
     isExitParent(parent) {
         if (parent.id) {
             return this.getNode(node.parentId)
         }
+
         return null
     }
+
     isNullOrEmpty(world) {
         if (world) {
             return world.trim().length === 0
         }
+
         return true
     }
+
     filterNodes(keyworld, searchOptions) {
         const _filterNode = (val, node) => {
             if (!val) return true
@@ -170,6 +191,7 @@ export default class TreeStore {
                 }
             }
         }
+
         let filterFunc = (searchOptions.customFilter && typeof(searchOptions.customFilter) === 'function') ? searchOptions.customFilter : _filterNode
         this.datas.forEach(node => {
             node.visible = filterFunc(keyworld, node)
@@ -182,17 +204,21 @@ export default class TreeStore {
             }
         })
     }
+
     getNode(key) {
         return this.datas.get(key)
     }
+
     toPinYin(keyworld, useInitial) {
         if (/^[a-zA-Z]/.test(keyworld)) {
             return keyworld
         }
+
         let fullpinyin = pinyin(keyworld, {
             filterChinese: true,
             noTone: true
         })
+
         if (useInitial) {
             let res = ''
             fullpinyin.split(' ').forEach(w => {
@@ -202,8 +228,11 @@ export default class TreeStore {
                     res += w.slice(0, 1)
                 }
             })
+
             return res
         }
+        
         return fullpinyin
     }
+
 }

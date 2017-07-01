@@ -140,7 +140,7 @@
     data() {
       return {
         treeOptions: {},
-        treeData: [],
+        treeData: { nodeData: [], currentNodeId: null },
         headers: [
           { text: '参数ID', sortable: false, left: true },
           { text: '参数名称', sortable: false , left: true},
@@ -164,8 +164,6 @@
 
         RemoveValueConfirmDlg: false,
         SelectedValue: {},
-
-        ParentIdMap: {},
 
         rules: {
           Dir: {
@@ -192,21 +190,24 @@
     },
 
     methods: {
-      init() {
-        this.ParentIdMap = {};
+      init(selectedDirId) {
+        let state = this.$refs.tree.getState();
         api.EnvDirs().then(data => {
-          let treeData = [{
+          let nodeData = [{
             id: '0',
             label: '全部',
             open: true,
             visible: true,
             checked: false,
-            children: conv2TreeData('id', data, this.ParentIdMap)
+            children: conv2NodeData('id', data)
           }];
 
-          this.treeData = treeData;
+          this.treeData = this.$refs.tree.createTreeData(nodeData, state, selectedDirId);
 
-          
+          if (selectedDirId) {
+            let node = this.$refs.tree.getNodeById(selectedDirId);
+            this.nodeClicked(node);
+          }
         })
       },
 
@@ -233,8 +234,8 @@
           Name: this.NewDirName,
           ParentId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : null
         };
-        api.CreateEnvDir(this.SelectedDir).then(data => {
-          this.init();
+        api.CreateEnvDir(params).then(data => {
+          this.init(data.Id);
         });
 
         this.NewDirName = '';
@@ -254,7 +255,7 @@
       removeDir() {
         this.RemoveDirConfirmDlg = false;
         api.RemoveEnvDir({ Id: this.SelectedDir.Id }).then(data => {
-          this.init();
+          this.init(this.SelectedDir.ParentId);
         })
       },
 
@@ -292,7 +293,7 @@
     }
   }
 
-  function conv2TreeData(pid, list, pidMap) {
+  function conv2NodeData(pid, list) {
     let arr = [];
     for (let e of list) {
       let a = {
@@ -305,10 +306,8 @@
       };
       arr.push(a);
       if (e.Children) {
-        a.children = conv2TreeData(a.id, e.Children, pidMap);
+        a.children = conv2NodeData(a.id, e.Children);
       }
-
-      pidMap[a.id] = pid;
     }
 
     return arr;

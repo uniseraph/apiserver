@@ -7,9 +7,19 @@ import * as ui from '../util/ui'
 axios.defaults.timeout = 5000;
 axios.defaults.baseURL = 'http://localhost:8080/public/mock';
 
+// 仅测试用
+axios.interceptors.request.use((config) => {
+    if(config.method === 'post'){
+        config.method = 'get';
+        config.url = config.url + '?' + qs.stringify(config.data);
+    }
+
+    return config;
+});
+
 export function fetch(url, params) {
     return new Promise((resolve, reject) => {
-        axios.get(url, params)
+        axios.post(url, params)
             .then(response => {
                 resolve(response.data);
             }, error => {
