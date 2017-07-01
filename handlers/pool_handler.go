@@ -129,7 +129,7 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	c := mgoSession.DB(mgoDB).C("pool")
 
-	n, err := c.Find(bson.M{"name": name}).Count()
+	n, err := c.Find(bson.M{"name": poolInfo.Name}).Count()
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
