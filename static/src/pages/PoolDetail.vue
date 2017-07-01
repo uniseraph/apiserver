@@ -11,12 +11,12 @@
           <v-container fluid>
             <v-layout row wrap>
               <v-flex xs2>
-                <v-subheader>名称</v-subheader>
+                <v-subheader>名称<span class="required-star">*</span></v-subheader>
               </v-flex>
               <v-flex xs3>
                 <v-text-field
                   v-model="Name"
-                  ref="Name"
+                  ref="all_Name"
                   single-line
                   :rules="rules.Name"
                 ></v-text-field>
@@ -24,47 +24,61 @@
               <v-flex xs2>
               </v-flex>
               <v-flex xs2>
-                <v-subheader>驱动类型</v-subheader>
+                <v-subheader>驱动类型<span class="required-star">*</span></v-subheader>
               </v-flex>
               <v-flex xs3>
                 <v-select
                   :items="DriverList"
                   v-model="Driver"
-                  ref="Driver"
+                  ref="all_Driver"
                   label="请选择"
                   dark
                   single-line
-                  auto
                   :rules="rules.Driver"
                 ></v-select>
               </v-flex>
-              <v-flex xs2>
-                <v-subheader>网络类型</v-subheader>
+              <v-flex v-if="Driver == 'swarm'" xs2>
+                <v-subheader>驱动版本</v-subheader>
               </v-flex>
-              <v-flex xs3>
+              <v-flex v-if="Driver == 'swarm'" xs3>
                 <v-select
-                  :items="NetworkList"
-                  v-model="Network"
-                  ref="Network"
+                  :items="SwarmVersionList"
+                  v-model="DriverOpts.Version"
+                  ref="swarm_Version"
                   label="请选择"
                   dark
                   single-line
-                  auto
-                  :rules="rules.Network"
+                  :rules="rules.DriverOpts.swarm.Version"
                 ></v-select>
               </v-flex>
-              <v-flex xs2>
+              <v-flex v-if="Driver == 'swarm'" xs2>
               </v-flex>
-              <v-flex xs2>
+              <v-flex v-if="Driver == 'swarm'" xs2>
                 <v-subheader>API地址</v-subheader>
               </v-flex>
-              <v-flex xs3>
+              <v-flex v-if="Driver == 'swarm'" xs3>
                 <v-text-field
-                  v-model="EndPoint"
-                  ref="EndPoint"
+                  v-model="DriverOpts.EndPoint"
+                  ref="swarm_EndPoint"
                   single-line
-                  :rules="rules.EndPoint"
+                  :rules="rules.DriverOpts.swarm.EndPoint"
                 ></v-text-field>
+              </v-flex>
+              <v-flex v-if="Driver == 'swarm'" xs2>
+                <v-subheader>驱动版本</v-subheader>
+              </v-flex>
+              <v-flex v-if="Driver == 'swarm'" xs3>
+                <v-select
+                  :items="SwarmAPIVersionList"
+                  v-model="DriverOpts.APIVersion"
+                  ref="swarm_APIVersion"
+                  label="请选择"
+                  dark
+                  single-line
+                  :rules="rules.DriverOpts.swarm.APIVersion"
+                ></v-select>
+              </v-flex>
+              <v-flex v-if="Driver == 'swarm'" xs7>
               </v-flex>
               <v-flex xs3>
                 <v-subheader>节点个数：{{ Nodes }}</v-subheader>
@@ -185,15 +199,17 @@
       return {
         Id: '',
         Name: '',
-        Driver: '',
-        Network: '',
-        EndPoint: '',
+        Driver: 'swarm',
+        DriverOpts: { Version: 'v1.0', EndPoint: '', APIVersion: 'v1.23' },
         Nodes: 0,
         Cpus: 0,
         Memories: 0,
         Disks: 0,
-        DriverList: [ 'Swarm', 'Kubernetes' ],
-        NetworkList: [ 'Flannel', 'VxLAN' ],
+
+        DriverList: [ 'swarm' ],
+        SwarmVersionList: [ 'v1.0' ],
+        SwarmAPIVersionList: [ 'v1.23' ],
+
         AuthorizedTeamList: [],
         AuthorizedUserList: [],
         UnauthorizedTeamList: [],
@@ -208,12 +224,19 @@
           Driver: [
             v => (v && v.length > 0 ? true : '请选择驱动类型')
           ],
-          Network: [
-            v => (v && v.length > 0 ? true : '请选择网络类型')
-          ],
-          EndPoint: [
-            v => (v && v.length > 0 ? true : '请输入集群API地址')
-          ]
+          DriverOpts: {
+            swarm: {
+              Version: [
+                v => (v && v.length > 0 ? true : '请选择集群驱动版本')
+              ],
+              EndPoint: [
+                v => (v && v.length > 0 ? true : '请输入集群API地址')
+              ],
+              APIVersion: [
+                v => (v && v.length > 0 ? true : '请选择集群API版本')
+              ]
+            }
+          }
         }
       }
     },
@@ -228,14 +251,13 @@
           this.Id = data.Id;
           this.Name = data.Name;
           this.Driver = data.Driver;
-          this.Network = data.Network;
-          this.EndPoint = data.EndPoint;
+          this.DriverOpts = data.DriverOpts;
           this.Nodes = data.Nodes;
           this.Cpus = data.Cpus;
           this.Memories = data.Memories;
           this.Disks = data.Disks;
-          this.AuthorizedTeamList = data.Teams;
-          this.AuthorizedUserList = data.Users;
+          this.AuthorizedTeamList = data.Teams ? data.Teams : [];
+          this.AuthorizedUserList = data.Users ? data.Users : [];
           this.AuthorizeToTeam = null;
           this.AuthorizeToUser = null;
 
@@ -254,12 +276,8 @@
       },
 
       save() {
-        for (let f in this.$refs) {
-          let e = this.$refs[f];
-          if (e.errorBucket && e.errorBucket.length > 0) {
-            ui.alert('请正确填写集群信息');
-            return;
-          }
+        if (!this.validateForm('all_') || !this.validateForm(this.Driver + '_')) {
+          return;
         }
 
         api.UpdatePool({

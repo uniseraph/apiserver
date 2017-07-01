@@ -12,8 +12,8 @@
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="Name" label="名称" v-model="NewTeam.Name" :rules="rules.Name"></v-text-field>
-                <v-text-field label="描述" v-model="NewTeam.Description"></v-text-field>
+                <v-text-field ref="Name" label="名称" required v-model="NewTeam.Name" :rules="rules.Name"></v-text-field>
+                <v-text-field label="描述" v-model="NewTeam.Description" class="mt-4"></v-text-field>
               </v-card-text>
             </v-card-row>
             <v-card-row actions>

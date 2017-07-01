@@ -1,3 +1,0 @@
-[
-{ "Id": "1", "Name": "Pool1", "Driver": "Swarm", "Network": "Flannel", "EndPoint": "10.0.0.1:3211", "Nodes": 10, "Cpus": 160, "Memories": 640, "Disks": 10240 }
-]

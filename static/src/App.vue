@@ -26,9 +26,10 @@
                   </v-flex>
                   <v-flex xs8>
                     <v-text-field
-                      v-model="Name"
-                      required
+                      v-model="Login.Name"
+                      ref="Login_Name"
                       single-line
+                      :rules="rules.Login.Name"
                     ></v-text-field>
                   </v-flex>
                   <v-flex xs4>
@@ -36,10 +37,12 @@
                   </v-flex>
                   <v-flex xs8>
                     <v-text-field
-                      v-model="Password"
-                      required
+                      v-model="Login.Password"
+                      ref="Login_Password"
                       single-line
                       type="password"
+                      :rules="rules.Login.Password"
+                      @keydown.enter.native="login"
                     ></v-text-field>
                   </v-flex>
                   <v-flex xs4>
@@ -234,8 +237,23 @@
         drawer: true,
         fixed: false,
         miniVariant: false,
-        Name: '',
-        Password: ''
+
+        Login: {
+          Name: '',
+          Password: ''
+        },
+
+        rules: {
+          Login: {
+            Name: [
+              v => (v && v.length > 0 ? true : '请输入用户名')
+            ],
+
+            Password: [
+              v => (v && v.length > 0 ? true : '请输入密码')
+            ]
+          }
+        }
       }
     },
 
@@ -265,9 +283,13 @@
       },
 
       login() {
+        if (!this.validateForm('Login_')) {
+          return;
+        }
+
         api.Login({
-          Name: this.Name,
-          Password: this.Password
+          Name: this.Login.Name,
+          Password: this.Login.Password
         }).then(data => {
           window.location.reload();
         })
