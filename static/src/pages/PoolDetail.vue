@@ -256,8 +256,8 @@
           this.Cpus = data.Cpus;
           this.Memories = data.Memories;
           this.Disks = data.Disks;
-          this.AuthorizedTeamList = data.Teams;
-          this.AuthorizedUserList = data.Users;
+          this.AuthorizedTeamList = data.Teams ? data.Teams : [];
+          this.AuthorizedUserList = data.Users ? data.Users : [];
           this.AuthorizeToTeam = null;
           this.AuthorizeToUser = null;
 

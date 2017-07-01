@@ -5,11 +5,11 @@ import * as ui from '../util/ui'
 
 // axios默认配置
 axios.defaults.timeout = 5000;
-axios.defaults.baseURL = 'http://localhost:8080/public/mock';
-//axios.defaults.baseURL = 'http://localhost:8080/api';
+//axios.defaults.baseURL = 'http://localhost:8080/public/mock';
+axios.defaults.baseURL = 'http://localhost:8080/api';
 
 // 仅测试用
-//*
+/*
 axios.interceptors.request.use((config) => {
     if(config.method === 'post'){
         config.method = 'get';
@@ -55,7 +55,7 @@ export default {
     },
 
     Pool(id) {
-        return fetch('/pools/' + id + '/detail');
+        return fetch('/pools/' + id + '/inspect');
     },
 
     CreatePool(params) {
