@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/handlers"
 
+	"github.com/contiv/ofnet/Godeps/_workspace/src/github.com/Sirupsen/logrus"
 )
 
 
@@ -245,6 +246,26 @@ func main() {
 		fmt.Printf("%s:%#v\n" , action , b)
 	}
 	fmt.Printf("checkaction success...\n" )
+
+
+	fmt.Println("\ncreate a pool....")
+
+	result , err := registerPool(client,"pool1", &handlers.PoolsRegisterRequest{
+		Name: "pool1",
+		Driver: "swarm",
+		DriverOpts: types.DriverOpts{
+			Version:"v1.0",
+			EndPoint:"unix:///var/run/docker.sock",
+			APIVersion:"v1.23",
+		},
+	},resp.Cookies())
+
+	if err!=nil {
+		logrus.Errorf("register the pool:%s err:%s","pool1",err.Error())
+		return
+	}
+
+	fmt.Printf("register success , result is %#v",result)
 
 
 }

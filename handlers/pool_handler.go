@@ -108,6 +108,7 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		Driver:         req.Driver,
 		DriverOpts:     req.DriverOpts,
 		Labels:         req.Labels,
+		Name:           req.Name,
 		ProxyEndpoints: make([]string, 1),
 	}
 
