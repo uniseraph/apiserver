@@ -2,6 +2,7 @@ import axios from 'axios'
 import qs from 'qs'
 
 import * as ui from '../util/ui'
+import store from '../vuex/store'
 
 // axios默认配置
 axios.defaults.timeout = 5000;
@@ -28,6 +29,7 @@ export function fetch(url, params) {
             }, error => {
                 let res = error.response;
                 if (res && res.status != 403) {
+                    console.log(store.getters.alertArea);
                     ui.alert(res.data);
                 }
 

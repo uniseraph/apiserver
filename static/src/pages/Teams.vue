@@ -7,6 +7,14 @@
         <v-dialog v-model="CreateTeamDlg">
           <v-btn class="primary white--text" slot="activator"><v-icon light>add</v-icon>新增团队</v-btn>
           <v-card>
+            <v-alert 
+              v-if="alertArea==='CreateTeamDlg'"
+              v-bind:success="alertType==='success'" 
+              v-bind:info="alertType==='info'" 
+              v-bind:warning="alertType==='warning'" 
+              v-bind:error="alertType==='error'" 
+              v-model="alertMsg" 
+              dismissible>{{ alertMsg }}</v-alert>
             <v-card-row>
               <v-card-title>新增团队</v-card-title>
             </v-card-row>
@@ -28,6 +36,14 @@
       <v-layout row justify-center>
         <v-dialog v-model="RemoveConfirmDlg" persistent>
           <v-card>
+            <v-alert 
+              v-if="alertArea==='RemoveConfirmDlg'"
+              v-bind:success="alertType==='success'" 
+              v-bind:info="alertType==='info'" 
+              v-bind:warning="alertType==='warning'" 
+              v-bind:error="alertType==='error'" 
+              v-model="alertMsg" 
+              dismissible>{{ alertMsg }}</v-alert>
             <v-card-row>
               <v-card-title>提示</v-card-title>
             </v-card-row>
@@ -66,6 +82,7 @@
 </template>
 
 <script>
+  import store, { mapGetters } from 'vuex'
   import api from '../api/api'
   import * as ui from '../util/ui'
 
@@ -81,8 +98,10 @@
           { text: '操作', sortable: false, left: true }
         ],
         items: [],
+
         CreateTeamDlg: false,
         NewTeam: { Name: '', Description: '' },
+
         RemoveConfirmDlg: false,
         SelectedTeam: {},
 
@@ -92,6 +111,24 @@
           ]
         }
       }
+    },
+
+    computed: {
+      ...mapGetters([
+          'alertArea',
+          'alertType',
+          'alertMsg'
+      ])
+    },
+
+    watch: {
+        RemoveConfirmDlg(v) {
+          (v ? ui.showAlertAt('RemoveConfirmDlg') : ui.showAlertAt())
+        },
+
+        CreateTeamDlg(v) {
+          (v ? ui.showAlertAt('CreateTeamDlg') : ui.showAlertAt())
+        }
     },
 
     mounted() {

@@ -4,11 +4,12 @@
       <v-layout row wrap style="margin-top:100px;">
         <v-flex xs4 offset-xs4>
           <v-alert 
+            v-if="alertArea==='global'"
             v-bind:success="alertType==='success'" 
             v-bind:info="alertType==='info'" 
             v-bind:warning="alertType==='warning'" 
             v-bind:error="alertType==='error'" 
-            v-model="showAlert" 
+            v-model="alertMsg" 
             dismissible>{{ alertMsg }}</v-alert>
         </v-flex>
         <v-flex xs4>
@@ -204,11 +205,12 @@
             <v-layout column>
               <v-flex xs12>
                 <v-alert 
+                  v-if="alertArea==='global'"
                   v-bind:success="alertType==='success'" 
                   v-bind:info="alertType==='info'" 
                   v-bind:warning="alertType==='warning'" 
                   v-bind:error="alertType==='error'" 
-                  v-model="showAlert" 
+                  v-model="alertMsg" 
                   dismissible>{{ alertMsg }}</v-alert>
               </v-flex>
               <v-flex xs12>
@@ -218,9 +220,6 @@
           </v-slide-y-transition>
         </v-container>
       </main>
-      <!--v-footer :fixed="fixed">
-        <span>&copy; 2017</span>
-      </v-footer-->
     </div>
   </v-app>
 </template>
@@ -259,7 +258,7 @@
 
     computed: {
       ...mapGetters([
-          'showAlert',
+          'alertArea',
           'alertType',
           'alertMsg',
           'token'

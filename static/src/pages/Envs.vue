@@ -17,6 +17,14 @@
       <v-layout row justify-center>
         <v-dialog v-model="UpdateDirDlg" persistent>
           <v-card>
+            <v-alert 
+              v-if="alertArea==='UpdateDirDlg'"
+              v-bind:success="alertType==='success'" 
+              v-bind:info="alertType==='info'" 
+              v-bind:warning="alertType==='warning'" 
+              v-bind:error="alertType==='error'" 
+              v-model="alertMsg" 
+              dismissible>{{ alertMsg }}</v-alert>
             <v-card-row>
               <v-card-title>修改目录名</v-card-title>
             </v-card-row>
@@ -35,6 +43,14 @@
       <v-layout row justify-center>
         <v-dialog v-model="CreateDirDlg" persistent>
           <v-card>
+            <v-alert 
+              v-if="alertArea==='CreateDirDlg'"
+              v-bind:success="alertType==='success'" 
+              v-bind:info="alertType==='info'" 
+              v-bind:warning="alertType==='warning'" 
+              v-bind:error="alertType==='error'" 
+              v-model="alertMsg" 
+              dismissible>{{ alertMsg }}</v-alert>
             <v-card-row>
               <v-card-title>新建“{{ SelectedDir.Name }}”的子目录</v-card-title>
             </v-card-row>
@@ -53,6 +69,14 @@
       <v-layout row justify-center>
         <v-dialog v-model="RemoveDirConfirmDlg" persistent>
           <v-card>
+            <v-alert 
+              v-if="alertArea==='RemoveDirConfirmDlg'"
+              v-bind:success="alertType==='success'" 
+              v-bind:info="alertType==='info'" 
+              v-bind:warning="alertType==='warning'" 
+              v-bind:error="alertType==='error'" 
+              v-model="alertMsg" 
+              dismissible>{{ alertMsg }}</v-alert>
             <v-card-row>
               <v-card-title>提示</v-card-title>
             </v-card-row>
@@ -75,6 +99,14 @@
     <v-layout row justify-center>
       <v-dialog v-model="RemoveValueConfirmDlg" persistent>
         <v-card>
+          <v-alert 
+              v-if="alertArea==='RemoveValueConfirmDlg'"
+              v-bind:success="alertType==='success'" 
+              v-bind:info="alertType==='info'" 
+              v-bind:warning="alertType==='warning'" 
+              v-bind:error="alertType==='error'" 
+              v-model="alertMsg" 
+              dismissible>{{ alertMsg }}</v-alert>
           <v-card-row>
             <v-card-title>提示</v-card-title>
           </v-card-row>
@@ -103,6 +135,14 @@
           <v-dialog v-model="CreateValueDlg">
             <v-btn class="primary white--text" slot="activator"><v-icon light>add</v-icon>新增参数</v-btn>
             <v-card>
+              <v-alert 
+                v-if="alertArea==='CreateValueDlg'"
+                v-bind:success="alertType==='success'" 
+                v-bind:info="alertType==='info'" 
+                v-bind:warning="alertType==='warning'" 
+                v-bind:error="alertType==='error'" 
+                v-model="alertMsg" 
+                dismissible>{{ alertMsg }}</v-alert>
               <v-card-row>
                 <v-card-title>新增参数</v-card-title>
               </v-card-row>
@@ -152,6 +192,7 @@
 </template>
 
 <script>
+  import store, { mapGetters } from 'vuex'
   import api from '../api/api'
   import * as ui from '../util/ui'
   import Tree from '../components/tree/tree.vue'
@@ -176,6 +217,7 @@
         Keyword: '',
 
         UpdateDirDlg: false,
+
         RemoveDirConfirmDlg: false,
         RemoveDirDisabled: true,
 
@@ -215,7 +257,35 @@
           },
 
           deep: true
+        },
+
+        RemoveDirConfirmDlg(v) {
+          (v ? ui.showAlertAt('RemoveDirConfirmDlg') : ui.showAlertAt())
+        },
+
+        UpdateDirDlg(v) {
+          (v ? ui.showAlertAt('UpdateDirDlg') : ui.showAlertAt())
+        },
+
+        CreateDirDlg(v) {
+          (v ? ui.showAlertAt('CreateDirDlg') : ui.showAlertAt())
+        },
+
+        RemoveValueConfirmDlg(v) {
+          (v ? ui.showAlertAt('RemoveValueConfirmDlg') : ui.showAlertAt())
+        },
+
+        CreateValueDlg(v) {
+          (v ? ui.showAlertAt('CreateValueDlg') : ui.showAlertAt())
         }
+    },
+
+    computed: {
+      ...mapGetters([
+          'alertArea',
+          'alertType',
+          'alertMsg'
+      ])
     },
 
     mounted() {
@@ -266,12 +336,12 @@
           return;
         }
 
-        this.CreateDirDlg = false;
         let params = {
           Name: this.NewDir.Name,
           ParentId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : null
         };
         api.CreateEnvDir(params).then(data => {
+          this.CreateDirDlg = false;
           this.init(data.Id);
         });
       },
@@ -281,8 +351,8 @@
           return;
         }
 
-        this.UpdateDirDlg = false;
         api.UpdateEnvDir(this.SelectedDir).then(data => {
+          this.UpdateDirDlg = false;
           this.init();
         });
       },
@@ -292,8 +362,8 @@
       },
 
       removeDir() {
-        this.RemoveDirConfirmDlg = false;
         api.RemoveEnvDir({ Id: this.SelectedDir.Id }).then(data => {
+          this.RemoveDirConfirmDlg = false;
           this.init(this.SelectedDir.ParentId);
         })
       },
@@ -319,7 +389,6 @@
           return;
         }
 
-        this.CreateValueDlg = false;
         let params = {
           Name: this.NewValue.Name,
           Value: this.NewValue.Value,
@@ -327,6 +396,7 @@
           DirId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : null
         };
         api.CreateEnvValue(params).then(data => {
+          this.CreateValueDlg = false;
           this.getDataFromApi();
         });
       },
@@ -337,8 +407,8 @@
       },
 
       removeValue() {
-        this.RemoveValueConfirmDlg = false;
         api.RemoveEnvValue({ Id: this.SelectedValue.Id }).then(data => {
+          this.RemoveValueConfirmDlg = false;
           this.getDataFromApi();
         })
       }

@@ -7,6 +7,14 @@
         <v-dialog v-model="CreatePoolDlg">
           <v-btn class="primary white--text" slot="activator"><v-icon light>add</v-icon>新增集群</v-btn>
           <v-card>
+            <v-alert 
+              v-if="alertArea==='CreatePoolDlg'"
+              v-bind:success="alertType==='success'" 
+              v-bind:info="alertType==='info'" 
+              v-bind:warning="alertType==='warning'" 
+              v-bind:error="alertType==='error'" 
+              v-model="alertMsg" 
+              dismissible>{{ alertMsg }}</v-alert>
             <v-card-row>
               <v-card-title>新增集群</v-card-title>
             </v-card-row>
@@ -75,6 +83,14 @@
       <v-layout row justify-center>
         <v-dialog v-model="RemoveConfirmDlg" persistent>
           <v-card>
+            <v-alert 
+              v-if="alertArea==='RemoveConfirmDlg'"
+              v-bind:success="alertType==='success'" 
+              v-bind:info="alertType==='info'" 
+              v-bind:warning="alertType==='warning'" 
+              v-bind:error="alertType==='error'" 
+              v-model="alertMsg" 
+              dismissible>{{ alertMsg }}</v-alert>
             <v-card-row>
               <v-card-title>提示</v-card-title>
             </v-card-row>
@@ -121,6 +137,7 @@
 </template>
 
 <script>
+  import store, { mapGetters } from 'vuex'
   import api from '../api/api'
   import * as ui from '../util/ui'
 
@@ -171,6 +188,24 @@
           }
         }
       }
+    },
+
+    computed: {
+      ...mapGetters([
+          'alertArea',
+          'alertType',
+          'alertMsg'
+      ])
+    },
+
+    watch: {
+        RemoveConfirmDlg(v) {
+          (v ? ui.showAlertAt('RemoveConfirmDlg') : ui.showAlertAt())
+        },
+
+        CreatePoolDlg(v) {
+          (v ? ui.showAlertAt('CreatePoolDlg') : ui.showAlertAt())
+        }
     },
 
     mounted() {
