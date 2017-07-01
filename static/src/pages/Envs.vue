@@ -69,14 +69,6 @@
       <v-layout row justify-center>
         <v-dialog v-model="RemoveDirConfirmDlg" persistent>
           <v-card>
-            <v-alert 
-              v-if="alertArea==='RemoveDirConfirmDlg'"
-              v-bind:success="alertType==='success'" 
-              v-bind:info="alertType==='info'" 
-              v-bind:warning="alertType==='warning'" 
-              v-bind:error="alertType==='error'" 
-              v-model="alertMsg" 
-              dismissible>{{ alertMsg }}</v-alert>
             <v-card-row>
               <v-card-title>提示</v-card-title>
             </v-card-row>
@@ -99,14 +91,6 @@
     <v-layout row justify-center>
       <v-dialog v-model="RemoveValueConfirmDlg" persistent>
         <v-card>
-          <v-alert 
-              v-if="alertArea==='RemoveValueConfirmDlg'"
-              v-bind:success="alertType==='success'" 
-              v-bind:info="alertType==='info'" 
-              v-bind:warning="alertType==='warning'" 
-              v-bind:error="alertType==='error'" 
-              v-model="alertMsg" 
-              dismissible>{{ alertMsg }}</v-alert>
           <v-card-row>
             <v-card-title>提示</v-card-title>
           </v-card-row>
@@ -259,20 +243,12 @@
           deep: true
         },
 
-        RemoveDirConfirmDlg(v) {
-          (v ? ui.showAlertAt('RemoveDirConfirmDlg') : ui.showAlertAt())
-        },
-
         UpdateDirDlg(v) {
           (v ? ui.showAlertAt('UpdateDirDlg') : ui.showAlertAt())
         },
 
         CreateDirDlg(v) {
           (v ? ui.showAlertAt('CreateDirDlg') : ui.showAlertAt())
-        },
-
-        RemoveValueConfirmDlg(v) {
-          (v ? ui.showAlertAt('RemoveValueConfirmDlg') : ui.showAlertAt())
         },
 
         CreateValueDlg(v) {
@@ -362,8 +338,8 @@
       },
 
       removeDir() {
+        this.RemoveDirConfirmDlg = false;
         api.RemoveEnvDir({ Id: this.SelectedDir.Id }).then(data => {
-          this.RemoveDirConfirmDlg = false;
           this.init(this.SelectedDir.ParentId);
         })
       },
@@ -407,8 +383,8 @@
       },
 
       removeValue() {
+        this.RemoveValueConfirmDlg = false;
         api.RemoveEnvValue({ Id: this.SelectedValue.Id }).then(data => {
-          this.RemoveValueConfirmDlg = false;
           this.getDataFromApi();
         })
       }

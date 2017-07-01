@@ -36,14 +36,6 @@
       <v-layout row justify-center>
         <v-dialog v-model="RemoveConfirmDlg" persistent>
           <v-card>
-            <v-alert 
-              v-if="alertArea==='RemoveConfirmDlg'"
-              v-bind:success="alertType==='success'" 
-              v-bind:info="alertType==='info'" 
-              v-bind:warning="alertType==='warning'" 
-              v-bind:error="alertType==='error'" 
-              v-model="alertMsg" 
-              dismissible>{{ alertMsg }}</v-alert>
             <v-card-row>
               <v-card-title>提示</v-card-title>
             </v-card-row>
@@ -122,10 +114,6 @@
     },
 
     watch: {
-        RemoveConfirmDlg(v) {
-          (v ? ui.showAlertAt('RemoveConfirmDlg') : ui.showAlertAt())
-        },
-
         CreateTeamDlg(v) {
           (v ? ui.showAlertAt('CreateTeamDlg') : ui.showAlertAt())
         }
