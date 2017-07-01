@@ -3,7 +3,7 @@
 POOL_NAME=$1
 
 echo "create the pool"
-curl  -X POST -H "Content-Type: application/json"  -d @scripts/create-pool.json http://localhost:8080/pools/register?name=${POOL_NAME}
+curl  -X POST -H "Content-Type: application/json"  -d @scripts/create-pool.json http://localhost:8080/pools/register?Name=${POOL_NAME}
 
 docker rm -f test
 
