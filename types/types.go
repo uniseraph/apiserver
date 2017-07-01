@@ -74,7 +74,7 @@ type Team struct {
 	UserIds     []bson.ObjectId
 }
 
-type TeamUser struct {
-	UserId string
-	TeamId string
-}
+//type TeamUser struct {
+//	UserId string
+//	TeamId string
+//}

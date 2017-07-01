@@ -172,7 +172,10 @@ func NewMainHandler(ctx context.Context) (http.Handler, error) {
 	SetupPrimaryRouter(r, c1, routes)
 
 	r.Path("/api/actions/check").Methods(http.MethodPost).HandlerFunc(  func (w http.ResponseWriter , r * http.Request){
-		postActionsCheck(ctx,w,r)
+
+		logrus.WithFields(logrus.Fields{"ctx":c1}).Debugf("call /api/actions/check")
+
+		checkUserPermission(postActionsCheck,types.ROLESET_NORMAL|types.ROLESET_SYSADMIN)(c1,w,r)
 	})
 
 
