@@ -6,65 +6,60 @@
      
       <span class="node-label" @click="handleNode(item)" :class="{'node-selected':(item.checked && !options.showCheckbox) || item.searched }">{{item.label}}</span>
 
-      <tree-node v-if="item.children && item.children.length > 0" :options="options" @handlecheckedChange="handlecheckedChange" v-show='item.open'
-        :tree-data="item.children"></tree-node>
+      <tree-node v-if="item.children && item.children.length > 0" :options="options" @handleCheckedChange="handleCheckedChange" v-show='item.open'
+        :nodeData="item.children"></tree-node>
     </li>
   </ul>
 </template>
 <script>
 export default {
   name: 'treeNode',
-  props: {
-    treeData: [Array],
-    options: [Object]
-  },
-  data () {
+  props: [ 'nodeData', 'options' ],
+
+  data() {
     return {
-      nodeData: []
+
     }
   },
-  created () {
+
+  created() {
     const parent = this.$parent
     if (parent.isTree) {
       this.tree = parent
     } else {
       this.tree = parent.tree
     }
+  },
 
-    const tree = this.tree
-    if (!tree) {
-      console.warn('找不到树节点')
-    }
-    this.nodeData = (this.treeData || []).slice(0)
-  },
-  watch: {
-    treeData: function(data){
-      this.nodeData = data;
-    }
-  },
-  computed:{
-    inputWidth: function(){
-      if(this.checkFirfox()){
+  computed: {
+    inputWidth() {
+      if (this.checkFirfox()) {
         return 14
       }
+
       return 13
     }
   },
+
   methods: {
     checkFirfox(){
       let u = navigator.userAgent
-        if (u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1){
-          return true
-        }
-        return false
+      if (u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1) {
+        return true
+      }
+
+      return false
     },
-    handleNodeExpand (node) {
+
+    handleNodeExpand(node) {
       node.open = !node.open
     },
-    handlecheckedChange (node) {
-      this.$emit('handlecheckedChange', node)
+
+    handleCheckedChange(node) {
+      this.$emit('handleCheckedChange', node)
     },
-    handleNode (node) {
+
+    handleNode(node) {
       if (this.tree.store.last) {
         if (this.tree.store.last.id === node.id) {
           //this.tree.store.last.checked = !this.tree.store.last.checked
@@ -74,8 +69,8 @@ export default {
           this.tree.store.last = node
         }
       } else {
-        this.tree.store.last = node
         node.checked = true
+        this.tree.store.last = node
       }
 
       this.tree.$emit('node-click', node)
@@ -101,11 +96,7 @@ export default {
     -moz-border-radius: 4px;
     border-radius: 4px;
   }
-  
-  .node-selected {
-    background-color:#ddd
-  }
-  
+
   .halo-tree li {
     margin: 0;
     padding: 5px 5px 5px 0;
