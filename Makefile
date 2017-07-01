@@ -1,6 +1,7 @@
 SHELL = /bin/bash
 
 TARGET       = apiserver
+CLI_TARGET   = apicli
 PROJECT_NAME = github.com/zanecloud/apiserver
 
 MAJOR_VERSION = $(shell cat VERSION)
@@ -12,16 +13,22 @@ IMAGE_NAME     = registry.cn-hangzhou.aliyuncs.com/zanecloud/apiserver
 BUILD_IMAGE     = golang:1.8
 
 install:
-	brew install mongodb redis
-
+	brew install mongodb redis npm
 
 init:
 	bash scripts/init.sh
 
-local:
+apiserver:clean
 	CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}" -o ${TARGET}
+
+apicli:cleancli
+	CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}"  -o ${CLI_TARGET}  client/client.go
+
+portal:
+	cd static && npm install && npm run build && cd ..
+
 build:
-	docker run --rm -v $(shell pwd):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} ${BUILD_IMAGE} make local
+	docker run --rm -v $(shell pwd):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} ${BUILD_IMAGE} make apiserver apicli
 image: build
 	docker build --rm -t ${IMAGE_NAME}:${MAJOR_VERSION}-${GIT_VERSION} .
 	docker tag  ${IMAGE_NAME}:${MAJOR_VERSION}-${GIT_VERSION} ${IMAGE_NAME}:${MAJOR_VERSION}
@@ -33,16 +40,21 @@ shell:
 	docker build --rm -t ${BUILD_IMAGE} contrib/builder/binary
 	docker run -ti --rm -v $(shell pwd):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} ${BUILD_IMAGE} /bin/bash
 
-run: local
-	MONGO_URLS=127.0.0.1 MONGO_DB=zanecloud ./apiserver -l debug start
+run:apiserver
+	MONGO_URLS=127.0.0.1 MONGO_DB=zanecloud  ROOT_DIR=./static ./apiserver -l debug start
 
 compose:
 	docker-compose up -d
 
+clean:
+	rm -rf apiserver
 
+cleancli:
+	rm -rf apicli
 
-test:
-	bash scripts/test-user.sh sadan 123456
-	bash scripts/test.sh ${POOL_NAME}
+test:apicli
+	mongo zanecloud --eval "db.user.remove({'name':'sadan'})"
+	mongo zanecloud --eval "db.team.remove({'name':'team1'})"
+	./apicli
 
 .PHONY: image build local

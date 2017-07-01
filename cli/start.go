@@ -87,6 +87,7 @@ func parserAPIServerConfig(c *cli.Context) *store.APIServerConfig {
 		RedisAddr: c.String(utils.KEY_REDIS_ADDR),
 		Addr:      c.String(utils.KEY_LISTENER_ADDR),
 		Port:      c.Int(utils.KEY_LISTENER_PORT),
+		RootDir:   c.String(utils.KEY_ROOT_DIR),
 	}
 
 }

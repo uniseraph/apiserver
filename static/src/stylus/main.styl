@@ -1,0 +1,54 @@
+@import './_variables'
+@import '../../node_modules/vuetify/src/stylus/settings/_colors'
+@import '../../node_modules/vuetify/src/stylus/settings/_theme'
+@import '../../node_modules/vuetify/src/stylus/tools/_mixins'
+@import '../../node_modules/vuetify/src/stylus/generic/*'
+@import '../../node_modules/vuetify/src/stylus/elements/*'
+@import '../../node_modules/vuetify/src/stylus/components/*'
+@import '../../node_modules/vuetify/src/stylus/trumps/*'
+
+.navigation-drawer > .list .list__tile--active .list__tile__title
+	color: #1976d2
+
+.ico_back
+	color: #1976d2
+	cursor: pointer
+
+.card
+	&__title
+		font-size: 16px
+
+.subheader
+	height: 36px
+
+.input-group
+	margin: 0 0
+
+	&__details
+		min-height: 6px
+
+.btn
+	&--floating
+		&.btn--small
+			width: 30px
+			height: 30px
+
+.input-group--select 
+	.input-group
+		&__selections
+			&__comma
+				font-size: 14px
+
+.input-group--text-field 
+	&.input-group--error 
+		label
+			color: rgba(0,0,0,0.38)
+	input
+		font-size: 14px
+
+.input-group--span
+	padding-top: 6px
+
+.required-star
+	color: red
+	padding-left: 5px

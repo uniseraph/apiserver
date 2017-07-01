@@ -24,10 +24,8 @@ const KEY_POOL_CLIENT = "pool.client"
 const KEY_LISTENER_ADDR = "addr"
 const KEY_LISTENER_PORT = "port"
 const KEY_APISERVER_CONFIG = "apiserver.config"
-
-const (
-
-)
+const KEY_CURRENT_USER = "user.self"
+const KEY_ROOT_DIR= "root.dir"
 
 func GetAPIServerConfig(ctx context.Context) *store.APIServerConfig {
 	config, ok := ctx.Value(KEY_APISERVER_CONFIG).(*store.APIServerConfig)
@@ -41,6 +39,19 @@ func GetAPIServerConfig(ctx context.Context) *store.APIServerConfig {
 
 func PutAPIServerConfig(ctx context.Context, config *store.APIServerConfig) context.Context {
 	return context.WithValue(ctx, KEY_APISERVER_CONFIG, config)
+}
+
+func PutCurrentUser(ctx context.Context, user *store.User) context.Context {
+	return context.WithValue(ctx, KEY_CURRENT_USER, user)
+}
+func GetCurrentUser(ctx context.Context) (*store.User, error) {
+	user, ok := ctx.Value(KEY_CURRENT_USER).(*store.User)
+	if !ok {
+		logrus.Errorf("can't get current user  by %s", KEY_CURRENT_USER)
+		return nil, errors.New("can't get current user")
+	}
+
+	return user, nil
 }
 
 func getMgoSession(ctx context.Context) (*mgo.Session, error) {

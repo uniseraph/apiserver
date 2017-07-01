@@ -14,6 +14,50 @@ import (
 	"time"
 )
 
+func getUserCurrent(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+	cookie, err := r.Cookie("uid")
+	if err != nil {
+		HttpError(w, "please login", http.StatusForbidden)
+		return
+	}
+
+	uid := cookie.Value
+
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer mgoSession.Close()
+
+	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
+
+	c := mgoSession.DB(mgoDB).C("user")
+
+	result := types.User{}
+
+	if err := c.Find(bson.M{"_id": bson.ObjectIdHex(uid)}).One(&result); err != nil {
+
+		if err == mgo.ErrNotFound {
+			HttpError(w, fmt.Sprintf("no such a user id is %s", uid), http.StatusNotFound)
+			return
+		}
+
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	//需要过滤
+	result.Pass = ""
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(result)
+
+}
+
+
 func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	if err := r.ParseForm(); err != nil {
@@ -49,7 +93,7 @@ func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	logrus.Debugf("getUserLogin::get the user %#v", result)
 	if result.Pass != utils.Md5(pass) {
-		HttpError(w, "pass is error", http.StatusUnauthorized)
+		HttpError(w, "pass is error", http.StatusForbidden)
 		return
 	}
 
@@ -76,11 +120,16 @@ func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	http.SetCookie(w, uid_cookie)
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "ok")
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }
 
 type UsersCreateRequest struct {
 	types.User
+}
+
+type UsersCreateResponse struct {
+	Id string
 }
 
 func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -158,9 +207,11 @@ func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "{%q:%q}", "Id", user.Id.Hex())
-}
+	//fmt.Fprintf(w, "{%q:%q}", "Id", user.Id.Hex())
 
+	resp := &UsersCreateResponse{Id:user.Id.Hex()}
+	json.NewEncoder(w).Encode(resp)
+}
 
 type UserResetPassRequest struct {
 	Id      string
@@ -170,7 +221,7 @@ type UserResetPassRequest struct {
 //"/users/{id:.*}/reset"
 func postUserResetPass(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
-	id := mux.Vars(r)["name"]
+	id := mux.Vars(r)["id"]
 
 	req := UserResetPassRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -202,8 +253,6 @@ func postUserResetPass(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusOK)
 
 }
-
-
 
 func getUserInspect(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
@@ -271,13 +320,270 @@ func getUsersJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 }
 
+///users/{name:.*}/remove
 func postUserRemove(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
+	id := mux.Vars(r)["id"]
+
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer mgoSession.Close()
+
+	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
+
+	c := mgoSession.DB(mgoDB).C("user")
+
+	if err := c.Remove(bson.M{"_id": bson.ObjectIdHex(id)}); err != nil {
+		if err == mgo.ErrNotFound {
+			HttpError(w, "no such a user", http.StatusNotFound)
+			return
+		}
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "{%q:%q}", "Id", id)
+
 }
+
+// /users/{id:.*}/join?TeamId=xxx"
 func postUserJoin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
+	if err := r.ParseForm(); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var (
+		teamId = r.Form.Get("TeamId")
+		userId = mux.Vars(r)["id"]
+	)
+
+	//需要判断当前用户是否为团队主管
+	currentUser, err := utils.GetCurrentUser(ctx)
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer mgoSession.Close()
+
+	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
+	c_team := mgoSession.DB(mgoDB).C("team")
+	team := &types.Team{}
+	if err := c_team.Find(bson.M{"_id": bson.ObjectIdHex(teamId)}).One(team); err != nil {
+		if err == mgo.ErrNotFound {
+			HttpError(w, fmt.Sprintf("no such a team :%s", teamId), http.StatusNotFound)
+			return
+		}
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+
+	c_user := mgoSession.DB(mgoDB).C("user")
+	user := &types.User{}
+	if err := c_user.Find(bson.M{"_id": bson.ObjectIdHex(userId)}).One(user); err != nil {
+		if err == mgo.ErrNotFound {
+			HttpError(w, fmt.Sprintf("no such a user :%s", userId), http.StatusNotFound)
+			return
+		}
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	//如果当前用户不是改团队的主管并且当前用户不是系统管理员，则没有权限
+	if team.Leader.Id != currentUser.Id.Hex()  && (currentUser.RoleSet & types.ROLESET_SYSADMIN == 0) {
+		HttpError(w, fmt.Sprintf("current user:%s isn't the team:%s  leader ，and current user's roleset:%d dont include sysadmin", currentUser.Id.Hex(), teamId,currentUser.RoleSet), http.StatusForbidden)
+		return
+	}
+
+
+	if err:= c_user.Update(bson.M{"_id":bson.ObjectIdHex(userId)} ,  bson.M{ "$addToSet" : bson.M{"teamids":bson.ObjectIdHex(teamId)}   } ); err!=nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	//if err:= c_team.Update(bson.M{"_id":bson.ObjectIdHex(teamId)} ,  bson.M{ "$addToSet" : bson.M{"userids":bson.ObjectIdHex(userId)}   } ); err!=nil {
+	if err:= c_team.Update(bson.M{"_id":bson.ObjectIdHex(teamId)} ,  bson.M{ "$addToSet" : bson.M{"users":user}   } ); err!=nil {
+
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// TODO没有事务保护
+
+
+
+
+
+	w.WriteHeader(http.StatusOK)
+
 }
+
+// /users/{id:.*}/quit?TeamId=xxx
 func postUserQuit(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
+	if err := r.ParseForm(); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var (
+		teamId = r.Form.Get("TeamId")
+		userId = mux.Vars(r)["id"]
+	)
+
+	//需要判断当前用户是否为团队主管
+	currentUser, err := utils.GetCurrentUser(ctx)
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
+
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	defer mgoSession.Close()
+
+	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
+
+
+	c_team := mgoSession.DB(mgoDB).C("team")
+	team := &types.Team{}
+	if err := c_team.Find(bson.M{"_id": bson.ObjectIdHex(teamId)}).One(team); err != nil {
+		if err == mgo.ErrNotFound {
+			HttpError(w, fmt.Sprintf("no such a team :%s", teamId), http.StatusNotFound)
+			return
+		}
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+
+	c_user := mgoSession.DB(mgoDB).C("user")
+	user := &types.User{}
+	if err := c_user.Find(bson.M{"_id": bson.ObjectIdHex(userId)}).One(user); err != nil {
+		if err == mgo.ErrNotFound {
+			HttpError(w, fmt.Sprintf("no such a user :%s", userId), http.StatusNotFound)
+			return
+		}
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	//如果当前用户不是改团队的主管并且当前用户不是系统管理员，则没有权限
+	if team.Leader.Id != currentUser.Id.Hex()  && (currentUser.RoleSet & types.ROLESET_SYSADMIN == 0) {
+		HttpError(w, fmt.Sprintf("current user:%s isn't the team:%s  leader ，and current user's roleset:%d dont include sysadmin", currentUser.Id.Hex(), teamId,currentUser.RoleSet), http.StatusForbidden)
+		return
+	}
+
+
+
+	if err := c_team.UpdateId(bson.ObjectIdHex(teamId),
+		bson.M{"$pull" : bson.M{ "users": bson.M{"_id": bson.ObjectIdHex(userId)}  } } ) ; err!=nil{
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := c_user.UpdateId(bson.ObjectIdHex(userId),
+		bson.M{"$pull" : bson.M{"teamids": bson.ObjectIdHex(teamId)}}) ; err!=nil{
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+
+	w.WriteHeader(http.StatusOK)
+
 }
 
+
+//"/users/{id:.*}/update":    &MyHandler{h: postUserUpdate, opChecker: checkUserPermission,roleset: types.ROLESET_SYSADMIN | types.ROLESET_NORMAL},
+
+type UserUpdateRequest struct {
+	Name     string
+	Roleset  types.Roleset
+	Pass     string
+	Tel      string
+	Email    string
+	Comments string
+}
+
+func postUserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+	id := mux.Vars(r)["id"]
+
+	req := UserUpdateRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	logrus.Debugf("postUserUpdate::the request is %#v", req)
+
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	defer mgoSession.Close()
+
+	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
+	c := mgoSession.DB(mgoDB).C("user")
+
+	selector := bson.M{"_id": bson.ObjectIdHex(id)}
+
+	data := bson.M{}
+	if req.Name != "" {
+		data = bson.M{"name": req.Name}
+	}
+
+	//TODO 这里要求roleset必须传
+	data["roleset"] = req.Roleset
+
+	if req.Pass != "" {
+		data["pass"] = utils.Md5(req.Pass)
+	}
+
+	if req.Tel != "" {
+		data["tel"] = req.Tel
+	}
+
+	if req.Email != "" {
+		data["email"] = req.Email
+	}
+
+	if req.Comments != "" {
+		data["comments"] = req.Comments
+	}
+	
+	logrus.Debugf("postUserUpdate::the data is %#v", data)
+
+	if err := c.Update(selector, bson.M{"$set": data}); err != nil {
+		if err == mgo.ErrNotFound {
+			HttpError(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+
+}

@@ -48,6 +48,7 @@ func Run() {
 				flMgoDB,
 				flAddr,
 				flPort,
+				flRootDir,
 				//flClusterTls,
 				//flClusterTlsKeyFile,
 				//flClusterTlsCertFile,
