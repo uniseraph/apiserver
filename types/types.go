@@ -73,6 +73,7 @@ type Team struct {
 	Leader      Leader
 	//UserIds     []bson.ObjectId
 	Users       []User
+	CreatedTime int64 `json:",omitempty"`
 }
 
 //type TeamUser struct {

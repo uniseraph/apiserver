@@ -12,6 +12,7 @@ import (
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
+	"time"
 )
 
 func getTeamsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -271,6 +272,7 @@ func postTeamsCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 		Name:        req.Name,
 		Id:          bson.NewObjectId(),
 		Description: req.Description,
+		CreatedTime: time.Now().Unix(),
 		Leader: types.Leader{
 			Id:   req.Leader.Id,
 			Name: req.Leader.Name,
