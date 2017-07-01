@@ -127,7 +127,7 @@ func checkUserPermission(h Handler, roleset types.Roleset) Handler {
 			return
 		}
 
-		if roleset&result.RoleSet == 0 {
+		if roleset & result.RoleSet == 0 {
 
 			logrus.Infof("current roleset  is %d ,current user is %#v , so it no permission", roleset, result)
 

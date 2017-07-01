@@ -41,7 +41,7 @@ type PoolInfo struct {
 	Status string
 
 	Driver         string
-	DriverOpts     *DriverOpts
+	DriverOpts     DriverOpts
 	Labels         map[string]interface{} `json:",omitempty"`
 	ProxyEndpoints []string               `json:",omitempty"`
 }

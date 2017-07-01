@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/zanecloud/apiserver/proxy"
 	store "github.com/zanecloud/apiserver/types"
@@ -47,12 +46,18 @@ func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 }
 
-type PoolsRegisterRequest struct {
+type PoolsRegisterRequest struct{
+	Name       string
 	Driver     string
-	DriverOpts *store.DriverOpts
+	DriverOpts store.DriverOpts
 	Labels     map[string]interface{} `json:",omitempty"`
 }
 
+
+type PoolsRegisterResponse struct {
+	Id   string
+	Name string
+}
 func getPoolsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	mgoSession, err := utils.GetMgoSessionClone(ctx)
 
@@ -67,7 +72,7 @@ func getPoolsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	c := mgoSession.DB(mgoDB).C("pool")
 
-	var result []*store.PoolInfo
+	var result []store.PoolInfo
 	if err := c.Find(bson.M{}).All(&result); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -86,7 +91,7 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	var (
-		name = r.Form.Get("name")
+		name = r.Form.Get("Name")
 	)
 
 	req := PoolsRegisterRequest{}
@@ -96,13 +101,19 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+//	{Name: "a", Driver: "swarm", DriverOpts: {Version: "v1.0", EndPoint: "bbbb", APIVersion: "v1.23"}}
+
 	poolInfo := &store.PoolInfo{
 		Id:             bson.NewObjectId(),
-		Name:           name,
 		Driver:         req.Driver,
 		DriverOpts:     req.DriverOpts,
 		Labels:         req.Labels,
 		ProxyEndpoints: make([]string, 1),
+	}
+
+
+	if name!= "" {
+		poolInfo.Name = name
 	}
 
 	mgoSession, err := utils.GetMgoSessionClone(ctx)
@@ -143,8 +154,13 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	result := &PoolsRegisterResponse{
+		Name: poolInfo.Name,
+		Id : poolInfo.Id.Hex(),
+	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "{%q:%q}", "Name", name)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(result)
+	//fmt.Fprintf(w, "{%q:%q}", "Name", name)
 
 }
