@@ -111,12 +111,12 @@ func postTeamAppoint(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	selector := bson.ObjectIdHex(teamId)
 
-	data := bson.M{"leader": &types.Leader{
+	data := bson.M{"leader": types.Leader{
 		Id:   userId,
 		Name: user.Name,
 	}}
 
-	if err := c.Update(selector, bson.M{"$set": data}); err != nil {
+	if err := c.UpdateId(selector, bson.M{"$set": data}); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -173,7 +173,7 @@ func postTeamRevoke(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		Name: "",
 	}}
 
-	if err := c_team.Update(selector, bson.M{"$set": data}); err != nil {
+	if err := c_team.UpdateId(selector, bson.M{"$set": data}); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

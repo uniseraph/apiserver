@@ -71,10 +71,11 @@ type Team struct {
 	Name        string
 	Description string
 	Leader      Leader
-	UserIds     []bson.ObjectId
+	//UserIds     []bson.ObjectId
+	Users       []User
 }
 
-type TeamUser struct {
-	UserId string
-	TeamId string
-}
+//type TeamUser struct {
+//	UserId string
+//	TeamId string
+//}

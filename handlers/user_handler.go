@@ -57,6 +57,7 @@ func getUserCurrent(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 }
 
+
 func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	if err := r.ParseForm(); err != nil {
@@ -119,7 +120,8 @@ func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	http.SetCookie(w, uid_cookie)
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "ok")
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }
 
 type UsersCreateRequest struct {
@@ -406,17 +408,21 @@ func postUserJoin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err:= c_team.Update(bson.M{"_id":bson.ObjectIdHex(teamId)} ,  bson.M{ "$addToSet" : bson.M{"userids":bson.ObjectIdHex(userId)}   } ); err!=nil {
+
+	if err:= c_user.Update(bson.M{"_id":bson.ObjectIdHex(userId)} ,  bson.M{ "$addToSet" : bson.M{"teamids":bson.ObjectIdHex(teamId)}   } ); err!=nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	//if err:= c_team.Update(bson.M{"_id":bson.ObjectIdHex(teamId)} ,  bson.M{ "$addToSet" : bson.M{"userids":bson.ObjectIdHex(userId)}   } ); err!=nil {
+	if err:= c_team.Update(bson.M{"_id":bson.ObjectIdHex(teamId)} ,  bson.M{ "$addToSet" : bson.M{"users":user}   } ); err!=nil {
+
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// TODO没有事务保护
 
-	if err:= c_user.Update(bson.M{"_id":bson.ObjectIdHex(userId)} ,  bson.M{ "$addToSet" : bson.M{"teamids":bson.ObjectIdHex(teamId)}   } ); err!=nil {
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 
 
 
@@ -438,6 +444,14 @@ func postUserQuit(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		userId = mux.Vars(r)["id"]
 	)
 
+	//需要判断当前用户是否为团队主管
+	currentUser, err := utils.GetCurrentUser(ctx)
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
+
 	mgoSession, err := utils.GetMgoSessionClone(ctx)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
@@ -447,26 +461,51 @@ func postUserQuit(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	defer mgoSession.Close()
 
 	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
-	c := mgoSession.DB(mgoDB).C("userteam")
 
-	n, err := c.Find(bson.M{"teamid": teamId, "userid": userId}).Count()
-	if err != nil {
+
+	c_team := mgoSession.DB(mgoDB).C("team")
+	team := &types.Team{}
+	if err := c_team.Find(bson.M{"_id": bson.ObjectIdHex(teamId)}).One(team); err != nil {
+		if err == mgo.ErrNotFound {
+			HttpError(w, fmt.Sprintf("no such a team :%s", teamId), http.StatusNotFound)
+			return
+		}
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if n == 0 {
-		HttpError(w, fmt.Sprintf("the user:%s hasn't  been in  the team %s", userId, teamId), http.StatusInternalServerError)
-		return
-	}
 
-	if err := c.Remove(bson.M{
-		"userid": userId,
-		"teamId": teamId,
-	}); err != nil {
+	c_user := mgoSession.DB(mgoDB).C("user")
+	user := &types.User{}
+	if err := c_user.Find(bson.M{"_id": bson.ObjectIdHex(userId)}).One(user); err != nil {
+		if err == mgo.ErrNotFound {
+			HttpError(w, fmt.Sprintf("no such a user :%s", userId), http.StatusNotFound)
+			return
+		}
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	//如果当前用户不是改团队的主管并且当前用户不是系统管理员，则没有权限
+	if team.Leader.Id != currentUser.Id.Hex()  && (currentUser.RoleSet & types.ROLESET_SYSADMIN == 0) {
+		HttpError(w, fmt.Sprintf("current user:%s isn't the team:%s  leader ，and current user's roleset:%d dont include sysadmin", currentUser.Id.Hex(), teamId,currentUser.RoleSet), http.StatusForbidden)
+		return
+	}
+
+
+
+	if err := c_team.UpdateId(bson.ObjectIdHex(teamId),
+		bson.M{"$pull" : bson.M{ "users": bson.M{"_id": bson.ObjectIdHex(userId)}  } } ) ; err!=nil{
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := c_user.UpdateId(bson.ObjectIdHex(userId),
+		bson.M{"$pull" : bson.M{"teamids": bson.ObjectIdHex(teamId)}}) ; err!=nil{
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 
 	w.WriteHeader(http.StatusOK)
 
