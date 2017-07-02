@@ -86,6 +86,21 @@ func main() {
 	fmt.Printf("inspect the user %#v \n", user)
 
 
+	fmt.Println("\nlist all teams ......")
+	teams , err := listTeam(client,resp.Cookies())
+	if err !=nil {
+		log.Errorf("list  teams err:%s",err.Error())
+		return
+	}
+	fmt.Printf("nteams is %#v\n",teams)
+
+	for _ , u := range teams {
+		fmt.Printf("team: %#v \n", u)
+	}
+
+
+
+
 	teamId , err := createTeam(client, &types.Team{
 		Name : "team1",
 		Description: "dev team1",
@@ -115,12 +130,12 @@ func main() {
 	}
 
 	fmt.Println("\nlist all teams ......")
-	teams , err := listTeam(client,resp.Cookies())
+	nteams , err := listTeam(client,resp.Cookies())
 	if err !=nil {
 		log.Errorf("list  teams err:%s",err.Error())
 		return
 	}
-	for _ , u := range teams {
+	for _ , u := range nteams {
 		fmt.Printf("team: %#v \n", u)
 	}
 
@@ -765,9 +780,10 @@ func listTeam(client *http.Client   , cookies []*http.Cookie) ([]types.Team ,  e
 	}
 	defer resp.Body.Close()
 
+	body, _ := ioutil.ReadAll(resp.Body)
 
+	fmt.Printf("listTeam repos body is %s\n", string(body))
 	if resp.StatusCode != http.StatusOK {
-		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Debugf("login read body statuscode:%d err:%s",resp.StatusCode,err.Error())
 			return nil ,err
@@ -778,7 +794,7 @@ func listTeam(client *http.Client   , cookies []*http.Cookie) ([]types.Team ,  e
 	}
 
 	var result []types.Team
-	if err := json.NewDecoder(resp.Body).Decode(&result) ; err !=nil {
+	if err := json.Unmarshal(body,&result) ; err !=nil {
 		//log.Errorf("decode the users buf : %s error:%s" , string(body) , err.Error() )
 		return nil , err
 	}
