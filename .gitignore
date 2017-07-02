@@ -26,3 +26,4 @@ apiserver.iml
 .vscode
 client/client
 static/package-lock.json
+debug

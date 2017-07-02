@@ -10,4 +10,13 @@ mongo zanecloud --eval "db.pool.createIndex({name:1}, {unique:true})"
 mongo zanecloud --eval "db.container.createIndex({name:1}, {unique:true})"
 mongo zanecloud --eval "db.container.createIndex({id:1}, {unique:true})"
 
-mongo zanecloud --eval "db.user.insertOne({name:'root',pass:'hell05a',roleset:4})"
+#准备加盐计算
+pass=hell05a
+name=root
+salt="1234567891234567"
+pass="hell05a"
+content="$pass:$salt"
+#生成加盐后的密码
+encryptedPassword=$(md5 -qs $content)
+
+mongo zanecloud --eval "db.user.insertOne({name:'$name',pass:'$encryptedPassword',salt: '$salt',roleset:4})"
