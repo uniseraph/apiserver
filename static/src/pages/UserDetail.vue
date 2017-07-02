@@ -16,7 +16,9 @@
               ref="Name"
               v-model="Name"
               single-line
+              required
               :rules="rules.Name"
+              @input="rules.Name = rules0.Name"
             ></v-text-field>
           </v-flex>
           <v-flex xs2>
@@ -29,7 +31,9 @@
               ref="Email"
               v-model="Email"
               single-line
+              required
               :rules="rules.Email"
+              @input="rules.Email = rules0.Email"
             ></v-text-field>
           </v-flex>
           <v-flex xs2>
@@ -40,7 +44,9 @@
               ref="Tel"
               v-model="Tel"
               single-line
+              required
               :rules="rules.Tel"
+              @input="rules.Tel = rules0.Tel"
             ></v-text-field>
           </v-flex>
           <v-flex xs2>
@@ -87,7 +93,9 @@
         IsSysAdmin: false,
         IsAppAdmin: false,
 
-        rules: {
+        rules: {},
+
+        rules0: {
           Name: [
             v => (v && v.length > 0 ? true : '请输入用户名')
           ],
@@ -123,35 +131,34 @@
       },
 
       save() {
-        for (let f in this.$refs) {
-          let e = this.$refs[f];
-          if (e.errorBucket && e.errorBucket.length > 0) {
-            ui.alert('请正确填写用户资料');
+        this.rules = this.rules0;
+        this.$nextTick(_ => {
+          if (!this.validateForm()) {
             return;
           }
-        }
 
-        let roleSet = this.constants.ROLE_NORMAL_USER;
-        if (this.IsSysAdmin) {
-          roleSet |= this.constants.ROLE_SYS_ADMIN;
-        }
-        if (this.IsAppAdmin) {
-          roleSet |= this.constants.ROLE_APP_ADMIN;
-        }
+          let roleSet = this.constants.ROLE_NORMAL_USER;
+          if (this.IsSysAdmin) {
+            roleSet |= this.constants.ROLE_SYS_ADMIN;
+          }
+          if (this.IsAppAdmin) {
+            roleSet |= this.constants.ROLE_APP_ADMIN;
+          }
 
-        api.UpdateUser({
-          Id: this.Id,
-          Name: this.Name,
-          Email: this.Email,
-          Tel: this.Tel,
-          RoleSet: roleSet
-        }).then(data => {
-          ui.alert('用户资料修改成功', 'success');
-          let that = this;
-          setTimeout(() => {
-            that.goback();
-          }, 1500);
-        })
+          api.UpdateUser({
+            Id: this.Id,
+            Name: this.Name,
+            Email: this.Email,
+            Tel: this.Tel,
+            RoleSet: roleSet
+          }).then(data => {
+            ui.alert('用户资料修改成功', 'success');
+            let that = this;
+            setTimeout(() => {
+              that.goback();
+            }, 1500);
+          });
+        });
       }
     }
   }

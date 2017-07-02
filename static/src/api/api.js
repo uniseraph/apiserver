@@ -29,7 +29,6 @@ export function fetch(url, params) {
             }, error => {
                 let res = error.response;
                 if (res && res.status != 403) {
-                    console.log(store.getters.alertArea);
                     ui.alert(res.data);
                 }
 

@@ -18,7 +18,9 @@
                   v-model="Name"
                   ref="Name"
                   single-line
+                  required
                   :rules="rules.Name"
+                  @input="rules.Name = rules0.Name"
                 ></v-text-field>
               </v-flex>
               <v-flex xs2>
@@ -121,7 +123,9 @@
         UsersNotInTeam: [],
         UserToJoin: null,
 
-        rules: {
+        rules: {},
+
+        rules0: {
           Name: [
             v => (v && v.length > 0 ? true : '请输入团队名称')
           ]
@@ -171,21 +175,20 @@
       },
 
       save() {
-        for (let f in this.$refs) {
-          let e = this.$refs[f];
-          if (e.errorBucket && e.errorBucket.length > 0) {
-            ui.alert('请正确填写团队资料');
+        this.rules = this.rules0;
+        this.$nextTick(_ => {
+          if (!this.validateForm()) {
             return;
           }
-        }
 
-        api.UpdateTeam({
-          Id: this.Id,
-          Name: this.Name,
-          Description: this.Description
-        }).then(data => {
-          ui.alert('团队资料修改成功', 'success');
-        })
+          api.UpdateTeam({
+            Id: this.Id,
+            Name: this.Name,
+            Description: this.Description
+          }).then(data => {
+            ui.alert('团队资料修改成功', 'success');
+          });
+        });
       },
 
       addUser() {

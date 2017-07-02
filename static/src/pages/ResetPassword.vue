@@ -17,7 +17,9 @@
               ref="Password1"
               type="password"
               single-line
+              required
               :rules="rules.Password1"
+              @input="rules.Password1 = rules0.Password1"
             ></v-text-field>
           </v-flex>
           <v-flex xs7>
@@ -31,7 +33,9 @@
               ref="Password2"
               type="password"
               single-line
+              required
               :rules="rules.Password2"
+              @input="rules.Password2 = rules0.Password2"
             ></v-text-field>
           </v-flex>
           <v-flex xs7>
@@ -62,7 +66,9 @@
         Password1: '',
         Password2: '',
 
-        rules: {
+        rules: {},
+
+        rules0: {
           Password1: [
             () => (this.Password1.length < 8 ? '密码至少需8位字符' : true)
           ],
@@ -90,23 +96,23 @@
       },
 
       save() {
-        for (let f in this.$refs) {
-          let e = this.$refs[f];
-          if (e.errorBucket && e.errorBucket.length > 0) {
+        this.rules = this.rules0;
+        this.$nextTick(_ => {
+          if (!this.validateForm()) {
             return;
           }
-        }
 
-        api.ResetPassword({
-          Id: this.Id,
-          Pass: this.Password1
-        }).then(data => {
-          ui.alert('密码修改成功', 'success');
-          let that = this;
-          setTimeout(() => {
-            that.goback();
-          }, 1500);
-        })
+          api.ResetPassword({
+            Id: this.Id,
+            Pass: this.Password1
+          }).then(data => {
+            ui.alert('密码修改成功', 'success');
+            let that = this;
+            setTimeout(() => {
+              that.goback();
+            }, 1500);
+          });
+        });
       }
     }
   }

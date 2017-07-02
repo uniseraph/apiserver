@@ -30,7 +30,13 @@
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="UpdateDir_Name" required v-model="SelectedDir.Name" :rules="rules.Dir.Name"></v-text-field>
+                <v-text-field 
+                  v-model="SelectedDir.Name" 
+                  ref="UpdateDir_Name" 
+                  required 
+                  :rules="rules.Dir.Name"
+                  @input="rules.Dir.Name = rules0.Dir.Name"
+                ></v-text-field>
               </v-card-text>
             </v-card-row>
             <v-card-row actions>
@@ -56,7 +62,13 @@
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="NewDir_Name" required v-model="NewDir.Name" :rules="rules.Dir.Name"></v-text-field>
+                <v-text-field 
+                  v-model="NewDir.Name"
+                  ref="NewDir_Name" 
+                  required
+                  :rules="rules.Dir.Name"
+                  @input="rules.Dir.Name = rules0.Dir.Name"
+                ></v-text-field>
               </v-card-text>
             </v-card-row>
             <v-card-row actions>
@@ -132,9 +144,28 @@
               </v-card-row>
               <v-card-row>
                 <v-card-text>
-                  <v-text-field ref="NewValue_Name" label="名称" required v-model="NewValue.Name" :rules="rules.Value.Name"></v-text-field>
-                  <v-text-field ref="NewValue_Value" label="默认值" required v-model="NewValue.Value" :rules="rules.Value.Value" class="mt-4"></v-text-field>
-                  <v-text-field label="描述" v-model="NewValue.Description" class="mt-4"></v-text-field>
+                  <v-text-field 
+                    v-model="NewValue.Name" 
+                    ref="NewValue_Name" 
+                    label="名称" 
+                    required 
+                    :rules="rules.Value.Name"
+                    @input="rules.Value.Name = rules0.Value.Name"
+                  ></v-text-field>
+                  <v-text-field 
+                    v-model="NewValue.Value" 
+                    ref="NewValue_Value" 
+                    label="默认值" 
+                    required 
+                    :rules="rules.Value.Value" 
+                    @input="rules.Value.Value = rules0.Value.Value"
+                    class="mt-4"
+                  ></v-text-field>
+                  <v-text-field 
+                    label="描述" 
+                    v-model="NewValue.Description" 
+                    class="mt-4"
+                  ></v-text-field>
                 </v-card-text>
               </v-card-row>
               <v-card-row actions>
@@ -214,7 +245,10 @@
         CreateValueDlg: false,
         NewValue: { Name: '', Value: '', Description: '' },
 
-        rules: {
+
+        rules: { Dir: {}, Value: {} },
+
+        rules0: {
           Dir: {
             Name: [
               v => (v && v.length > 0 ? true : '请输入目录名')
@@ -308,28 +342,34 @@
       },
 
       createDir() {
-        if (!this.validateForm('NewDir_')) {
-          return;
-        }
+        this.rules.Dir = this.rules0.Dir;
+        this.$nextTick(_ => {
+          if (!this.validateForm('NewDir_')) {
+            return;
+          }
 
-        let params = {
-          Name: this.NewDir.Name,
-          ParentId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : null
-        };
-        api.CreateEnvDir(params).then(data => {
-          this.CreateDirDlg = false;
-          this.init(data.Id);
+          let params = {
+            Name: this.NewDir.Name,
+            ParentId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : null
+          };
+          api.CreateEnvDir(params).then(data => {
+            this.CreateDirDlg = false;
+            this.init(data.Id);
+          });
         });
       },
 
       updateDir() {
-        if (!this.validateForm('UpdateDir_')) {
-          return;
-        }
+        this.rules.Dir = this.rules0.Dir;
+        this.$nextTick(_ => {
+          if (!this.validateForm('UpdateDir_')) {
+            return;
+          }
 
-        api.UpdateEnvDir(this.SelectedDir).then(data => {
-          this.UpdateDirDlg = false;
-          this.init();
+          api.UpdateEnvDir(this.SelectedDir).then(data => {
+            this.UpdateDirDlg = false;
+            this.init();
+          });
         });
       },
 
@@ -361,19 +401,22 @@
       },
 
       createValue() {
-        if (!this.validateForm('NewValue_')) {
-          return;
-        }
+        this.rules.Value = this.rules0.Value;
+        this.$nextTick(_ => {
+          if (!this.validateForm('NewValue_')) {
+            return;
+          }
 
-        let params = {
-          Name: this.NewValue.Name,
-          Value: this.NewValue.Value,
-          Description: this.NewValue.Description,
-          DirId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : null
-        };
-        api.CreateEnvValue(params).then(data => {
-          this.CreateValueDlg = false;
-          this.getDataFromApi();
+          let params = {
+            Name: this.NewValue.Name,
+            Value: this.NewValue.Value,
+            Description: this.NewValue.Description,
+            DirId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : null
+          };
+          api.CreateEnvValue(params).then(data => {
+            this.CreateValueDlg = false;
+            this.getDataFromApi();
+          });
         });
       },
 

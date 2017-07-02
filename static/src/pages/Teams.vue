@@ -20,8 +20,19 @@
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="Name" label="名称" required v-model="NewTeam.Name" :rules="rules.Name"></v-text-field>
-                <v-text-field label="描述" v-model="NewTeam.Description" class="mt-4"></v-text-field>
+                <v-text-field 
+                  v-model="NewTeam.Name"
+                  ref="Name" 
+                  label="名称" 
+                  required
+                  :rules="rules.Name"
+                  @input="rules.Name = rules0.Name"
+                ></v-text-field>
+                <v-text-field 
+                  v-model="NewTeam.Description" 
+                  label="描述" 
+                  class="mt-4"
+                ></v-text-field>
               </v-card-text>
             </v-card-row>
             <v-card-row actions>
@@ -97,7 +108,9 @@
         RemoveConfirmDlg: false,
         SelectedTeam: {},
 
-        rules: {
+        rules: {},
+
+        rules0: {
           Name: [
             v => (v && v.length > 0 ? true : '请输入团队名称')
           ]
@@ -131,17 +144,17 @@
       },
 
       createTeam() {
-        for (let f in this.$refs) {
-          let e = this.$refs[f];
-          if (e.errorBucket && e.errorBucket.length > 0) {
+        this.rules = this.rules0;
+        this.$nextTick(_ => {
+          if (!this.validateForm()) {
             return;
           }
-        }
 
-        this.CreateTeamDlg = false;
-        api.CreateTeam(this.NewTeam).then(data => {
-          this.init();
-        })
+          this.CreateTeamDlg = false;
+          api.CreateTeam(this.NewTeam).then(data => {
+            this.init();
+          });
+        });
       },
 
       confirmBeforeRemove(team) {

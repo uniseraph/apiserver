@@ -27,6 +27,7 @@
                   required 
                   persistent-hint 
                   :rules="rules.Name"
+                  @input="rules.Name = rules0.Name"
                 ></v-text-field>
                 <v-select
                   :items="DriverList"
@@ -36,7 +37,7 @@
                   dark
                   required
                   :rules="rules.Driver"
-                  class="mt-4"
+                  class="mt-2"
                 ></v-select>
                 <v-select
                   v-if="NewPool.Driver == 'swarm'"
@@ -47,7 +48,7 @@
                   dark
                   required
                   :rules="rules.DriverOpts.swarm.Version"
-                  class="mt-4"
+                  class="mt-2"
                 ></v-select>
                 <v-text-field 
                   v-if="NewPool.Driver == 'swarm'"
@@ -56,7 +57,8 @@
                   label="API地址" 
                   required 
                   :rules="rules.DriverOpts.swarm.EndPoint"
-                  class="mt-4"
+                  @input="rules.DriverOpts.swarm.EndPoint = rules0.DriverOpts.swarm.EndPoint"
+                  class="mt-2"
                 ></v-text-field>
                 <v-select
                   v-if="NewPool.Driver == 'swarm'"
@@ -67,7 +69,7 @@
                   dark
                   required
                   :rules="rules.DriverOpts.swarm.APIVersion"
-                  class="mt-4"
+                  class="mt-2"
                 ></v-select>
               </v-card-text>
             </v-card-row>
@@ -158,7 +160,11 @@
         RemoveConfirmDlg: false,
         SelectedPool: {},
 
-        rules: {
+        rules: { 
+          DriverOpts: { swarm: {} } 
+        },
+
+        rules0: {
           Name: [
             v => (v && v.length > 0 ? true : '请输入集群名称')
           ],
@@ -208,14 +214,17 @@
       },
 
       createPool() {
-        if (!this.validateForm('all_') || !this.validateForm(this.Driver + '_')) {
-          return;
-        }
+        this.rules = this.rules0;
+          this.$nextTick(_ => {
+          if (!this.validateForm('all_') || !this.validateForm(this.Driver + '_')) {
+            return;
+          }
 
-        this.CreatePoolDlg = false;
-        api.CreatePool(this.NewPool).then(data => {
-          this.init();
-        })
+          this.CreatePoolDlg = false;
+          api.CreatePool(this.NewPool).then(data => {
+            this.init();
+          });
+        });
       },
 
       confirmBeforeRemove(pool) {

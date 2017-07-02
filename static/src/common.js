@@ -6,18 +6,18 @@ export default {
 
     Vue.prototype.validateForm = function(refPrefix) {
     	for (let f in this.$refs) {
-          if (!refPrefix || f.indexOf(refPrefix) == 0) {
-            let e = this.$refs[f];
-            if (e.validate) {
-              e.validate();
-              if (e.errorBucket && e.errorBucket.length > 0) {
-                return false;
-              }
+        if (!refPrefix || f.indexOf(refPrefix) == 0) {
+          let e = this.$refs[f];
+          if (e.validate) {
+            e.validate();
+            if (e.errorBucket && e.errorBucket.length > 0) {
+              return false;
             }
           }
         }
+      }
 
-        return true;
+      return true;
     }
   }
 }

@@ -30,7 +30,9 @@
                       v-model="Login.Name"
                       ref="Login_Name"
                       single-line
+                      required
                       :rules="rules.Login.Name"
+                      @input="rules.Login.Name = rules0.Login.Name"
                     ></v-text-field>
                   </v-flex>
                   <v-flex xs4>
@@ -41,8 +43,10 @@
                       v-model="Login.Password"
                       ref="Login_Password"
                       single-line
+                      required
                       type="password"
                       :rules="rules.Login.Password"
+                      @input="rules.Login.Password = rules0.Login.Password"
                       @keydown.enter.native="login"
                     ></v-text-field>
                   </v-flex>
@@ -242,7 +246,9 @@
           Password: ''
         },
 
-        rules: {
+        rules: { Login: {} },
+
+        rules0: {
           Login: {
             Name: [
               v => (v && v.length > 0 ? true : '请输入用户名')
@@ -275,23 +281,28 @@
             context.setToken(data);
           }, err => {
             let res = err.response;
-            if (res != null && res.status == 403) {
+            if (res != null && res.status == 403) { // 403，测试改成404
               context.setToken({});
             }
           })
       },
 
       login() {
-        if (!this.validateForm('Login_')) {
-          return;
-        }
+        this.rules.Login = this.rules0.Login;
 
-        api.Login({
-          Name: this.Login.Name,
-          Password: this.Login.Password
-        }).then(data => {
-          window.location.reload();
-        })
+        // 前面对rules的赋值必须在next tick才能生效，validateForm才能正常工作
+        this.$nextTick(_ => {
+          if (!this.validateForm('Login_')) {
+            return;
+          }
+
+          api.Login({
+            Name: this.Login.Name,
+            Password: this.Login.Password
+          }).then(data => {
+            window.location.reload();
+          });
+        });
       }
     }
   }

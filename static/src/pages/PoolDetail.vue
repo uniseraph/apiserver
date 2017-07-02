@@ -18,7 +18,9 @@
                   v-model="Name"
                   ref="all_Name"
                   single-line
+                  required
                   :rules="rules.Name"
+                  @input="rules.Name = rules0.Name"
                 ></v-text-field>
               </v-flex>
               <v-flex xs2>
@@ -34,6 +36,7 @@
                   label="请选择"
                   dark
                   single-line
+                  required
                   :rules="rules.Driver"
                 ></v-select>
               </v-flex>
@@ -48,6 +51,7 @@
                   label="请选择"
                   dark
                   single-line
+                  required
                   :rules="rules.DriverOpts.swarm.Version"
                 ></v-select>
               </v-flex>
@@ -61,7 +65,9 @@
                   v-model="DriverOpts.EndPoint"
                   ref="swarm_EndPoint"
                   single-line
+                  required
                   :rules="rules.DriverOpts.swarm.EndPoint"
+                  @input="rules.DriverOpts.swarm.EndPoint = rules0.DriverOpts.swarm.EndPoint"
                 ></v-text-field>
               </v-flex>
               <v-flex v-if="Driver == 'swarm'" xs2>
@@ -75,6 +81,7 @@
                   label="请选择"
                   dark
                   single-line
+                  required
                   :rules="rules.DriverOpts.swarm.APIVersion"
                 ></v-select>
               </v-flex>
@@ -217,7 +224,11 @@
         AuthorizeToTeam: null,
         AuthorizeToUser: null,
 
-        rules: {
+        rules: { 
+          DriverOpts: { swarm: {} } 
+        },
+
+        rules0: {
           Name: [
             v => (v && v.length > 0 ? true : '请输入集群名称')
           ],
@@ -276,19 +287,22 @@
       },
 
       save() {
-        if (!this.validateForm('all_') || !this.validateForm(this.Driver + '_')) {
-          return;
-        }
+        this.rules = this.rules0;
+        this.$nextTick(_ => {
+          if (!this.validateForm('all_') || !this.validateForm(this.Driver + '_')) {
+            return;
+          }
 
-        api.UpdatePool({
-          Id: this.Id,
-          Name: this.Name,
-          Driver: this.Driver,
-          Network: this.Network,
-          EndPoint: this.EndPoint
-        }).then(data => {
-          ui.alert('集群资料修改成功', 'success');
-        })
+          api.UpdatePool({
+            Id: this.Id,
+            Name: this.Name,
+            Driver: this.Driver,
+            Network: this.Network,
+            EndPoint: this.EndPoint
+          }).then(data => {
+            ui.alert('集群资料修改成功', 'success');
+          });
+        });
       },
 
       addTeam() {

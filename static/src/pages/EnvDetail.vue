@@ -18,7 +18,9 @@
                   v-model="Name"
                   ref="Env_Name"
                   single-line
-                  :rules="rules.Name"
+                  required
+                  :rules="rules.Env.Name"
+                  @input="rules.Env.Name = rules0.Env.Name"
                 ></v-text-field>
               </v-flex>
               <v-flex xs2>
@@ -31,7 +33,9 @@
                   v-model="Value"
                   ref="Env_Value"
                   single-line
-                  :rules="rules.Value"
+                  required
+                  :rules="rules.Env.Value"
+                  @input="rules.Env.Value = rules0.Env.Value"
                 ></v-text-field>
               </v-flex>
               <v-flex xs2>
@@ -74,9 +78,11 @@
               <td>
                 <v-text-field
                   v-model="props.item.Value"
-                  :ref="'Pool_Value_' + props.item.PoolId"
+                  :ref="'Pool_' + props.item.PoolId"
                   single-line
-                  :rules="rules.Values"
+                  required
+                  :rules="rules.Pool.Values"
+                  @input="rules.Pool.Values = rules0.Pool.Values"
                 ></v-text-field>
               </td>
               <td>
@@ -113,18 +119,24 @@
         Description: '',
         Values: [],
 
-        rules: {
-          Name: [
-            v => (v && v.length > 0 ? true : '请输入参数名')
-          ],
+        rules: { Env: {}, Pool: {} },
 
-          Value: [
-            v => (v && v.length > 0 ? true : '请输入默认值')
-          ],
+        rules0: {
+          Env: {
+            Name: [
+                v => (v && v.length > 0 ? true : '请输入参数名')
+            ],
 
-          Values: [
-            v => (v && v.length > 0 ? true : '请输入集群参数值')
-          ],
+            Value: [
+              v => (v && v.length > 0 ? true : '请输入默认值')
+            ]
+          },
+
+          Pool: {
+            Values: [
+              v => (v && v.length > 0 ? true : '请输入集群参数值')
+            ]
+          }
         }
       }
     },
@@ -149,34 +161,39 @@
       },
 
       saveEnvValue() {
-        if (!this.validateForm('Env_')) {
-          ui.alert('请正确填写参数信息');
-          return;
-        }
+        this.rules.Env = this.rules0.Env;
+        this.$nextTick(_ => {
+          if (!this.validateForm('Env_')) {
+            ui.alert('请正确填写参数信息');
+            return;
+          }
 
-        api.UpdateEnvValue({
-          Id: this.Id,
-          Name: this.Name,
-          Value: this.Value,
-          Description: this.Description
-        }).then(data => {
-          ui.alert('参数信息修改成功', 'success');
-        })
+          api.UpdateEnvValue({
+            Id: this.Id,
+            Name: this.Name,
+            Value: this.Value,
+            Description: this.Description
+          }).then(data => {
+            ui.alert('参数信息修改成功', 'success');
+          });
+        });
       },
 
       savePoolValue(item) {
-        if (!this.validateForm('Pool_')) {
-          ui.alert('请正确填写集群参数值');
-          return;
-        }
+        this.rules.Pool = this.rules0.Pool;
+        this.$nextTick(_ => {
+          if (!this.validateForm('Pool_')) {
+            return;
+          }
 
-        api.UpdateEnvValue({
-          Id: this.Id,
-          PoolId: item.PoolId,
-          Value: item.Value
-        }).then(data => {
-          ui.alert('集群参数值修改成功', 'success');
-        })
+          api.UpdateEnvValue({
+            Id: this.Id,
+            PoolId: item.PoolId,
+            Value: item.Value
+          }).then(data => {
+            ui.alert('集群参数值修改成功', 'success');
+          });
+        });
       }
     }
   }
