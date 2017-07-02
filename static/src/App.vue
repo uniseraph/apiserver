@@ -280,10 +280,7 @@
         api.Me().then(data => {
             context.setToken(data);
           }, err => {
-            let res = err.response;
-            if (res != null && res.status == 403) { // 403，测试改成404
-              context.setToken({});
-            }
+            context.setToken({});
           })
       },
 
