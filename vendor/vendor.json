@@ -225,6 +225,12 @@
 			"revisionTime": "2017-06-17T10:17:21Z"
 		},
 		{
+			"checksumSHA1": "WMTjT/WhwABW0CP22n1KeXxb96w=",
+			"path": "github.com/google/uuid",
+			"revision": "6a5e28554805e78ea6141142aba763936c4761c0",
+			"revisionTime": "2017-03-06T14:51:42Z"
+		},
+		{
 			"checksumSHA1": "g/V4qrXjUGG9B+e3hB+4NAYJ5Gs=",
 			"path": "github.com/gorilla/context",
 			"revision": "08b5f424b9271eedf6f9f0ce86cb9396ed337a42",
