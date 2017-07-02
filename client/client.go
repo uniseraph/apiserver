@@ -810,8 +810,9 @@ func registerPool(client *http.Client , name string , request * handlers.PoolsRe
 		return string(body), errors.New(string(body))
 	}
 
+	//fmt.Println(string(body))
 	result := handlers.PoolsRegisterResponse{}
-	json.Unmarshal(body,result)
+	json.Unmarshal(body,&result)
 
 	return result , nil
 }

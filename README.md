@@ -2,9 +2,29 @@
 
 ### APISERVER 简述
 
-apiserver是用户访问zanecloud的入口，对pool进行管理和路由。
+apiserver是用户访问zanecloud的入口，进行用户权限管理，对pool进行管理和路由。
 
-# 自动化测试
+
+
+## 安装相关依赖包
+
+下载代码到本机的 $GOPATH/src/github.com/zanecloud目录下
+
+
+```
+    make install
+```
+
+该命令只需要执行一次
+
+
+## 重置测试环境
+```
+   make init
+```
+
+
+## 接口自动化测试
 
 目前的自动化测试仅支持mac
 
@@ -20,8 +40,14 @@ make run
 
 在另一个terminal中运行
 ```
-make test POOL_NAME=pool123
+make test
 ```
-则将本机的docker注册为一个pool，名字在参数中指定；并在apiserver中为该pool起一个proxy，通过该proxy暴露docker/swarm接口服务。
-make test会测试常用docker接口。
+
+
+## 运行完整环境
+
+```
+make install && make all
+```
+然后访问 http://localhost:8080
 

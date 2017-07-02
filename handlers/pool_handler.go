@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/zanecloud/apiserver/proxy"
-	store "github.com/zanecloud/apiserver/types"
+	 "github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -29,7 +29,7 @@ func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	c := mgoSession.DB(mgoDB).C("pool")
 
-	result := store.PoolInfo{}
+	result := types.PoolInfo{}
 	if err := c.Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&result); err != nil {
 
 		if err == mgo.ErrNotFound {
@@ -49,7 +49,7 @@ func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 type PoolsRegisterRequest struct{
 	Name       string
 	Driver     string
-	DriverOpts store.DriverOpts
+	DriverOpts types.DriverOpts
 	Labels     map[string]interface{} `json:",omitempty"`
 }
 
@@ -72,7 +72,7 @@ func getPoolsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	c := mgoSession.DB(mgoDB).C("pool")
 
-	var result []store.PoolInfo
+	var result []types.PoolInfo
 	if err := c.Find(bson.M{}).All(&result); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -103,7 +103,7 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 //	{Name: "a", Driver: "swarm", DriverOpts: {Version: "v1.0", EndPoint: "bbbb", APIVersion: "v1.23"}}
 
-	poolInfo := &store.PoolInfo{
+	poolInfo := &types.PoolInfo{
 		Id:             bson.NewObjectId(),
 		Driver:         req.Driver,
 		DriverOpts:     req.DriverOpts,
@@ -155,13 +155,14 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	result := &PoolsRegisterResponse{
+	result := PoolsRegisterResponse{
 		Name: poolInfo.Name,
 		Id : poolInfo.Id.Hex(),
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(result)
+
 	//fmt.Fprintf(w, "{%q:%q}", "Name", name)
 
 }
