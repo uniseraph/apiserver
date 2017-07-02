@@ -34,7 +34,7 @@ var routes = map[string]map[string]*MyHandler{
 	"HEAD": {},
 	"GET":  {
 		"/users/{name:.*}/login":   &MyHandler{h: getUserLogin},
-		"/users/current":           &MyHandler{h: getUserCurrent },
+		"/users/current":           &MyHandler{h: getUserCurrent ,opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/users/{id:.*}/inspect":   &MyHandler{h: getUserInspect, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/users/{id:.*}/detail":    &MyHandler{h: getUserInspect, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/users/ps":                &MyHandler{h: getUsersJSON, opChecker: checkUserPermission,roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
@@ -51,7 +51,7 @@ var routes = map[string]map[string]*MyHandler{
 		"/pools/json":            &MyHandler{h: getPoolsJSON, opChecker: checkUserPermission,roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 
 		"/users/{name:.*}/login":   &MyHandler{h: getUserLogin},
-		"/users/current":           &MyHandler{h: getUserCurrent },
+		"/users/current":           &MyHandler{h: getUserCurrent, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/users/create":            &MyHandler{h: postUsersCreate, opChecker: checkUserPermission,roleset: types.ROLESET_SYSADMIN},
 		"/users/{id:.*}/inspect":   &MyHandler{h: getUserInspect, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/users/{id:.*}/detail":    &MyHandler{h: getUserInspect, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},

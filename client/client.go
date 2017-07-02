@@ -56,6 +56,15 @@ func main() {
 		fmt.Println("cookie:", cookie)
 	}
 
+	fmt.Println("\n current user is ....")
+	currentUser , err := currentUser(client,resp.Cookies())
+	if err !=nil {
+		log.Errorf("inspect the current user err:%s",err.Error())
+		return
+	}
+	fmt.Printf("the current user is  %#v \n", currentUser)
+
+
 
 	userId , err := createUser(client,  &types.User{
 		Name : "sadan",
@@ -527,6 +536,49 @@ func inspectTeam(client *http.Client  , teamId string , cookies []*http.Cookie) 
 	}
 
 	result:= &types.Team{}
+	if err := json.NewDecoder(resp.Body).Decode(result) ; err !=nil {
+		return nil , err
+	}
+
+	return result, nil
+
+}
+
+//"/users/current":           &MyHandler{h: getUserCurrent ,opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+func currentUser(client *http.Client  ,  cookies []*http.Cookie) (*types.User ,  error){
+
+	url := fmt.Sprintf("http://localhost:8080/api/users/current")
+
+	req , err := http.NewRequest(http.MethodPost , url , nil)
+	if err != nil {
+		return nil , err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+
+	resp, err := client.Do(req)
+	if err!=nil {
+		return nil ,err
+	}
+	defer resp.Body.Close()
+
+
+	if resp.StatusCode != http.StatusOK {
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Debugf("login read body statuscode:%d err:%s",resp.StatusCode,err.Error())
+			return nil ,err
+		}
+
+		return nil , errors.New(string(body))
+	}
+
+	result:= &types.User{}
 	if err := json.NewDecoder(resp.Body).Decode(result) ; err !=nil {
 		return nil , err
 	}

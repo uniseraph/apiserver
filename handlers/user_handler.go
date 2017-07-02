@@ -16,37 +16,13 @@ import (
 	"github.com/google/uuid"
 )
 
+//		"/users/current":           &MyHandler{h: getUserCurrent ,opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 func getUserCurrent(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
-	cookie, err := r.Cookie("uid")
+
+	result , err :=utils.GetCurrentUser(ctx)
 	if err != nil {
-		HttpError(w, "please login", http.StatusForbidden)
-		return
-	}
-
-	uid := cookie.Value
-
-	mgoSession, err := utils.GetMgoSessionClone(ctx)
-	if err != nil {
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer mgoSession.Close()
-
-	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
-
-	c := mgoSession.DB(mgoDB).C("user")
-
-	result := types.User{}
-
-	if err := c.Find(bson.M{"_id": bson.ObjectIdHex(uid)}).One(&result); err != nil {
-
-		if err == mgo.ErrNotFound {
-			HttpError(w, fmt.Sprintf("no such a user id is %s", uid), http.StatusNotFound)
-			return
-		}
-
-		HttpError(w, err.Error(), http.StatusInternalServerError)
+		HttpError(w,err.Error(),http.StatusForbidden)
 		return
 	}
 
