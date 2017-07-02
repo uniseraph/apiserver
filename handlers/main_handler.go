@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strconv"
 
 	"fmt"
 	"github.com/Sirupsen/logrus"
@@ -91,18 +92,70 @@ func checkUserPermission1(h Handler, roleset types.Roleset) Handler {
 	return wrap
 }
 
-func checkUserPermission(h Handler, roleset types.Roleset) Handler {
+func checkUserPermission(h Handler, rs types.Roleset) Handler {
 
 	wrap := func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
-		cookie, err := r.Cookie("uid")
+		cookie, err := r.Cookie("sessionID")
 		if err != nil {
 			HttpError(w, "please login", http.StatusForbidden)
 			return
 		}
 
-		uid := cookie.Value
+		sessionID := cookie.Value
+		redisClient, err := utils.GetRedisClient(ctx)
+		if err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
+		//通过保存在session中的内容
+		// - uid
+		// - roleSet
+		//来判断当前登录用户是否有权限
+		content := redisClient.HGetAll(utils.RedisSessionKey(sessionID))
+		logrus.Debugf("HGETALL content: %#v", content)
+		sessionContent, err := redisClient.HGetAll(utils.RedisSessionKey(sessionID)).Result()
+		logrus.Infof("SessionContent: %#v", sessionContent)
+		//如果没有找到或者redis出错
+		//则认证失败
+		if err != nil {
+			HttpError(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		//如果session中uid字段为空
+		//则认证失败
+		var uid = string(sessionContent["uid"])
+		if len(uid) == 0 {
+			HttpError(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		//校验权限是否满足要求
+		var roleSet types.Roleset
+		//如果权限字段为空，则给用户默认权限
+		//否则使用redis中session缓存写入的权限
+		if len(sessionContent["roleSet"]) == 0 {
+			roleSet = types.ROLESET_DEFAULT
+		}else {
+			value, err := strconv.ParseInt(sessionContent["roleSet"], 10, 64)
+			if err != nil {
+				HttpError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			roleSet = types.Roleset(value)
+		}
+
+		if rs & roleSet == 0 {
+			logrus.Infof("current roleset  is %d ,current user id is %s , so it no permission", roleSet, uid)
+			HttpError(w, "no permission", http.StatusMethodNotAllowed)
+			return
+		}
+
+		//如果鉴权成功
+		//根据uid把当前用户信息load到context中
+		//以便request的剩余生命周期里，可以通过context直接得到用户信息
+		//TODO
+		//留不留都行，不是每个API都需要拿到用户全部信息
 		mgoSession, err := utils.GetMgoSessionClone(ctx)
 		if err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
@@ -127,13 +180,6 @@ func checkUserPermission(h Handler, roleset types.Roleset) Handler {
 			return
 		}
 
-		if roleset & result.RoleSet == 0 {
-
-			logrus.Infof("current roleset  is %d ,current user is %#v , so it no permission", roleset, result)
-
-			HttpError(w, "no permission", http.StatusMethodNotAllowed)
-			return
-		}
 
 		c1 := utils.PutCurrentUser(ctx, &result)
 
@@ -155,6 +201,7 @@ func NewMainHandler(ctx context.Context) (http.Handler, error) {
 	session.SetMode(mgo.Monotonic, true)
 	c := utils.PutMgoSession(ctx, session)
 
+	logrus.Infof("redis address is : %s", config.RedisAddr)
 	client := redis.NewClient(&redis.Options{
 		Addr:     config.RedisAddr,
 		Password: "", // no password set

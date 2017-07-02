@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/zanecloud/apiserver/types"
@@ -12,6 +13,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
 	"time"
+	"github.com/google/uuid"
 )
 
 func getUserCurrent(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -92,7 +94,8 @@ func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	logrus.Debugf("getUserLogin::get the user %#v", result)
-	if result.Pass != utils.Md5(pass) {
+	//校验用户输入的密码，与该ID的用户模型中Pass是否匹配
+	if ok, err := utils.ValidatePassword(result, pass); ok != true || err != nil {
 		HttpError(w, "pass is error", http.StatusForbidden)
 		return
 	}
@@ -103,22 +106,40 @@ func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := client.Set(utils.KEY_REDIS_UID, result.Id.String(), time.Minute*10).Err(); err != nil {
+	//生成每个用户唯一的一个session key
+	//用于在缓存中保存登录状态
+	sessionUUID, err := uuid.NewUUID()
+	if err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	sessionKey := sessionUUID.String()
+	//准备session的内容
+	sessionContents := map[string]interface{}{
+		"uid": result.Id.Hex(),
+		"roleSet": strconv.FormatUint(uint64(result.RoleSet),10),  //fmt.Sprintf("%d", result.RoleSet),
+	}
+	err = client.HMSet(utils.RedisSessionKey(sessionKey), sessionContents).Err()
+	if err != nil {
+		logrus.Fatalf("Redis hmset error: %#v", err)
+		panic(err)
+	}
+	age := time.Hour * 24 * 7
+	//设置session一周超时
+	//一周后再登录，会找不到redis中的key，导致认证不再可以通过，需要重新登录
+	client.Expire(utils.RedisSessionKey(sessionKey), age)
 
-	uid_cookie := &http.Cookie{
-		Name:     "uid",
-		Value:    result.Id.Hex(),
+	uidCookie := &http.Cookie{
+		Name:     "sessionID",
+		Value:    sessionKey,
 		Path:     "/",
 		HttpOnly: false,
-		MaxAge:   600,
+		MaxAge:   int(age),
 	}
 
-	logrus.Debugf("getUserLogin::get the cookie %#v", uid_cookie)
+	logrus.Debugf("getUserLogin::get the cookie %#v", uidCookie)
 
-	http.SetCookie(w, uid_cookie)
+	http.SetCookie(w, uidCookie)
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(result)
@@ -143,6 +164,7 @@ func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 		name = r.Form.Get("Name")
 		pass = r.Form.Get("Pass")
 	)
+	logrus.Debugf("User Create: name: %s, pass: %s", name, pass)
 
 	req := UsersCreateRequest{}
 
@@ -151,10 +173,17 @@ func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
+
+	//以下为遗留问题
+	//为了兼容从url的参数字符串中读取参数，该参数优先于body的json
+	//TODO
+	//name要大于4个字符
 	if name != "" {
 		req.Name = name
 	}
 
+	//TODO
+	//pass要大于8个字符
 	if pass != "" {
 		req.Pass = pass
 	}
@@ -190,10 +219,16 @@ func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	//为用户密码加盐
+	salt := utils.RandomStr(16)
+	//生成加密后的密码，数据库中不保存明文密码
+	encryptedPassword := utils.Md5(fmt.Sprint("%s:%s", req.Pass, salt))
+
 	//创建用户时候，可以分配角色
 	user := &types.User{Name: req.Name,
 		Id:          bson.NewObjectId(),
-		Pass:        utils.Md5(req.Pass),
+		Pass:        encryptedPassword,
+		Salt:	     salt,
 		Email:       req.Email,
 		Comments:    req.Comments,
 		RoleSet:     req.RoleSet,

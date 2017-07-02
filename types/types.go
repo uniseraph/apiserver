@@ -52,7 +52,7 @@ type User struct {
 	Id   bson.ObjectId "_id"
 	Name string
 	Pass string `json:",omitempty"`
-	//Pass        string
+	Salt string `json:"-"`
 	RoleSet     Roleset
 	Email       string
 	TeamIds     []bson.ObjectId
