@@ -280,10 +280,7 @@
         api.Me().then(data => {
             context.setToken(data);
           }, err => {
-            let res = err.response;
-            if (res != null && res.status != 200) {
-              context.setToken({});
-            }
+            context.setToken({});
           })
       },
 
