@@ -115,6 +115,9 @@ func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	logrus.Debugf("getUserLogin::get the cookie %#v", uidCookie)
 
+	//密码不要在detail信息中出现
+	result.Pass=""
+
 	http.SetCookie(w, uidCookie)
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
@@ -315,7 +318,7 @@ func getUsersJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	c := mgoSession.DB(mgoDB).C("user")
 
-	var results []types.User
+	results:=make ( []types.User ,0)
 	if err := c.Find(bson.M{}).All(&results); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return

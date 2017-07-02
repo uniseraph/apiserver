@@ -72,7 +72,7 @@ func getPoolsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	c := mgoSession.DB(mgoDB).C("pool")
 
-	var result []types.PoolInfo
+	result :=  make( []types.PoolInfo,20)
 	if err := c.Find(bson.M{}).All(&result); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
