@@ -15,7 +15,7 @@ import (
 	"time"
 	"github.com/google/uuid"
 )
-
+//TODO 不应该走checkUserPermission过滤角色权限
 //		"/users/current":           &MyHandler{h: getUserCurrent ,opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 func getUserCurrent(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 

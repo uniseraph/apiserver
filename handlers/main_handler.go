@@ -83,14 +83,6 @@ var routes = map[string]map[string]*MyHandler{
 	},
 }
 
-func checkUserPermission1(h Handler, roleset types.Roleset) Handler {
-
-	wrap := func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-
-		h(ctx, w, r)
-	}
-	return wrap
-}
 
 func checkUserPermission(h Handler, rs types.Roleset) Handler {
 
