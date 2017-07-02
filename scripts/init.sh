@@ -10,8 +10,8 @@ mongo zanecloud --eval "db.pool.createIndex({name:1}, {unique:true})"
 mongo zanecloud --eval "db.container.createIndex({name:1}, {unique:true})"
 mongo zanecloud --eval "db.container.createIndex({id:1}, {unique:true})"
 
+
 #准备加盐计算
-pass=hell05a
 name=root
 salt="1234567891234567"
 pass="hell05a"

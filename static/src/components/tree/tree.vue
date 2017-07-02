@@ -86,6 +86,7 @@
       },
 
       createTreeData(nodeData, state, currNodeId) {
+        let parentNode = null;
         const traverseNodes = (root) => {
             for (let node of root) {
                 let s = state[node.id];
@@ -96,10 +97,17 @@
                 }
 
                 if (currNodeId && node.id == currNodeId) {
+                  if (parentNode) {
+                    parentNode.open = true;
+                  }
+
                   node.checked = true;
                 }
 
-                if (node.children && node.children.length > 0) traverseNodes(node.children)
+                if (node.children && node.children.length > 0) {
+                  parentNode = node;
+                  traverseNodes(node.children)
+                }
             }
         };
 

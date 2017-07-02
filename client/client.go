@@ -11,7 +11,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/handlers"
 
+	"github.com/contiv/ofnet/Godeps/_workspace/src/github.com/Sirupsen/logrus"
 )
+
+
+
 
 func main() {
 
@@ -242,6 +246,26 @@ func main() {
 		fmt.Printf("%s:%#v\n" , action , b)
 	}
 	fmt.Printf("checkaction success...\n" )
+
+
+	fmt.Println("\ncreate a pool....")
+
+	result , err := registerPool(client,"pool1", &handlers.PoolsRegisterRequest{
+		Name: "pool1",
+		Driver: "swarm",
+		DriverOpts: types.DriverOpts{
+			Version:"v1.0",
+			EndPoint:"unix:///var/run/docker.sock",
+			APIVersion:"v1.23",
+		},
+	},resp.Cookies())
+
+	if err!=nil {
+		logrus.Errorf("register the pool:%s err:%s","pool1",err.Error())
+		return
+	}
+
+	fmt.Printf("register success , result is %#v",result)
 
 
 }
@@ -749,9 +773,45 @@ func  updateUser(client *http.Client , userId string ,  email string , cookies [
 			return err
 		}
 
-
 		return errors.New(string(body))
 	}
 
 	return nil
+}
+
+
+func registerPool(client *http.Client , name string , request * handlers.PoolsRegisterRequest , cookies []*http.Cookie) (interface{} , error) {
+
+	url := fmt.Sprintf("http://localhost:8080/api/pools/register")
+
+	buf , _ := json.Marshal(request)
+
+	req , _ := http.NewRequest(http.MethodPost , url , strings.NewReader(string(buf)))
+
+	req.Header.Set("Content-Type", "application/json")
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+
+	resp, err := client.Do(req)
+	if err!=nil {
+		return nil , err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body statuscode:%d err:%s",resp.StatusCode,err.Error())
+		return err.Error(), err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return string(body), errors.New(string(body))
+	}
+
+	result := handlers.PoolsRegisterResponse{}
+	json.Unmarshal(body,result)
+
+	return result , nil
 }

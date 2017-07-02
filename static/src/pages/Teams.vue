@@ -7,13 +7,21 @@
         <v-dialog v-model="CreateTeamDlg">
           <v-btn class="primary white--text" slot="activator"><v-icon light>add</v-icon>新增团队</v-btn>
           <v-card>
+            <v-alert 
+              v-if="alertArea==='CreateTeamDlg'"
+              v-bind:success="alertType==='success'" 
+              v-bind:info="alertType==='info'" 
+              v-bind:warning="alertType==='warning'" 
+              v-bind:error="alertType==='error'" 
+              v-model="alertMsg" 
+              dismissible>{{ alertMsg }}</v-alert>
             <v-card-row>
               <v-card-title>新增团队</v-card-title>
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="Name" label="名称" v-model="NewTeam.Name" :rules="rules.Name"></v-text-field>
-                <v-text-field label="描述" v-model="NewTeam.Description"></v-text-field>
+                <v-text-field ref="Name" label="名称" required v-model="NewTeam.Name" :rules="rules.Name"></v-text-field>
+                <v-text-field label="描述" v-model="NewTeam.Description" class="mt-4"></v-text-field>
               </v-card-text>
             </v-card-row>
             <v-card-row actions>
@@ -66,6 +74,7 @@
 </template>
 
 <script>
+  import store, { mapGetters } from 'vuex'
   import api from '../api/api'
   import * as ui from '../util/ui'
 
@@ -81,8 +90,10 @@
           { text: '操作', sortable: false, left: true }
         ],
         items: [],
+
         CreateTeamDlg: false,
         NewTeam: { Name: '', Description: '' },
+
         RemoveConfirmDlg: false,
         SelectedTeam: {},
 
@@ -92,6 +103,20 @@
           ]
         }
       }
+    },
+
+    computed: {
+      ...mapGetters([
+          'alertArea',
+          'alertType',
+          'alertMsg'
+      ])
+    },
+
+    watch: {
+        CreateTeamDlg(v) {
+          (v ? ui.showAlertAt('CreateTeamDlg') : ui.showAlertAt())
+        }
     },
 
     mounted() {

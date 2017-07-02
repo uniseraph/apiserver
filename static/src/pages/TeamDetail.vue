@@ -18,7 +18,7 @@
                   v-model="Name"
                   ref="Name"
                   single-line
-                   :rules="rules.Name"
+                  :rules="rules.Name"
                 ></v-text-field>
               </v-flex>
               <v-flex xs2>
@@ -108,7 +108,7 @@
         Id: '',
         Name: '',
         Description: '',
-        LeaderId: null,
+        LeaderId: false,
         headers: [
           { text: 'ID', sortable: false, left: true },
           { text: '用户名', sortable: false, left: true },
@@ -131,9 +131,13 @@
 
     watch: {
       LeaderId(newLeaderId, oldLeaderId) {
+        if (oldLeaderId === false) {
+          return;
+        }
+
         api.AppointLeader({
-          Id: this.Id,
-          LeaderId: newLeaderId
+          TeamId: this.Id,
+          UserId: newLeaderId
         }).then(data => {
         })
         .catch(err => {
@@ -152,8 +156,8 @@
           this.Id = data.Id;
           this.Name = data.Name;
           this.Description = data.Description;
-          this.LeaderId = data.Leader.Id;
-          this.UsersInTeam = data.UsersInTeam;
+          this.LeaderId = data.Leader ? data.Leader.Id : null;
+          this.UsersInTeam = data.Users;
           this.UserToJoin = null,
 
           api.Users().then(data => {
@@ -186,14 +190,14 @@
 
       addUser() {
         if (this.UserToJoin) {
-          api.JoinTeam({ Id: this.Id, UserId: this.UserToJoin }).then(data => {
+          api.JoinTeam({ TeamId: this.Id, UserId: this.UserToJoin }).then(data => {
             this.init();
           })
         }
       },
 
       removeUser(user) {
-        api.QuitTeam({ Id: this.Id, UserId: user.Id }).then(data => {
+        api.QuitTeam({ TeamId: this.Id, UserId: user.Id }).then(data => {
             this.init();
           })
       }

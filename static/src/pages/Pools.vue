@@ -7,33 +7,68 @@
         <v-dialog v-model="CreatePoolDlg">
           <v-btn class="primary white--text" slot="activator"><v-icon light>add</v-icon>新增集群</v-btn>
           <v-card>
+            <v-alert 
+              v-if="alertArea==='CreatePoolDlg'"
+              v-bind:success="alertType==='success'" 
+              v-bind:info="alertType==='info'" 
+              v-bind:warning="alertType==='warning'" 
+              v-bind:error="alertType==='error'" 
+              v-model="alertMsg" 
+              dismissible>{{ alertMsg }}</v-alert>
             <v-card-row>
               <v-card-title>新增集群</v-card-title>
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="Name" label="名称" v-model="NewPool.Name" :rules="rules.Name"></v-text-field>
+                <v-text-field 
+                  v-model="NewPool.Name" 
+                  ref="all_Name" 
+                  label="名称" 
+                  required 
+                  persistent-hint 
+                  :rules="rules.Name"
+                ></v-text-field>
                 <v-select
                   :items="DriverList"
                   v-model="NewPool.Driver"
-                  ref="Driver"
+                  ref="all_Driver"
                   label="驱动类型"
                   dark
-                  single-line
-                  auto
+                  required
                   :rules="rules.Driver"
+                  class="mt-4"
                 ></v-select>
                 <v-select
-                  :items="NetworkList"
-                  v-model="NewPool.Network"
-                  ref="Network"
-                  label="网络类型"
+                  v-if="NewPool.Driver == 'swarm'"
+                  :items="SwarmVersionList"
+                  v-model="NewPool.DriverOpts.Version"
+                  ref="swarm_Version"
+                  label="驱动版本"
                   dark
-                  single-line
-                  auto
-                  :rules="rules.Network"
+                  required
+                  :rules="rules.DriverOpts.swarm.Version"
+                  class="mt-4"
                 ></v-select>
-                <v-text-field ref="EndPoint" label="API地址" v-model="NewPool.EndPoint" :rules="rules.EndPoint"></v-text-field>
+                <v-text-field 
+                  v-if="NewPool.Driver == 'swarm'"
+                  v-model="NewPool.DriverOpts.EndPoint" 
+                  ref="swarm_EndPoint" 
+                  label="API地址" 
+                  required 
+                  :rules="rules.DriverOpts.swarm.EndPoint"
+                  class="mt-4"
+                ></v-text-field>
+                <v-select
+                  v-if="NewPool.Driver == 'swarm'"
+                  :items="SwarmAPIVersionList"
+                  v-model="NewPool.DriverOpts.APIVersion"
+                  ref="swarm_APIVersion"
+                  label="驱动版本"
+                  dark
+                  required
+                  :rules="rules.DriverOpts.swarm.APIVersion"
+                  class="mt-4"
+                ></v-select>
               </v-card-text>
             </v-card-row>
             <v-card-row actions>
@@ -72,7 +107,6 @@
           <td>{{ props.item.Id }}</td>
           <td><router-link :to="'/pool/' + props.item.Id + '/detail'">{{ props.item.Name }}</router-link></td>
           <td>{{ props.item.Driver }}</td>
-          <td>{{ props.item.Network }}</td>
           <td class="text-xs-right">{{ props.item.Nodes }}</td>
           <td class="text-xs-right">
             {{ props.item.Cpus }}
@@ -95,6 +129,7 @@
 </template>
 
 <script>
+  import store, { mapGetters } from 'vuex'
   import api from '../api/api'
   import * as ui from '../util/ui'
 
@@ -105,7 +140,6 @@
           { text: 'ID', sortable: false, left: true },
           { text: '名称', sortable: false, left: true },
           { text: '驱动类型', sortable: false, left: true },
-          { text: '网络类型', sortable: false, left: true },
           { text: '节点', sortable: false },
           { text: 'CPU', sortable: false },
           { text: '内存 (GB)', sortable: false },
@@ -113,10 +147,14 @@
           { text: '操作', sortable: false, left: true }
         ],
         items: [],
-        DriverList: [ 'Swarm', 'Kubernetes' ],
-        NetworkList: [ 'Flannel', 'VxLAN' ],
+
+        DriverList: [ 'swarm' ],
+        SwarmVersionList: [ 'v1.0' ],
+        SwarmAPIVersionList: [ 'v1.23' ],
+
         CreatePoolDlg: false,
-        NewPool: { Name: '', Driver: '', Network: '', EndPoint: '' },
+        NewPool: { Name: '', Driver: 'swarm', DriverOpts: { Version: 'v1.0', EndPoint: '', APIVersion: 'v1.23' } },
+
         RemoveConfirmDlg: false,
         SelectedPool: {},
 
@@ -127,14 +165,35 @@
           Driver: [
             v => (v && v.length > 0 ? true : '请选择驱动类型')
           ],
-          Network: [
-            v => (v && v.length > 0 ? true : '请选择网络类型')
-          ],
-          EndPoint: [
-            v => (v && v.length > 0 ? true : '请输入集群API地址')
-          ]
+          DriverOpts: {
+            swarm: {
+              Version: [
+                v => (v && v.length > 0 ? true : '请选择集群驱动版本')
+              ],
+              EndPoint: [
+                v => (v && v.length > 0 ? true : '请输入集群API地址')
+              ],
+              APIVersion: [
+                v => (v && v.length > 0 ? true : '请选择集群API版本')
+              ]
+            }
+          }
         }
       }
+    },
+
+    computed: {
+      ...mapGetters([
+          'alertArea',
+          'alertType',
+          'alertMsg'
+      ])
+    },
+
+    watch: {
+        CreatePoolDlg(v) {
+          (v ? ui.showAlertAt('CreatePoolDlg') : ui.showAlertAt())
+        }
     },
 
     mounted() {
@@ -149,12 +208,8 @@
       },
 
       createPool() {
-        for (let f in this.$refs) {
-          let e = this.$refs[f];
-          console.log(e);
-          if (e.errorBucket && e.errorBucket.length > 0) {
-            return;
-          }
+        if (!this.validateForm('all_') || !this.validateForm(this.Driver + '_')) {
+          return;
         }
 
         this.CreatePoolDlg = false;

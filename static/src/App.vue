@@ -4,11 +4,12 @@
       <v-layout row wrap style="margin-top:100px;">
         <v-flex xs4 offset-xs4>
           <v-alert 
+            v-if="alertArea==='global'"
             v-bind:success="alertType==='success'" 
             v-bind:info="alertType==='info'" 
             v-bind:warning="alertType==='warning'" 
             v-bind:error="alertType==='error'" 
-            v-model="showAlert" 
+            v-model="alertMsg" 
             dismissible>{{ alertMsg }}</v-alert>
         </v-flex>
         <v-flex xs4>
@@ -26,9 +27,10 @@
                   </v-flex>
                   <v-flex xs8>
                     <v-text-field
-                      v-model="Name"
-                      required
+                      v-model="Login.Name"
+                      ref="Login_Name"
                       single-line
+                      :rules="rules.Login.Name"
                     ></v-text-field>
                   </v-flex>
                   <v-flex xs4>
@@ -36,10 +38,12 @@
                   </v-flex>
                   <v-flex xs8>
                     <v-text-field
-                      v-model="Password"
-                      required
+                      v-model="Login.Password"
+                      ref="Login_Password"
                       single-line
                       type="password"
+                      :rules="rules.Login.Password"
+                      @keydown.enter.native="login"
                     ></v-text-field>
                   </v-flex>
                   <v-flex xs4>
@@ -201,11 +205,12 @@
             <v-layout column>
               <v-flex xs12>
                 <v-alert 
+                  v-if="alertArea==='global'"
                   v-bind:success="alertType==='success'" 
                   v-bind:info="alertType==='info'" 
                   v-bind:warning="alertType==='warning'" 
                   v-bind:error="alertType==='error'" 
-                  v-model="showAlert" 
+                  v-model="alertMsg" 
                   dismissible>{{ alertMsg }}</v-alert>
               </v-flex>
               <v-flex xs12>
@@ -215,9 +220,6 @@
           </v-slide-y-transition>
         </v-container>
       </main>
-      <!--v-footer :fixed="fixed">
-        <span>&copy; 2017</span>
-      </v-footer-->
     </div>
   </v-app>
 </template>
@@ -234,14 +236,29 @@
         drawer: true,
         fixed: false,
         miniVariant: false,
-        Name: '',
-        Password: ''
+
+        Login: {
+          Name: '',
+          Password: ''
+        },
+
+        rules: {
+          Login: {
+            Name: [
+              v => (v && v.length > 0 ? true : '请输入用户名')
+            ],
+
+            Password: [
+              v => (v && v.length > 0 ? true : '请输入密码')
+            ]
+          }
+        }
       }
     },
 
     computed: {
       ...mapGetters([
-          'showAlert',
+          'alertArea',
           'alertType',
           'alertMsg',
           'token'
@@ -265,9 +282,13 @@
       },
 
       login() {
+        if (!this.validateForm('Login_')) {
+          return;
+        }
+
         api.Login({
-          Name: this.Name,
-          Password: this.Password
+          Name: this.Login.Name,
+          Password: this.Login.Password
         }).then(data => {
           window.location.reload();
         })

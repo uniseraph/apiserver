@@ -181,7 +181,6 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 		}
 
 
-
 		c1 := utils.PutCurrentUser(ctx, &result)
 
 		h(c1, w, r)

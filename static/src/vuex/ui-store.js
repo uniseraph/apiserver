@@ -1,22 +1,28 @@
 const state = {
-    showAlert: false,
-    alertType: 'warning',
-    alertMsg: ''
+    showAlertAt: 'global',
+    alertArea: null,
+    alertType: null,
+    alertMsg: null
 }
 
 const getters = {
-    showAlert: state => state.showAlert,
+    showAlertAt: state => state.showAlertAt,
+    alertArea: state => state.alertArea,
     alertType: state => state.alertType,
     alertMsg: state => state.alertMsg,
 }
 
-const SHOW_ALERT = 'SHOW_ALERT'
+const SHOW_ALERT_AT = 'SHOW_ALERT_AT'
+const ALERT_AREA = 'ALERT_AREA'
 const ALERT_TYPE = 'ALERT_TYPE'
 const ALERT_MSG = 'ALERT_MSG'
 
 const actions = {
-    showAlert({ commit }, status) {
-        commit(SHOW_ALERT, status)
+    showAlertAt({ commit }, status) {
+        commit(SHOW_ALERT_AT, status)
+    },
+    alertArea({ commit }, str) {
+        commit(ALERT_AREA, str)
     },
     alertType({ commit }, str) {
         commit(ALERT_TYPE, str)
@@ -27,8 +33,11 @@ const actions = {
 }
 
 const mutations = {
-	[SHOW_ALERT](state, status) {
-        state.showAlert = status
+	[SHOW_ALERT_AT](state, str) {
+        state.showAlertAt = str
+    },
+    [ALERT_AREA](state, str) {
+        state.alertArea = str
     },
 	[ALERT_TYPE](state, str) {
         state.alertType = str

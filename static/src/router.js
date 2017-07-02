@@ -4,6 +4,7 @@ import VueRouter from 'vue-router'
 import Pools from './pages/Pools.vue'
 import PoolDetail from './pages/PoolDetail.vue'
 import Envs from './pages/Envs.vue'
+import EnvDetail from './pages/EnvDetail.vue'
 import Users from './pages/Users.vue'
 import CreateUser from './pages/CreateUser.vue'
 import UserDetail from './pages/UserDetail.vue'
@@ -18,6 +19,7 @@ export default new VueRouter({
 		{ path: '/pools', component: Pools },
 		{ path: '/pool/:id/detail', component: PoolDetail },
 		{ path: '/envs', component: Envs },
+		{ path: '/env/:id/detail', component: EnvDetail },
 		{ path: '/users', component: Users },
 		{ path: '/users/create', component: CreateUser },
 		{ path: '/user/:id/detail', component: UserDetail },

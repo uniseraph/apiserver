@@ -17,12 +17,20 @@
       <v-layout row justify-center>
         <v-dialog v-model="UpdateDirDlg" persistent>
           <v-card>
+            <v-alert 
+              v-if="alertArea==='UpdateDirDlg'"
+              v-bind:success="alertType==='success'" 
+              v-bind:info="alertType==='info'" 
+              v-bind:warning="alertType==='warning'" 
+              v-bind:error="alertType==='error'" 
+              v-model="alertMsg" 
+              dismissible>{{ alertMsg }}</v-alert>
             <v-card-row>
               <v-card-title>修改目录名</v-card-title>
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="UpdateDirName" v-model="SelectedDir.Name" :rules="rules.Dir.Name"></v-text-field>
+                <v-text-field ref="UpdateDir_Name" required v-model="SelectedDir.Name" :rules="rules.Dir.Name"></v-text-field>
               </v-card-text>
             </v-card-row>
             <v-card-row actions>
@@ -35,12 +43,20 @@
       <v-layout row justify-center>
         <v-dialog v-model="CreateDirDlg" persistent>
           <v-card>
+            <v-alert 
+              v-if="alertArea==='CreateDirDlg'"
+              v-bind:success="alertType==='success'" 
+              v-bind:info="alertType==='info'" 
+              v-bind:warning="alertType==='warning'" 
+              v-bind:error="alertType==='error'" 
+              v-model="alertMsg" 
+              dismissible>{{ alertMsg }}</v-alert>
             <v-card-row>
-              <v-card-title>新建子目录</v-card-title>
+              <v-card-title>新建“{{ SelectedDir.Name }}”的子目录</v-card-title>
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="NewDirName" v-model="NewDirName" :rules="rules.Dir.Name"></v-text-field>
+                <v-text-field ref="NewDir_Name" required v-model="NewDir.Name" :rules="rules.Dir.Name"></v-text-field>
               </v-card-text>
             </v-card-row>
             <v-card-row actions>
@@ -99,7 +115,35 @@
           @keydown.enter.native="getDataFromApi"
         ></v-text-field>
         <v-spacer></v-spacer>
-
+        <v-layout row justify-center style="margin-right:0;">
+          <v-dialog v-model="CreateValueDlg">
+            <v-btn class="primary white--text" slot="activator"><v-icon light>add</v-icon>新增参数</v-btn>
+            <v-card>
+              <v-alert 
+                v-if="alertArea==='CreateValueDlg'"
+                v-bind:success="alertType==='success'" 
+                v-bind:info="alertType==='info'" 
+                v-bind:warning="alertType==='warning'" 
+                v-bind:error="alertType==='error'" 
+                v-model="alertMsg" 
+                dismissible>{{ alertMsg }}</v-alert>
+              <v-card-row>
+                <v-card-title>新增参数</v-card-title>
+              </v-card-row>
+              <v-card-row>
+                <v-card-text>
+                  <v-text-field ref="NewValue_Name" label="名称" required v-model="NewValue.Name" :rules="rules.Value.Name"></v-text-field>
+                  <v-text-field ref="NewValue_Value" label="默认值" required v-model="NewValue.Value" :rules="rules.Value.Value" class="mt-4"></v-text-field>
+                  <v-text-field label="描述" v-model="NewValue.Description" class="mt-4"></v-text-field>
+                </v-card-text>
+              </v-card-row>
+              <v-card-row actions>
+                <v-btn class="blue--text darken-1" flat @click.native="createValue">确认</v-btn>
+                <v-btn class="blue--text darken-1" flat @click.native="CreateValueDlg = false">取消</v-btn>
+              </v-card-row>
+            </v-card>
+          </v-dialog>
+        </v-layout>
       </v-card-title>
       <v-data-table
         :headers="headers"
@@ -113,7 +157,7 @@
       >
         <template slot="items" scope="props">
           <td>{{ props.item.Id }}</td>
-          <td><router-link :to="'/envs/values/' + props.item.Id + '/detail'">{{ props.item.Name }}</router-link></td>
+          <td><router-link :to="'/env/' + props.item.Id + '/detail'">{{ props.item.Name }}</router-link></td>
           <td>{{ props.item.Value }}</td>
           <td>{{ props.item.Description }}</td>
           <td>
@@ -132,6 +176,7 @@
 </template>
 
 <script>
+  import store, { mapGetters } from 'vuex'
   import api from '../api/api'
   import * as ui from '../util/ui'
   import Tree from '../components/tree/tree.vue'
@@ -143,7 +188,7 @@
         treeData: { nodeData: [], currentNodeId: null },
         headers: [
           { text: '参数ID', sortable: false, left: true },
-          { text: '参数名称', sortable: false , left: true},
+          { text: '参数名', sortable: false , left: true},
           { text: '默认值', sortable: false, left: true },
           { text: '描述', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
@@ -156,21 +201,35 @@
         Keyword: '',
 
         UpdateDirDlg: false,
+
         RemoveDirConfirmDlg: false,
         RemoveDirDisabled: true,
 
         CreateDirDlg: false,
-        NewDirName: '',
+        NewDir: { Name: '' },
 
         RemoveValueConfirmDlg: false,
         SelectedValue: {},
+
+        CreateValueDlg: false,
+        NewValue: { Name: '', Value: '', Description: '' },
 
         rules: {
           Dir: {
             Name: [
               v => (v && v.length > 0 ? true : '请输入目录名')
             ]
-          }
+          },
+
+          Value: {
+            Name: [
+              v => (v && v.length > 0 ? true : '请输入参数名')
+            ],
+
+            Value: [
+              v => (v && v.length > 0 ? true : '请输入默认值')
+            ]
+          },
         }
       }
     },
@@ -182,7 +241,27 @@
           },
 
           deep: true
+        },
+
+        UpdateDirDlg(v) {
+          (v ? ui.showAlertAt('UpdateDirDlg') : ui.showAlertAt())
+        },
+
+        CreateDirDlg(v) {
+          (v ? ui.showAlertAt('CreateDirDlg') : ui.showAlertAt())
+        },
+
+        CreateValueDlg(v) {
+          (v ? ui.showAlertAt('CreateValueDlg') : ui.showAlertAt())
         }
+    },
+
+    computed: {
+      ...mapGetters([
+          'alertArea',
+          'alertType',
+          'alertMsg'
+      ])
     },
 
     mounted() {
@@ -229,21 +308,27 @@
       },
 
       createDir() {
-        this.CreateDirDlg = false;
+        if (!this.validateForm('NewDir_')) {
+          return;
+        }
+
         let params = {
-          Name: this.NewDirName,
+          Name: this.NewDir.Name,
           ParentId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : null
         };
         api.CreateEnvDir(params).then(data => {
+          this.CreateDirDlg = false;
           this.init(data.Id);
         });
-
-        this.NewDirName = '';
       },
 
       updateDir() {
-        this.UpdateDirDlg = false;
+        if (!this.validateForm('UpdateDir_')) {
+          return;
+        }
+
         api.UpdateEnvDir(this.SelectedDir).then(data => {
+          this.UpdateDirDlg = false;
           this.init();
         });
       },
@@ -273,6 +358,23 @@
           this.items = data.Data;
           this.totalItems = data.Total;
         })
+      },
+
+      createValue() {
+        if (!this.validateForm('NewValue_')) {
+          return;
+        }
+
+        let params = {
+          Name: this.NewValue.Name,
+          Value: this.NewValue.Value,
+          Description: this.NewValue.Description,
+          DirId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : null
+        };
+        api.CreateEnvValue(params).then(data => {
+          this.CreateValueDlg = false;
+          this.getDataFromApi();
+        });
       },
 
       confirmBeforeRemoveValue(v) {
