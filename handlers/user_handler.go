@@ -105,7 +105,7 @@ func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	//一周后再登录，会找不到redis中的key，导致认证不再可以通过，需要重新登录
 	client.Expire(utils.RedisSessionKey(sessionKey), age)
 
-	uidCookie := &http.Cookie{
+	sessionIDCookie := &http.Cookie{
 		Name:     "sessionID",
 		Value:    sessionKey,
 		Path:     "/",
@@ -113,12 +113,10 @@ func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		MaxAge:   int(age),
 	}
 
-	logrus.Debugf("getUserLogin::get the cookie %#v", uidCookie)
+	logrus.Debugf("getUserLogin::get the cookie %#v", sessionIDCookie)
 
-	http.SetCookie(w, uidCookie)
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	http.SetCookie(w, sessionIDCookie)
+	utils.HttpOK(w, result)
 }
 
 type UsersCreateRequest struct {

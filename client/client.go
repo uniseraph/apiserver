@@ -10,8 +10,6 @@ import (
 	"strings"
 	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/handlers"
-
-	"github.com/contiv/ofnet/Godeps/_workspace/src/github.com/Sirupsen/logrus"
 )
 
 
@@ -21,40 +19,9 @@ func main() {
 
 	client := &http.Client{}
 
-	req, err := http.NewRequest("POST", "http://localhost:8080/api/users/root/login?Pass=hell05a" ,nil )
-	if err != nil {
-		log.Errorf(err.Error())
-		return
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := client.Do(req)
-	defer resp.Body.Close()
-	if err !=nil {
-		log.Errorf("login post err:%s", err.Error())
-		return
-	}
-
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Debugf("login read body err:%s",err.Error())
-		return
-	}
-	if resp.StatusCode != http.StatusOK {
-
-		log.Errorf("login statuscode:%d err:%s" , resp.StatusCode, string(body))
-		return
-	}
-
-	fmt.Println(string(body))
-	rootUser:=&types.User{}
-	json.Unmarshal(body,rootUser)
-	fmt.Printf("\nlogin success , the root  user is %#v....",rootUser)
-
-	for _ , cookie := range resp.Cookies(){
-		fmt.Println("cookie:", cookie)
-	}
+	//登录root用户
+	//获得测试使用的登录态cookie
+	resp := sessionCreate(client)
 
 	fmt.Println("\n current user is ....")
 	currentUser , err := currentUser(client,resp.Cookies())
@@ -270,13 +237,67 @@ func main() {
 	},resp.Cookies())
 
 	if err!=nil {
-		logrus.Errorf("register the pool:%s err:%s","pool1",err.Error())
+		log.Errorf("register the pool:%s err:%s","pool1",err.Error())
 		return
 	}
 
 	fmt.Printf("register success , result is %#v",result)
 
+	//测试退出当前用户功能
+	fmt.Println("\nsession destory....")
+	err = sessionLogout(client, resp.Cookies())
+	if err != nil {
+		log.Errorf("session destroy failed!", err.Error())
+	}else{
+		log.Infof("session destroy success.")
+	}
 
+	//登录root用户
+	//获得测试使用的登录态cookie
+	resp = sessionCreate(client)
+
+	//继续以下测试，依然可以使用resp.Cookies()保持会话
+}
+
+//root用户登录
+//获取登陆后的cookie
+func sessionCreate(client *http.Client) (response *http.Response)  {
+	req, err := http.NewRequest("POST", "http://localhost:8080/api/users/root/login?Pass=hell05a" ,nil )
+	if err != nil {
+		log.Errorf(err.Error())
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := client.Do(req)
+	defer resp.Body.Close()
+	if err !=nil {
+		log.Errorf("login post err:%s", err.Error())
+		return
+	}
+
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body err:%s",err.Error())
+		return
+	}
+	if resp.StatusCode != http.StatusOK {
+
+		log.Errorf("login statuscode:%d err:%s" , resp.StatusCode, string(body))
+		return
+	}
+
+	fmt.Println(string(body))
+	rootUser:=&types.User{}
+	json.Unmarshal(body,rootUser)
+	fmt.Printf("\nlogin success , the root  user is %#v....",rootUser)
+
+	for _ , cookie := range resp.Cookies(){
+		fmt.Println("cookie:", cookie)
+	}
+
+	return resp
 }
 
 
@@ -867,4 +888,72 @@ func registerPool(client *http.Client , name string , request * handlers.PoolsRe
 	json.Unmarshal(body,&result)
 
 	return result , nil
+}
+
+func sessionLogout(client *http.Client  ,  cookies []*http.Cookie) (error){
+
+	//先调用登出接口
+	//是的cookie失效
+	url := fmt.Sprintf("http://localhost:8080/api/session/logout")
+
+	req , err := http.NewRequest(http.MethodPost , url , nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+
+	resp, err := client.Do(req)
+	if err!=nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Debugf("login read body statuscode:%d err:%s",resp.StatusCode,err.Error())
+			return err
+		}
+
+		return errors.New(string(body))
+	}
+	resp.Body.Close()
+	log.Infof("logout success.")
+
+	//再调用current user接口
+	//应该看到返回状态是401
+
+	url = fmt.Sprintf("http://localhost:8080/api/users/current")
+
+	req , err = http.NewRequest(http.MethodPost , url , nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+
+	resp, err = client.Do(req)
+	if err!=nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	//如果是未授权，则退出成功
+	if resp.StatusCode != http.StatusUnauthorized {
+		return errors.New(string("After logout, current user api is not 401"))
+	}else {
+		return nil
+	}
+
+	return nil
+
 }

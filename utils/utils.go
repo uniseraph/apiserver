@@ -7,6 +7,7 @@ import (
 	"crypto/md5"
 	"io"
 	"fmt"
+	"encoding/json"
 )
 
 //计算MD5
@@ -21,6 +22,22 @@ func Md5(data string) string {
 func HttpError(w http.ResponseWriter, err string, status int) {
 	logrus.WithField("status", status).Errorf("HTTP error: %v", err)
 	http.Error(w, err, status)
+}
+
+//请求处理结果成功的标准操作
+func HttpOK(w http.ResponseWriter, result interface{} ) {
+	body := map[string]interface{}{
+		"status" : "0",
+		"msg"	 : "Success",
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	if result != nil {
+		body["data"] = result
+		json.NewEncoder(w).Encode(body)
+	}else{
+		json.NewEncoder(w).Encode(body)
+	}
 }
 
 //生成随机字符串，长度为n

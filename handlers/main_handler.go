@@ -72,7 +72,8 @@ var routes = map[string]map[string]*MyHandler{
 		"/teams/{id:.*}/revoke":    &MyHandler{h: postTeamRevoke, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/teams/{id:.*}/remove":    &MyHandler{h: postTeamRemove, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 
-
+		"/session/{name:.*}/login":   &MyHandler{h: postSessionCreate},
+		"/session/logout":   	      &MyHandler{h: postSessionDestroy},
 
 		//"/actions/check" : &MyHandler{h: postActionsCheck } ,
 	},
@@ -95,8 +96,10 @@ func checkUserPermission1(h Handler, roleset types.Roleset) Handler {
 func checkUserPermission(h Handler, rs types.Roleset) Handler {
 
 	wrap := func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-
 		cookie, err := r.Cookie("sessionID")
+		//如果cookie中不存在sessionID
+		//则err不为空
+		//则认为禁止登陆
 		if err != nil {
 			HttpError(w, "please login", http.StatusForbidden)
 			return
@@ -121,6 +124,12 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 		//则认证失败
 		if err != nil {
 			HttpError(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		//如果session在redis中内容为空
+		//则认证失败
+		if len(sessionContent) == 0 {
+			HttpError(w, "sessionContent is empty", http.StatusUnauthorized)
 			return
 		}
 		//如果session中uid字段为空
@@ -284,6 +293,10 @@ func OptionsHandler(c context.Context, w http.ResponseWriter, r *http.Request) {
 
 func HttpError(w http.ResponseWriter, err string, status int) {
 	utils.HttpError(w, err, status)
+}
+
+func HttpOK(w http.ResponseWriter, result interface{} ) ()  {
+	utils.HttpOK(w, result)
 }
 //"/actions/check" : &MyHandler{h: postActionsCheck } ,
 func postActionsCheck(ctx context.Context, w http.ResponseWriter, r *http.Request) {
