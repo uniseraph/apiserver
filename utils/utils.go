@@ -26,18 +26,19 @@ func HttpError(w http.ResponseWriter, err string, status int) {
 
 //请求处理结果成功的标准操作
 func HttpOK(w http.ResponseWriter, result interface{} ) {
-	body := map[string]interface{}{
-		"status" : "0",
-		"msg"	 : "Success",
-	}
+	//body := map[string]interface{}{
+	//	"status" : "0",
+	//	"msg"	 : "Success",
+	//}
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	if result != nil {
-		body["data"] = result
-		json.NewEncoder(w).Encode(body)
-	}else{
-		json.NewEncoder(w).Encode(body)
-	}
+	//if result != nil {
+	//	body["data"] = result
+	//	json.NewEncoder(w).Encode(body)
+	//}else{
+	//	json.NewEncoder(w).Encode(body)
+	//}
+	json.NewEncoder(w).Encode(result)
 }
 
 //生成随机字符串，长度为n
