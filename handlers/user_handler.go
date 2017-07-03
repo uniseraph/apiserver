@@ -15,7 +15,7 @@ import (
 	"time"
 	"github.com/google/uuid"
 )
-
+//TODO 不应该走checkUserPermission过滤角色权限
 //		"/users/current":           &MyHandler{h: getUserCurrent ,opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 func getUserCurrent(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
@@ -115,8 +115,13 @@ func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	logrus.Debugf("getUserLogin::get the cookie %#v", sessionIDCookie)
 
+	//密码不要在detail信息中出现
+	result.Pass=""
+
 	http.SetCookie(w, sessionIDCookie)
-	utils.HttpOK(w, result)
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }
 
 type UsersCreateRequest struct {
@@ -313,7 +318,7 @@ func getUsersJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	c := mgoSession.DB(mgoDB).C("user")
 
-	var results []types.User
+	results:=make ( []types.User ,0)
 	if err := c.Find(bson.M{}).All(&results); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
