@@ -103,7 +103,7 @@
             </v-list-tile>
           </v-list-item>
           <v-list-item>
-            <v-list-tile ripple to="/envs" router>
+            <v-list-tile ripple to="/env/trees" router>
               <v-list-tile-avatar>
                 <v-icon light>local_parking</v-icon>
               </v-list-tile-avatar>

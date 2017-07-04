@@ -1,0 +1,6 @@
+{ 
+	"Id": "1", 
+	"Name": "MYSQL_USER_SERVER", 
+	"Value": "user.mysql.consul",
+	"Description": "用户数据库域名"
+}

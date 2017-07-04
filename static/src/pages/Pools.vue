@@ -107,7 +107,7 @@
       >
         <template slot="items" scope="props">
           <td>{{ props.item.Id }}</td>
-          <td><router-link :to="'/pool/' + props.item.Id + '/detail'">{{ props.item.Name }}</router-link></td>
+          <td><router-link :to="'/pool/' + props.item.Id">{{ props.item.Name }}</router-link></td>
           <td>{{ props.item.Driver }}</td>
           <td class="text-xs-right">{{ props.item.Nodes }}</td>
           <td class="text-xs-right">

@@ -3,7 +3,8 @@ import VueRouter from 'vue-router'
 
 import Pools from './pages/Pools.vue'
 import PoolDetail from './pages/PoolDetail.vue'
-import Envs from './pages/Envs.vue'
+import EnvTrees from './pages/EnvTrees.vue'
+import EnvTree from './pages/EnvTree.vue'
 import EnvDetail from './pages/EnvDetail.vue'
 import Users from './pages/Users.vue'
 import CreateUser from './pages/CreateUser.vue'
@@ -17,15 +18,16 @@ Vue.use(VueRouter)
 export default new VueRouter({
 	routes: [
 		{ path: '/pools', component: Pools },
-		{ path: '/pool/:id/detail', component: PoolDetail },
-		{ path: '/envs', component: Envs },
-		{ path: '/env/:id/detail', component: EnvDetail },
+		{ path: '/pool/:id', component: PoolDetail },
+		{ path: '/env/trees', component: EnvTrees },
+		{ path: '/env/tree/:id/:name', component: EnvTree },
+		{ path: '/env/value/:id', component: EnvDetail },
 		{ path: '/users', component: Users },
 		{ path: '/users/create', component: CreateUser },
-		{ path: '/user/:id/detail', component: UserDetail },
-		{ path: '/user/:id/password', component: ResetPassword },
+		{ path: '/user/:id', component: UserDetail },
+		{ path: '/user/password/:id', component: ResetPassword },
 		{ path: '/teams', component: Teams },
-		{ path: '/team/:id/detail', component: TeamDetail },
+		{ path: '/team/:id', component: TeamDetail },
 		{ path: '*', redirect: '/pools' }
 	]
 })
