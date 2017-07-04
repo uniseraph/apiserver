@@ -6,7 +6,7 @@ import store from '../vuex/store'
 
 // axios默认配置
 axios.defaults.timeout = 5000;
-//axios.defaults.baseURL = 'http://localhost:8080/public/mock';
+axios.defaults.baseURL = 'http://localhost:8080/public/mock';
 axios.defaults.baseURL = 'http://localhost:8080/api';
 
 // 仅测试用

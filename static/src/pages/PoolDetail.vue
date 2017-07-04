@@ -26,6 +26,20 @@
               <v-flex xs2>
               </v-flex>
               <v-flex xs2>
+                <v-subheader>参数目录</v-subheader>
+              </v-flex>
+              <v-flex xs3>
+                <v-select
+                  :items="EnvTreeList"
+                  item-text="Name"
+                  item-value="Id"
+                  v-model="EnvTreeId"
+                  label="请选择"
+                  dark
+                  single-line
+                ></v-select>
+              </v-flex>
+              <v-flex xs2>
                 <v-subheader>驱动类型<span class="required-star">*</span></v-subheader>
               </v-flex>
               <v-flex xs3>
@@ -40,8 +54,10 @@
                   :rules="rules.Driver"
                 ></v-select>
               </v-flex>
+              <v-flex xs2>
+              </v-flex>
               <v-flex v-if="Driver == 'swarm'" xs2>
-                <v-subheader>驱动版本</v-subheader>
+                <v-subheader>驱动版本<span class="required-star">*</span></v-subheader>
               </v-flex>
               <v-flex v-if="Driver == 'swarm'" xs3>
                 <v-select
@@ -56,9 +72,7 @@
                 ></v-select>
               </v-flex>
               <v-flex v-if="Driver == 'swarm'" xs2>
-              </v-flex>
-              <v-flex v-if="Driver == 'swarm'" xs2>
-                <v-subheader>API地址</v-subheader>
+                <v-subheader>API地址<span class="required-star">*</span></v-subheader>
               </v-flex>
               <v-flex v-if="Driver == 'swarm'" xs3>
                 <v-text-field
@@ -71,7 +85,9 @@
                 ></v-text-field>
               </v-flex>
               <v-flex v-if="Driver == 'swarm'" xs2>
-                <v-subheader>驱动版本</v-subheader>
+              </v-flex>
+              <v-flex v-if="Driver == 'swarm'" xs2>
+                <v-subheader>API版本<span class="required-star">*</span></v-subheader>
               </v-flex>
               <v-flex v-if="Driver == 'swarm'" xs3>
                 <v-select
@@ -84,8 +100,6 @@
                   required
                   :rules="rules.DriverOpts.swarm.APIVersion"
                 ></v-select>
-              </v-flex>
-              <v-flex v-if="Driver == 'swarm'" xs7>
               </v-flex>
               <v-flex xs3>
                 <v-subheader>节点个数：{{ Nodes }}</v-subheader>
@@ -206,6 +220,7 @@
       return {
         Id: '',
         Name: '',
+        EnvTreeId: null,
         Driver: 'swarm',
         DriverOpts: { Version: 'v1.0', EndPoint: '', APIVersion: 'v1.23' },
         Nodes: 0,
@@ -213,6 +228,7 @@
         Memories: 0,
         Disks: 0,
 
+        EnvTreeList: [],
         DriverList: [ 'swarm' ],
         SwarmVersionList: [ 'v1.0' ],
         SwarmAPIVersionList: [ 'v1.23' ],
@@ -261,6 +277,7 @@
         api.Pool(this.$route.params.id).then(data => {
           this.Id = data.Id;
           this.Name = data.Name;
+          this.EnvTreeId = data.EnvTreeId;
           this.Driver = data.Driver;
           this.DriverOpts = data.DriverOpts;
           this.Nodes = data.Nodes;
@@ -271,6 +288,10 @@
           this.AuthorizedUserList = data.Users ? data.Users : [];
           this.AuthorizeToTeam = null;
           this.AuthorizeToUser = null;
+
+          api.EnvTrees().then(data => {
+            this.EnvTreeList = data;
+          })
 
           api.Teams().then(data => {
             this.UnauthorizedTeamList = filterArray(data, this.AuthorizedTeamList, 'Id');
@@ -296,6 +317,7 @@
           api.UpdatePool({
             Id: this.Id,
             Name: this.Name,
+            EnvTreeId: this.EnvTreeId,
             Driver: this.Driver,
             Network: this.Network,
             EndPoint: this.EndPoint

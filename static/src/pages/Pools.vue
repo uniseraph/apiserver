@@ -30,6 +30,15 @@
                   @input="rules.Name = rules0.Name"
                 ></v-text-field>
                 <v-select
+                  :items="EnvTreeList"
+                  v-model="NewPool.EnvTreeId"
+                  item-text="Name"
+                  item-value="Id"
+                  label="参数目录"
+                  dark
+                  class="mt-2"
+                ></v-select>
+                <v-select
                   :items="DriverList"
                   v-model="NewPool.Driver"
                   ref="all_Driver"
@@ -108,6 +117,7 @@
         <template slot="items" scope="props">
           <td>{{ props.item.Id }}</td>
           <td><router-link :to="'/pool/' + props.item.Id">{{ props.item.Name }}</router-link></td>
+          <td>{{ props.item.EnvTree ? props.item.EnvTree.Name : '' }}</td>
           <td>{{ props.item.Driver }}</td>
           <td class="text-xs-right">{{ props.item.Nodes }}</td>
           <td class="text-xs-right">
@@ -141,6 +151,7 @@
         headers: [
           { text: 'ID', sortable: false, left: true },
           { text: '名称', sortable: false, left: true },
+          { text: '参数目录', sortable: false, left: true },
           { text: '驱动类型', sortable: false, left: true },
           { text: '节点', sortable: false },
           { text: 'CPU', sortable: false },
@@ -150,12 +161,13 @@
         ],
         items: [],
 
+        EnvTreeList: [],
         DriverList: [ 'swarm' ],
         SwarmVersionList: [ 'v1.0' ],
         SwarmAPIVersionList: [ 'v1.23' ],
 
         CreatePoolDlg: false,
-        NewPool: { Name: '', Driver: 'swarm', DriverOpts: { Version: 'v1.0', EndPoint: '', APIVersion: 'v1.23' } },
+        NewPool: { Name: '', EnvTreeId: null, Driver: 'swarm', DriverOpts: { Version: 'v1.0', EndPoint: '', APIVersion: 'v1.23' } },
 
         RemoveConfirmDlg: false,
         SelectedPool: {},
@@ -210,6 +222,10 @@
       init() {
         api.Pools().then(data => {
           this.items = data;
+        })
+
+        api.EnvTrees().then(data => {
+          this.EnvTreeList = data;
         })
       },
 
