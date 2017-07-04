@@ -134,6 +134,8 @@ type EnvTreeNodeParamKey struct {
 //参数目录树节点的参数值
 //EnvTreeNodeParamValue belongs to EnvTreeNodeParamKey
 //EnvTreeNodeParamValue belongs to Pool
+//这其实是一个Key和Pool的关联关系表
+//用来查询一个Key被哪些Pool所用，并且每个值都是什么
 type EnvTreeNodeParamValue struct {
 	Id 	    bson.ObjectId "_id"
 	Value  	    string

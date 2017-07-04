@@ -43,6 +43,26 @@ var routes = map[string]map[string]*MyHandler{
 		"/teams/ps":                &MyHandler{h: getTeamsJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/teams/list":              &MyHandler{h: getTeamsJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 
+		/*
+			参数目录树
+		*/
+
+		"/envs/trees/list": &MyHandler{h: getTrees,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/trees/create": &MyHandler{h: createTree,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/trees/{id:.*}/update": &MyHandler{h: updateTree,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/trees/{id:.*}/remove": &MyHandler{h: deleteTree,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/dirs/list": &MyHandler{h: getTreeDirs,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/dirs/create": &MyHandler{h: createDir,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/dirs/{id:.*}/update": &MyHandler{h: updateDir,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/dirs/{id:.*}/remove": &MyHandler{h: deleteDir,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/list": &MyHandler{h: getTreeValues,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/{id:.*}/detail": &MyHandler{h: getTreeValueDetails,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/create": &MyHandler{h: createValue,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/{id:.*}/update": &MyHandler{h: updateValue,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/{id:.*}/remove": &MyHandler{h: deleteValue,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/{id:.*}/update-values": &MyHandler{h: updateValueAttributes,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+
+
 	},
 	"POST": {
 		"/pools/{id:.*}/inspect": &MyHandler{h: getPoolJSON,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
@@ -76,6 +96,26 @@ var routes = map[string]map[string]*MyHandler{
 		"/session/logout":   	      &MyHandler{h: postSessionDestroy},
 
 		//"/actions/check" : &MyHandler{h: postActionsCheck } ,
+
+		/*
+			参数目录树
+		*/
+
+		"/envs/trees/list": &MyHandler{h: getTrees,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/trees/create": &MyHandler{h: createTree,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/trees/{id:.*}/update": &MyHandler{h: updateTree,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/trees/{id:.*}/remove": &MyHandler{h: deleteTree,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/dirs/list": &MyHandler{h: getTreeDirs,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/dirs/create": &MyHandler{h: createDir,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/dirs/{id:.*}/update": &MyHandler{h: updateDir,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/dirs/{id:.*}/remove": &MyHandler{h: deleteDir,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/list": &MyHandler{h: getTreeValues,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/{id:.*}/detail": &MyHandler{h: getTreeValueDetails,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/create": &MyHandler{h: createValue,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/{id:.*}/update": &MyHandler{h: updateValue,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/{id:.*}/remove": &MyHandler{h: deleteValue,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/{id:.*}/update-values": &MyHandler{h: updateValueAttributes,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+
 	},
 	"PUT":    {},
 	"DELETE": {},
