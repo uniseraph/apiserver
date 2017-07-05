@@ -33,7 +33,7 @@
       >
         <template slot="items" scope="props">
           <td>{{ props.item.Id }}</td>
-          <td><router-link :to="'/user/' + props.item.Id + '/detail'">{{ props.item.Name }}</router-link></td>
+          <td><router-link :to="'/user/' + props.item.Id">{{ props.item.Name }}</router-link></td>
           <td>{{ props.item.Email }}</td>
           <td>{{ props.item.Tel }}</td>
           <td>
@@ -43,7 +43,7 @@
           </td>
           <td>{{ props.item.CreatedTime | formatDate }}</td>
           <td>
-            <router-link :to="'/user/' + props.item.Id + '/password'">
+            <router-link :to="'/user/password/' + props.item.Id">
               <v-btn outline small icon class="green green--text" title="重置密码">
                 <v-icon>lock</v-icon>
               </v-btn>

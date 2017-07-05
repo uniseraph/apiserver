@@ -144,7 +144,7 @@
     },
 
     mounted() {
-      this.init();
+      this.$router.go(-1);
     },
 
     methods: {

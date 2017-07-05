@@ -6,7 +6,7 @@ import store from '../vuex/store'
 
 // axios默认配置
 axios.defaults.timeout = 5000;
-//axios.defaults.baseURL = 'http://localhost:8080/public/mock';
+axios.defaults.baseURL = 'http://localhost:8080/public/mock';
 axios.defaults.baseURL = 'http://localhost:8080/api';
 
 // 仅测试用
@@ -85,6 +85,22 @@ export default {
 
     RemoveUserFromPool(params) {
         return fetch('/pools/' + params.Id + '/remove-user', params);
+    },
+
+    EnvTrees(params) {
+        return fetch('/envs/trees/list', params);
+    },
+
+    CreateEnvTree(params) {
+        return fetch('/envs/trees/create', params);  
+    },
+
+    UpdateEnvTree(params) {
+        return fetch('/envs/trees/' + params.Id + '/update', params);  
+    },
+
+    RemoveEnvTree(params) {
+        return fetch('/envs/trees/' + params.Id + '/update', params);  
     },
 
     EnvDirs(params) {
