@@ -246,7 +246,7 @@ func main() {
 		Driver: "swarm",
 		DriverOpts: types.DriverOpts{
 			Version:"v1.0",
-			EndPoint:"unix:///var/run/docker.sock",
+			EndPoint:"47.92.49.245:2375",
 			APIVersion:"v1.23",
 		},
 	},resp.Cookies())
