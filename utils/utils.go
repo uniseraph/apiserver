@@ -8,6 +8,9 @@ import (
 	"io"
 	"fmt"
 	"encoding/json"
+	"time"
+	"context"
+	"gopkg.in/mgo.v2"
 )
 
 //计算MD5
@@ -53,4 +56,43 @@ func RandomStr(n int) string {
 		return s
 	}
 	return ""
+}
+
+//当前时间的int64格式返回值
+func TimeNow64() int64 {
+	return time.Now().UnixNano() / int64(time.Millisecond)
+}
+
+//将解析HTTP请求的body解析成JSON对象
+//存储到对应的req模型中
+func HttpRequestBodyJsonParse(w http.ResponseWriter, r *http.Request, req interface{})  {
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+}
+
+//得到数据库表连接后的HTTP请求回调函数
+type mgoCollectionsCallback func(cs map[string] *mgo.Collection)
+//统一管理数据库
+//批量获取表连接
+//使用闭包处理API的业务逻辑
+func GetMgoCollections(ctx context.Context, w http.ResponseWriter, names []string, cb mgoCollectionsCallback)  {
+	mgoSession, err := GetMgoSessionClone(ctx)
+	if err != nil {
+		//走不到这里的,ctx中必然有mgoSesson
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer mgoSession.Close()
+
+	mgoDB := GetAPIServerConfig(ctx).MgoDB
+
+	var cs = make(map[string] *mgo.Collection)
+	for _, name := range names {
+		c := mgoSession.DB(mgoDB).C(name)
+		cs[name] = c
+	}
+
+	cb(cs)
 }
