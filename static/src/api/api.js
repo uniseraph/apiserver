@@ -221,6 +221,58 @@ export default {
 
     RemoveTemplate(id) {
         return fetch('/templates/' + id + '/remove');
+    },
+
+    Applications(params) {
+        return fetch('/applications/list', params);
+    },
+
+    CreateApplication(params) {
+        return fetch('/applications/create', params);
+    },
+
+    StartApplication(id) {
+        return fetch('/applications/' + id + '/start');
+    },
+
+    StopApplication(id) {
+        return fetch('/applications/' + id + '/stop');
+    },
+
+    RemoveApplication(id) {
+        return fetch('/applications/' + id);
+    },
+
+    ScaleService(params) {
+        return fetch('/applications/services/' + params.Id + '/scale', params);
+    },
+
+    DeploymentHistory(params) {
+        return fetch('/applications/' + id + '/history');
+    },
+
+    UpgradeApplication(params) {
+        return fetch('/applications/' + id + '/upgrade');
+    },
+
+    RollbackApplication(params) {
+        return fetch('/applications/' + id + '/rollback');
+    },
+
+    AddTeamToApplication(params) {
+        return fetch('/applications/' + id + '/add-team');
+    },
+
+    RemoveUserToApplication(params) {
+        return fetch('/applications/' + id + '/remove-team');
+    },
+
+    AddUserToApplication(params) {
+        return fetch('/applications/' + id + '/add-user');
+    },
+
+    RemoveUserToApplication(params) {
+        return fetch('/applications/' + id + '/remove-user');
     }
 
 }

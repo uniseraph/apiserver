@@ -4,7 +4,7 @@
       <v-card>
         <v-card-title>
           <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
-          &nbsp;&nbsp;应用模板&nbsp;&nbsp;/&nbsp;&nbsp;新建模板
+          &nbsp;&nbsp;应用模板&nbsp;&nbsp;/&nbsp;&nbsp;{{ Title }}
           <v-spacer></v-spacer>
         </v-card-title>
         <div>
@@ -570,7 +570,96 @@
 
     methods: {
       init() {
-        
+        api.Template(this.$route.params.id).then(data => {
+          this.svcIdStart = 0;
+          this.envIdStart = 0;
+          this.portMappingIdStart = 0;
+          this.volumnIdStart = 0;
+          this.labelIdStart = 0;
+
+          this.Id = data.Id;
+          this.Title = data.Title;
+          this.Name = data.Name;
+          this.Version = data.Version;
+          this.Description = data.Description;
+
+          let rules = {
+            Title: this.rules0.Title,
+            Name: this.rules0.Name,
+            Version: this.rules0.Version,
+            Services: []
+          };
+
+          if (!data.ServiceTemplates) {
+            data.ServiceTemplates = [];
+          } else {
+            for (let st of data.ServiceTemplates) {
+              st.index = st.Id = this.svcIdStart++;
+
+              let r = {
+                Title: this.rules0.Services.Title,
+                Name: this.rules0.Services.Name,
+                ImageName: this.rules0.Services.ImageName,
+                ImageTag: this.rules0.Services.ImageTag,
+                CPU: this.rules0.Services.CPU,
+                Memory: this.rules0.Services.Memory,
+                Envs: [],
+                PortMappings: [],
+                Volumns: [],
+                Labels: []
+              };
+
+              if (!st.Envs) {
+                st.Envs = [];
+              } else {
+                let i = 0;
+                for (let e of st.Envs) {
+                  e.index = i++;
+                  e.Id = this.envIdStart++;
+                  r.Envs[e.Id] = this.rules0.Services.Envs;
+                }
+              }
+
+              if (!st.PortMappings) {
+                st.PortMappings = [];
+              } else {
+                let i = 0;
+                for (let e of st.Envs) {
+                  e.index = i++;
+                  e.Id = this.portMappingIdStart++;
+                  r.PortMappings[e.Id] = this.rules0.Services.PortMappings;
+                }
+              }
+
+              if (!st.Volumns) {
+                st.Volumns = [];
+              } else {
+                let i = 0;
+                for (let e of st.Volumns) {
+                  e.index = i++;
+                  e.Id = this.volumnIdStart++;
+                  r.Volumns[e.Id] = this.rules0.Services.Volumns;
+                }
+              }
+
+              if (!st.Labels) {
+                st.Labels = [];
+              } else {
+                let i = 0;
+                for (let e of st.Labels) {
+                  e.index = i++;
+                  e.Id = this.labelIdStart++;
+                  r.Labels[e.Id] = this.rules0.Services.Labels;
+                }
+              }
+
+              rules.Services[st.Id] = r; 
+            }
+          }
+
+          this.rules = rules;
+          this.ServiceTemplates = data.ServiceTemplates;
+        })
       },
 
       goback() {
@@ -726,6 +815,7 @@
           }
 
           let a = {
+            Id: this.Id,
             Title: this.Title,
             Name: this.Name,
             Version: this.Version,
@@ -733,12 +823,9 @@
             ServiceTemplates: this.ServiceTemplates
           }
 
-          api.CreateTemplate(a).then(data => {
+          api.UpdateTemplate(a).then(data => {
             ui.alert('新增应用模板成功', 'success');
-            let that = this;
-            setTimeout(() => {
-              that.goback();
-            }, 1500);
+            this.init();
           })
         });
       }

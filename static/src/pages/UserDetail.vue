@@ -153,10 +153,7 @@
             RoleSet: roleSet
           }).then(data => {
             ui.alert('用户资料修改成功', 'success');
-            let that = this;
-            setTimeout(() => {
-              that.goback();
-            }, 1500);
+            this.init();
           });
         });
       }

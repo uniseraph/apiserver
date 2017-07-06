@@ -5,25 +5,24 @@
 	"Version": "V1.0.1", 
 	"Description": "Eureka集群应用模板", 
 	"UpdatedTime": 111111111111, 
-	"Updater": "1", 
+	"UpdaterId": "1", 
 	"Updater": { "Id": "1", "Name": "User1" },
 
 	"ServiceTemplates": [
 		{
-			"Title": "Eureka1"
+			"Title": "Eureka1",
 			"Name": "eureka1",
 			"ImageName": "springcloud/config",
 			"ImageTag": "1.0.1",
-			"ReplicaCount", 1,
+			"ReplicaCount": 1,
 			"Description": "第一个Eureka服务",
 			"Command": "",
 			"Envs": [
-				{ "Name": "spring.profiles.active", Value: "eureka1" },
-				{ "Name": "eureka1.instance.hostname", Value: "eureka1.consul" },
-				{ "Name": "eureka2.instance.hostname", Value: "eureka2.consul" },
-				{ "Name": "eureka3.instance.hostname", Value: "eureka3.consul" }
+				{ "Name": "spring.profiles.active", "Value": "eureka1" },
+				{ "Name": "eureka1.instance.hostname", "Value": "eureka1.consul" },
+				{ "Name": "eureka2.instance.hostname", "Value": "eureka2.consul" },
+				{ "Name": "eureka3.instance.hostname", "Value": "eureka3.consul" }
 			]
-		},
-
+		}
 	]
 }
