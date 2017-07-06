@@ -386,6 +386,96 @@ func TestEnvTree(t *testing.T) {
 		}
 	})
 
+	t.Run("Meta=5", func(t *testing.T) {
+		if tree, err := getEnvTreeDirList(metaId); err != nil {
+			t.Error(err)
+		} else if tree == nil {
+			t.Error("Tree List is nil")
+		} else {
+			//得到一个空的结构体
+			t.Log(tree)
+		}
+	})
+
+	//创建一棵树的全部节点
+	//mysql root->[master->mycat->[proxy01, proxy02], slave]
+	//树的形状很奇怪，是为了测试，真实系统不会这么奇怪
+	t.Run("Meta=6", func(t *testing.T) {
+		id, err := createEnvTreeMeta()
+		if err != nil {
+			t.Error(err)
+		} else {
+			t.Log(id)
+			metaId = id
+		}
+		if dir, err := createEnvTreeNodeDirMySQLRoot(id); err != nil {
+			t.Error(err)
+		} else if dir.Name != "MySQL" {
+			t.Error("Name is not correct")
+		} else {
+			t.Log(dir)
+			if m_dir, err := createEnvTreeNodeDirMySQLRootMasterNode(metaId, dir.Id); err != nil {
+				t.Error(err)
+			} else if m_dir.Name != "Master" {
+				t.Error("Name is not correct")
+			} else {
+				t.Log(m_dir)
+				if cat_dir, err := createEnvTreeNodeDirMySQLRootMycatproxyNode(metaId, m_dir.Id); err != nil {
+					t.Error(err)
+				} else if cat_dir.Name != "MyCAT Proxy" {
+					t.Error("Name is not correct")
+				} else {
+					t.Log(cat_dir)
+					if cat_dir, err := createEnvTreeNodeDirMySQLRootMycatproxy01Node(metaId, cat_dir.Id); err != nil {
+						t.Error(err)
+					} else if cat_dir.Name != "Proxy01" {
+						t.Error("Name is not correct")
+					} else {
+						t.Log(cat_dir)
+					}
+
+					if cat_dir, err := createEnvTreeNodeDirMySQLRootMycatproxy02Node(metaId, cat_dir.Id); err != nil {
+						t.Error(err)
+					} else if cat_dir.Name != "Proxy02" {
+						t.Error("Name is not correct")
+					} else {
+						t.Log(cat_dir)
+					}
+				}
+			}
+
+			if s_dir, err := createEnvTreeNodeDirMySQLRootSlaveNode(metaId, dir.Id); err != nil {
+				t.Error(err)
+			} else if s_dir.Name != "Slave" {
+				t.Error("Name is not correct")
+			} else {
+				t.Log(s_dir)
+			}
+		}
+	})
+
+	t.Run("Meta=7", func(t *testing.T) {
+		if tree, err := getEnvTreeDirList(metaId); err != nil {
+			t.Error(err)
+		} else {
+			//得到一个这个样子的树
+			//mysql root->[master->mycat->[proxy01, proxy02], slave]
+			t.Log(tree)
+
+			if tree.Name != "MySQL" {
+				t.Error(tree)
+			}
+			if tree.ParentId != "" {
+				t.Error(tree.ParentId)
+			}
+			if len(tree.Children) != 2 {
+				t.Error(tree.Children)
+			}
+			if tree.Children[0].Children[0].Name != "MyCAT Proxy" {
+				t.Error(tree.Children[0].Children[0])
+			}
+		}
+	})
 }
 
 //root用户登录
@@ -1100,6 +1190,8 @@ func cleanUpDatabase() {
 		{"mongo", "zanecloud --eval \"db.user.remove({'name':'sadan'})\""},
 		{"mongo", "zanecloud --eval \"db.team.remove({'name':'team1'})\""},
 		{"mongo", "zanecloud --eval \"db.pool.remove({'name':'pool1'})\""},
+		{"mongo", "zanecloud --eval \"db.env_tree_meta.remove({})\""},
+		{"mongo", "zanecloud --eval \"db.env_tree_node_dir.remove({})\""},
 	}
 
 	for _, arr := range cmds {
@@ -1285,4 +1377,336 @@ func deleteEnvTree(id string) error {
 	}
 
 	return nil
+}
+
+func getEnvTreeDirList(id string) (*handlers.EnvTreeNodeDirsResponse, error) {
+	url := fmt.Sprintf("http://localhost:8080/api/envs/dirs/list?TreeId=%s", id)
+
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(""))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body err:%s", err.Error())
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(string(body))
+	}
+
+	t := &handlers.EnvTreeNodeDirsResponse{}
+	if err := json.Unmarshal(body, &t); err != nil {
+		return nil, err
+	}
+
+	return t, nil
+}
+
+func createEnvTreeNodeDirMySQLRoot(tree_id string) (*handlers.EnvTreeNodeDirResponse, error) {
+	tree := &handlers.EnvTreeNodeDirRequest{
+		Name:   "MySQL",
+		TreeId: tree_id,
+	}
+
+	buf, err := json.Marshal(tree)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "http://localhost:8080/api/envs/dirs/create", strings.NewReader(string(buf)))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body err:%s", err.Error())
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(string(body))
+	}
+
+	t := &handlers.EnvTreeNodeDirResponse{}
+	if err := json.Unmarshal(body, &t); err != nil {
+		return nil, err
+	}
+
+	return t, nil
+
+}
+
+func createEnvTreeNodeDirMySQLRootMasterNode(tree_id string, parent_id string) (*handlers.EnvTreeNodeDirResponse, error) {
+	tree := &handlers.EnvTreeNodeDirRequest{
+		Name:     "Master",
+		ParentId: parent_id,
+		TreeId:   tree_id,
+	}
+
+	buf, err := json.Marshal(tree)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "http://localhost:8080/api/envs/dirs/create", strings.NewReader(string(buf)))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body err:%s", err.Error())
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(string(body))
+	}
+
+	t := &handlers.EnvTreeNodeDirResponse{}
+	if err := json.Unmarshal(body, &t); err != nil {
+		return nil, err
+	}
+
+	return t, nil
+
+}
+
+func createEnvTreeNodeDirMySQLRootSlaveNode(tree_id string, parent_id string) (*handlers.EnvTreeNodeDirResponse, error) {
+	tree := &handlers.EnvTreeNodeDirRequest{
+		Name:     "Slave",
+		ParentId: parent_id,
+		TreeId:   tree_id,
+	}
+
+	buf, err := json.Marshal(tree)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "http://localhost:8080/api/envs/dirs/create", strings.NewReader(string(buf)))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body err:%s", err.Error())
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(string(body))
+	}
+
+	t := &handlers.EnvTreeNodeDirResponse{}
+	if err := json.Unmarshal(body, &t); err != nil {
+		return nil, err
+	}
+
+	return t, nil
+
+}
+
+func createEnvTreeNodeDirMySQLRootMycatproxyNode(tree_id string, parent_id string) (*handlers.EnvTreeNodeDirResponse, error) {
+	tree := &handlers.EnvTreeNodeDirRequest{
+		Name:     "MyCAT Proxy",
+		ParentId: parent_id,
+		TreeId:   tree_id,
+	}
+
+	buf, err := json.Marshal(tree)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "http://localhost:8080/api/envs/dirs/create", strings.NewReader(string(buf)))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body err:%s", err.Error())
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(string(body))
+	}
+
+	t := &handlers.EnvTreeNodeDirResponse{}
+	if err := json.Unmarshal(body, &t); err != nil {
+		return nil, err
+	}
+
+	return t, nil
+
+}
+
+func createEnvTreeNodeDirMySQLRootMycatproxy01Node(tree_id string, parent_id string) (*handlers.EnvTreeNodeDirResponse, error) {
+	tree := &handlers.EnvTreeNodeDirRequest{
+		Name:     "Proxy01",
+		ParentId: parent_id,
+		TreeId:   tree_id,
+	}
+
+	buf, err := json.Marshal(tree)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "http://localhost:8080/api/envs/dirs/create", strings.NewReader(string(buf)))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body err:%s", err.Error())
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(string(body))
+	}
+
+	t := &handlers.EnvTreeNodeDirResponse{}
+	if err := json.Unmarshal(body, &t); err != nil {
+		return nil, err
+	}
+
+	return t, nil
+
+}
+
+func createEnvTreeNodeDirMySQLRootMycatproxy02Node(tree_id string, parent_id string) (*handlers.EnvTreeNodeDirResponse, error) {
+	tree := &handlers.EnvTreeNodeDirRequest{
+		Name:     "Proxy02",
+		ParentId: parent_id,
+		TreeId:   tree_id,
+	}
+
+	buf, err := json.Marshal(tree)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "http://localhost:8080/api/envs/dirs/create", strings.NewReader(string(buf)))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body err:%s", err.Error())
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(string(body))
+	}
+
+	t := &handlers.EnvTreeNodeDirResponse{}
+	if err := json.Unmarshal(body, &t); err != nil {
+		return nil, err
+	}
+
+	return t, nil
+
 }

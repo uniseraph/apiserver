@@ -5,16 +5,16 @@ import (
 	"net/http"
 	"strconv"
 
+	"encoding/json"
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/go-redis/redis"
+	"github.com/gorilla/mux"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"github.com/gorilla/mux"
 	"strings"
-	"encoding/json"
 )
 
 type ResponseBody struct {
@@ -22,78 +22,76 @@ type ResponseBody struct {
 	Message string
 }
 type Handler func(c context.Context, w http.ResponseWriter, r *http.Request)
-type OpPermissionCheckHandler func (h Handler, roleset types.Roleset) Handler
+type OpPermissionCheckHandler func(h Handler, roleset types.Roleset) Handler
 
 type MyHandler struct {
-	h         Handler                       // 业务逻辑
-	opChecker OpPermissionCheckHandler      // 检查当前用户的角色是否满足需求， 只判断行为权限，不判断数据权限
-	roleset   types.Roleset                 // 只有拥有这些角色的用户才有权限
+	h         Handler                  // 业务逻辑
+	opChecker OpPermissionCheckHandler // 检查当前用户的角色是否满足需求， 只判断行为权限，不判断数据权限
+	roleset   types.Roleset            // 只有拥有这些角色的用户才有权限
 }
 
 var routes = map[string]map[string]*MyHandler{
 	"HEAD": {},
-	"GET":  {
-		"/users/{name:.*}/login":   &MyHandler{h: getUserLogin},
-		"/users/current":           &MyHandler{h: getUserCurrent ,opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/users/{id:.*}/inspect":   &MyHandler{h: getUserInspect, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/users/{id:.*}/detail":    &MyHandler{h: getUserInspect, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/users/ps":                &MyHandler{h: getUsersJSON, opChecker: checkUserPermission,roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/users/list":              &MyHandler{h: getUsersJSON, opChecker: checkUserPermission,roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/teams/{id:.*}/inspect":   &MyHandler{h: getTeamJSON, opChecker: checkUserPermission,roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/teams/ps":                &MyHandler{h: getTeamsJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/teams/list":              &MyHandler{h: getTeamsJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+	"GET": {
+		"/users/{name:.*}/login": &MyHandler{h: getUserLogin},
+		"/users/current":         &MyHandler{h: getUserCurrent, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/users/{id:.*}/inspect": &MyHandler{h: getUserInspect, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/users/{id:.*}/detail":  &MyHandler{h: getUserInspect, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/users/ps":              &MyHandler{h: getUsersJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/users/list":            &MyHandler{h: getUsersJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/teams/{id:.*}/inspect": &MyHandler{h: getTeamJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/teams/ps":              &MyHandler{h: getTeamsJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/teams/list":            &MyHandler{h: getTeamsJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 
 		/*
 			参数目录树
 		*/
 
-		"/envs/trees/list": &MyHandler{h: getTrees,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/trees/create": &MyHandler{h: createTree,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/trees/{id:.*}/update": &MyHandler{h: updateTree,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/trees/{id:.*}/remove": &MyHandler{h: deleteTree,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/dirs/list": &MyHandler{h: getTreeDirs,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/dirs/create": &MyHandler{h: createDir,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/dirs/{id:.*}/update": &MyHandler{h: updateDir,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/dirs/{id:.*}/remove": &MyHandler{h: deleteDir,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/values/list": &MyHandler{h: getTreeValues,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/values/{id:.*}/detail": &MyHandler{h: getTreeValueDetails,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/values/create": &MyHandler{h: createValue,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/values/{id:.*}/update": &MyHandler{h: updateValue,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/values/{id:.*}/remove": &MyHandler{h: deleteValue,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/values/{id:.*}/update-values": &MyHandler{h: updateValueAttributes,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-
-
+		"/envs/trees/list":                   &MyHandler{h: getTrees, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/trees/create":                 &MyHandler{h: createTree, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/trees/{id:.*}/update":         &MyHandler{h: updateTree, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/trees/{id:.*}/remove":         &MyHandler{h: deleteTree, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/dirs/list":                    &MyHandler{h: getTreeDirs, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/dirs/create":                  &MyHandler{h: createDir, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/dirs/{id:.*}/update":          &MyHandler{h: updateDir, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/dirs/{id:.*}/remove":          &MyHandler{h: deleteDir, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/list":                  &MyHandler{h: getTreeValues, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/{id:.*}/detail":        &MyHandler{h: getTreeValueDetails, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/create":                &MyHandler{h: createValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/{id:.*}/update":        &MyHandler{h: updateValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/{id:.*}/remove":        &MyHandler{h: deleteValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/{id:.*}/update-values": &MyHandler{h: updateValueAttributes, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 	},
 	"POST": {
-		"/pools/{id:.*}/inspect": &MyHandler{h: getPoolJSON,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/pools/{id:.*}/inspect": &MyHandler{h: getPoolJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/pools/register":        &MyHandler{h: postPoolsRegister, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
-		"/pools/ps":              &MyHandler{h: getPoolsJSON, opChecker: checkUserPermission,roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/pools/json":            &MyHandler{h: getPoolsJSON, opChecker: checkUserPermission,roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/pools/ps":              &MyHandler{h: getPoolsJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/pools/json":            &MyHandler{h: getPoolsJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 
 		"/users/{name:.*}/login":   &MyHandler{h: getUserLogin},
 		"/users/current":           &MyHandler{h: getUserCurrent, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/users/create":            &MyHandler{h: postUsersCreate, opChecker: checkUserPermission,roleset: types.ROLESET_SYSADMIN},
+		"/users/create":            &MyHandler{h: postUsersCreate, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/users/{id:.*}/inspect":   &MyHandler{h: getUserInspect, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/users/{id:.*}/detail":    &MyHandler{h: getUserInspect, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/users/ps":                &MyHandler{h: getUsersJSON, opChecker: checkUserPermission,roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/users/list":              &MyHandler{h: getUsersJSON, opChecker: checkUserPermission,roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/users/{id:.*}/resetpass": &MyHandler{h: postUserResetPass, opChecker: checkUserPermission,roleset: types.ROLESET_SYSADMIN},
-		"/users/{id:.*}/remove":    &MyHandler{h: postUserRemove, opChecker: checkUserPermission,roleset: types.ROLESET_SYSADMIN},
-		"/users/{id:.*}/update":    &MyHandler{h: postUserUpdate, opChecker: checkUserPermission,roleset: types.ROLESET_SYSADMIN | types.ROLESET_NORMAL},
-		"/users/{id:.*}/join":      &MyHandler{h: postUserJoin, opChecker: checkUserPermission,roleset: types.ROLESET_SYSADMIN | types.ROLESET_NORMAL},
-		"/users/{id:.*}/quit":      &MyHandler{h: postUserQuit, opChecker: checkUserPermission,roleset: types.ROLESET_SYSADMIN | types.ROLESET_NORMAL},
+		"/users/ps":                &MyHandler{h: getUsersJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/users/list":              &MyHandler{h: getUsersJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/users/{id:.*}/resetpass": &MyHandler{h: postUserResetPass, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/users/{id:.*}/remove":    &MyHandler{h: postUserRemove, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/users/{id:.*}/update":    &MyHandler{h: postUserUpdate, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN | types.ROLESET_NORMAL},
+		"/users/{id:.*}/join":      &MyHandler{h: postUserJoin, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN | types.ROLESET_NORMAL},
+		"/users/{id:.*}/quit":      &MyHandler{h: postUserQuit, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN | types.ROLESET_NORMAL},
 
-		"/teams/create":            &MyHandler{h: postTeamsCreate, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
-		"/teams/{id:.*}/inspect":   &MyHandler{h: getTeamJSON, opChecker: checkUserPermission,roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/teams/ps":                &MyHandler{h: getTeamsJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/teams/list":              &MyHandler{h: getTeamsJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/teams/{id:.*}/update":    &MyHandler{h: postTeamUpdate, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
-		"/teams/{id:.*}/appoint":   &MyHandler{h: postTeamAppoint, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
-		"/teams/{id:.*}/revoke":    &MyHandler{h: postTeamRevoke, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
-		"/teams/{id:.*}/remove":    &MyHandler{h: postTeamRemove, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/teams/create":          &MyHandler{h: postTeamsCreate, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/teams/{id:.*}/inspect": &MyHandler{h: getTeamJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/teams/ps":              &MyHandler{h: getTeamsJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/teams/list":            &MyHandler{h: getTeamsJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/teams/{id:.*}/update":  &MyHandler{h: postTeamUpdate, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/teams/{id:.*}/appoint": &MyHandler{h: postTeamAppoint, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/teams/{id:.*}/revoke":  &MyHandler{h: postTeamRevoke, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/teams/{id:.*}/remove":  &MyHandler{h: postTeamRemove, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 
-		"/session/{name:.*}/login":   &MyHandler{h: postSessionCreate},
-		"/session/logout":   	      &MyHandler{h: postSessionDestroy},
+		"/session/{name:.*}/login": &MyHandler{h: postSessionCreate},
+		"/session/logout":          &MyHandler{h: postSessionDestroy},
 
 		//"/actions/check" : &MyHandler{h: postActionsCheck } ,
 
@@ -101,29 +99,27 @@ var routes = map[string]map[string]*MyHandler{
 			参数目录树
 		*/
 
-		"/envs/trees/list": &MyHandler{h: getTrees,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/trees/create": &MyHandler{h: createTree,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/trees/{id:.*}/update": &MyHandler{h: updateTree,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/trees/{id:.*}/remove": &MyHandler{h: deleteTree,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/dirs/list": &MyHandler{h: getTreeDirs,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/dirs/create": &MyHandler{h: createDir,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/dirs/{id:.*}/update": &MyHandler{h: updateDir,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/dirs/{id:.*}/remove": &MyHandler{h: deleteDir,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/values/list": &MyHandler{h: getTreeValues,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/values/{id:.*}/detail": &MyHandler{h: getTreeValueDetails,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/values/create": &MyHandler{h: createValue,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/values/{id:.*}/update": &MyHandler{h: updateValue,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/values/{id:.*}/remove": &MyHandler{h: deleteValue,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/values/{id:.*}/update-values": &MyHandler{h: updateValueAttributes,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-
+		"/envs/trees/list":                   &MyHandler{h: getTrees, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/trees/create":                 &MyHandler{h: createTree, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/trees/{id:.*}/update":         &MyHandler{h: updateTree, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/trees/{id:.*}/remove":         &MyHandler{h: deleteTree, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/dirs/list":                    &MyHandler{h: getTreeDirs, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/dirs/create":                  &MyHandler{h: createDir, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/dirs/{id:.*}/update":          &MyHandler{h: updateDir, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/dirs/{id:.*}/remove":          &MyHandler{h: deleteDir, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/list":                  &MyHandler{h: getTreeValues, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/{id:.*}/detail":        &MyHandler{h: getTreeValueDetails, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/create":                &MyHandler{h: createValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/{id:.*}/update":        &MyHandler{h: updateValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/{id:.*}/remove":        &MyHandler{h: deleteValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/{id:.*}/update-values": &MyHandler{h: updateValueAttributes, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 	},
 	"PUT":    {},
 	"DELETE": {},
 	"OPTIONS": {
-		"":&MyHandler{h: OptionsHandler} ,
+		"": &MyHandler{h: OptionsHandler},
 	},
 }
-
 
 func checkUserPermission(h Handler, rs types.Roleset) Handler {
 
@@ -177,7 +173,7 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 		//否则使用redis中session缓存写入的权限
 		if len(sessionContent["roleSet"]) == 0 {
 			roleSet = types.ROLESET_DEFAULT
-		}else {
+		} else {
 			value, err := strconv.ParseInt(sessionContent["roleSet"], 10, 64)
 			if err != nil {
 				HttpError(w, err.Error(), http.StatusInternalServerError)
@@ -186,7 +182,7 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 			roleSet = types.Roleset(value)
 		}
 
-		if rs & roleSet == 0 {
+		if rs&roleSet == 0 {
 			logrus.Infof("current roleset  is %d ,current user id is %s , so it no permission", roleSet, uid)
 			HttpError(w, "no permission", http.StatusMethodNotAllowed)
 			return
@@ -221,7 +217,6 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 			return
 		}
 
-
 		c1 := utils.PutCurrentUser(ctx, &result)
 
 		h(c1, w, r)
@@ -254,34 +249,31 @@ func NewMainHandler(ctx context.Context) (http.Handler, error) {
 
 	c1 := utils.PutRedisClient(c, client)
 
-
 	r := mux.NewRouter()
 
 	SetupPrimaryRouter(r, c1, routes)
 
-	r.Path("/api/actions/check").Methods(http.MethodPost).HandlerFunc(  func (w http.ResponseWriter , r * http.Request){
+	r.Path("/api/actions/check").Methods(http.MethodPost).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-	//	logrus.WithFields(logrus.Fields{"ctx":c1}).Debugf("call /api/actions/check")
+		//	logrus.WithFields(logrus.Fields{"ctx":c1}).Debugf("call /api/actions/check")
 
-		checkUserPermission(postActionsCheck,types.ROLESET_NORMAL|types.ROLESET_SYSADMIN)(c1,w,r)
+		checkUserPermission(postActionsCheck, types.ROLESET_NORMAL|types.ROLESET_SYSADMIN)(c1, w, r)
 	})
 
-
-	fsh := http.StripPrefix("/",http.FileServer(http.Dir(config.RootDir)))
+	fsh := http.StripPrefix("/", http.FileServer(http.Dir(config.RootDir)))
 
 	//r.Path("/").Methods(http.MethodGet).Handler(http.StripPrefix("/",fsh))
 
-	r.PathPrefix("/").HandlerFunc( func (w http.ResponseWriter , r * http.Request){
+	r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI }).Debug("HTTP request received")
+		logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI}).Debug("HTTP request received")
 
-
-		fsh.ServeHTTP(w,r)
+		fsh.ServeHTTP(w, r)
 	})
 
-	return r , nil
+	return r, nil
 
-//	return NewHandler(c1, routes), nil
+	//	return NewHandler(c1, routes), nil
 }
 
 func SetupPrimaryRouter(r *mux.Router, ctx context.Context, rs map[string]map[string]*MyHandler) {
@@ -292,22 +284,21 @@ func SetupPrimaryRouter(r *mux.Router, ctx context.Context, rs map[string]map[st
 			localRoute := route
 			localHandler := myHandler
 			wrap := func(w http.ResponseWriter, r *http.Request) {
-				logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI , "localHandler":localHandler}).Debug("HTTP request received")
+				logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI, "localHandler": localHandler}).Debug("HTTP request received")
 
-				if localHandler.opChecker !=nil {
-					localHandler.opChecker(localHandler.h,localHandler.roleset)(ctx,w,r)
-				}else{
-					localHandler.h(ctx,w,r)
+				if localHandler.opChecker != nil {
+					localHandler.opChecker(localHandler.h, localHandler.roleset)(ctx, w, r)
+				} else {
+					localHandler.h(ctx, w, r)
 				}
 			}
 			localMethod := method
 
 			//r.Path("/v{version:[0-9.]+}" + localRoute).Methods(localMethod).HandlerFunc(wrap)
-			r.Path("/api"+localRoute).Methods(localMethod).HandlerFunc(wrap)
+			r.Path("/api" + localRoute).Methods(localMethod).HandlerFunc(wrap)
 		}
 	}
 }
-
 
 func BoolValue(r *http.Request, k string) bool {
 	s := strings.ToLower(strings.TrimSpace(r.FormValue(k)))
@@ -327,15 +318,16 @@ func HttpError(w http.ResponseWriter, err string, status int) {
 	utils.HttpError(w, err, status)
 }
 
-func HttpOK(w http.ResponseWriter, result interface{} ) ()  {
+func HttpOK(w http.ResponseWriter, result interface{}) {
 	utils.HttpOK(w, result)
 }
+
 //"/actions/check" : &MyHandler{h: postActionsCheck } ,
 func postActionsCheck(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	currentUser, err := utils.GetCurrentUser(ctx)
 	if err != nil {
-		HttpError(w, err.Error(),http.StatusForbidden)
+		HttpError(w, err.Error(), http.StatusForbidden)
 		return
 	}
 
@@ -351,21 +343,21 @@ func postActionsCheck(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	}
 
 	//这是系统初始化的变量，所以不需要判断是否存在
-	action2MyHandler , _ := routes["POST"]
+	action2MyHandler, _ := routes["POST"]
 
-	for  _, action :=  range req.Actions {
+	for _, action := range req.Actions {
 
-		if myHandler , ok := action2MyHandler[action] ; ok {
+		if myHandler, ok := action2MyHandler[action]; ok {
 
 			//所有角色都有权限
 			if myHandler.opChecker == nil {
 
-				result.Action2Result[action] =true
+				result.Action2Result[action] = true
 
-			}else {
-				if myHandler.roleset & currentUser.RoleSet !=0 {
-					result.Action2Result[action] =true
-				}else{
+			} else {
+				if myHandler.roleset&currentUser.RoleSet != 0 {
+					result.Action2Result[action] = true
+				} else {
 					result.Action2Result[action] = false
 				}
 
