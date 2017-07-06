@@ -188,7 +188,6 @@
               :items="items"
               :total-items="totalItems"
               :pagination.sync="pagination"
-              :search="Keyword"
               hide-actions
               class="values-table elevation-1"
               no-data-text=""
@@ -395,7 +394,7 @@
 
       removeDir() {
         this.RemoveDirConfirmDlg = false;
-        api.RemoveEnvDir({ Id: this.SelectedDir.Id }).then(data => {
+        api.RemoveEnvDir(this.SelectedDir.Id).then(data => {
           this.init(this.SelectedDir.ParentId);
         })
       },
@@ -403,7 +402,7 @@
       getDataFromApi() {
         let params = {
           DirId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : null, 
-          Name: this.Name,
+          Name: this.Keyword,
           PageSize: this.pagination.rowsPerPage, 
           Page: this.pagination.page
         };
@@ -444,7 +443,7 @@
 
       removeValue() {
         this.RemoveValueConfirmDlg = false;
-        api.RemoveEnvValue({ Id: this.SelectedValue.Id }).then(data => {
+        api.RemoveEnvValue(this.SelectedValue.Id).then(data => {
           this.getDataFromApi();
         })
       }

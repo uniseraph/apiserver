@@ -112,7 +112,7 @@
           <td>
             <v-btn outline small icon class="green green--text" @click.native="edit(props.item)" title="修改">
                 <v-icon>mode_edit</v-icon>
-              </v-btn>
+            </v-btn>
             <v-btn outline small icon class="orange orange--text" @click.native="confirmBeforeRemove(props.item)" title="删除参数目录">
               <v-icon>close</v-icon>
             </v-btn>
@@ -232,7 +232,7 @@
 
       removeTree() {
         this.RemoveConfirmDlg = false;
-        api.RemoveEnvTree({ Id: this.SelectedTree.Id }).then(data => {
+        api.RemoveEnvTree(this.SelectedTree.Id).then(data => {
           this.init();
         })
       }

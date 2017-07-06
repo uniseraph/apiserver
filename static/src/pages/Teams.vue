@@ -164,7 +164,7 @@
 
       removeTeam() {
         this.RemoveConfirmDlg = false;
-        api.RemoveTeam({ Id: this.SelectedTeam.Id }).then(data => {
+        api.RemoveTeam(this.SelectedTeam.Id).then(data => {
           this.init();
         })
       }

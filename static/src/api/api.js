@@ -6,11 +6,11 @@ import store from '../vuex/store'
 
 // axios默认配置
 axios.defaults.timeout = 5000;
-axios.defaults.baseURL = 'http://localhost:8080/public/mock';
 axios.defaults.baseURL = 'http://localhost:8080/api';
 
 // 仅测试用
 /*
+axios.defaults.baseURL = 'http://localhost:8080/public/mock';
 axios.interceptors.request.use((config) => {
     if(config.method === 'post'){
         config.method = 'get';
@@ -63,8 +63,8 @@ export default {
         return fetch('/pools/register', params); 
     },
 
-    RemovePool(params) {
-        return fetch('/pools/' + params.Id + '/remove', params); 
+    RemovePool(id) {
+        return fetch('/pools/' + id + '/remove'); 
     },
 
     UpdatePool(params) {
@@ -99,8 +99,8 @@ export default {
         return fetch('/envs/trees/' + params.Id + '/update', params);  
     },
 
-    RemoveEnvTree(params) {
-        return fetch('/envs/trees/' + params.Id + '/update', params);  
+    RemoveEnvTree(id) {
+        return fetch('/envs/trees/' + id + '/remove');  
     },
 
     EnvDirs(params) {
@@ -115,8 +115,8 @@ export default {
         return fetch('/envs/dirs/' + params.Id + '/update', params);
     },
 
-    RemoveEnvDir(params) {
-        return fetch('/envs/dirs/' + params.Id + '/remove', params);
+    RemoveEnvDir(id) {
+        return fetch('/envs/dirs/' + id + '/remove');
     },
 
     EnvValues(params) {
@@ -135,8 +135,8 @@ export default {
         return fetch('/envs/values/' + params.Id + '/update', params);
     },
 
-    RemoveEnvValue(params) {
-        return fetch('/envs/values/' + params.Id + '/remove', params);
+    RemoveEnvValue(id) {
+        return fetch('/envs/values/' + id + '/remove');
     },
 
     UpdateEnvValues(params) {
@@ -155,8 +155,8 @@ export default {
         return fetch('/teams/create', params);
     },
 
-    RemoveTeam(params) {
-        return fetch('/teams/' + params.Id + '/remove', params);
+    RemoveTeam(id) {
+        return fetch('/teams/' + id + '/remove');
     },
 
     UpdateTeam(params) {
@@ -187,8 +187,8 @@ export default {
         return fetch('/users/create', params);
     },
     
-    RemoveUser(params) {
-        return fetch('/users/' + params.Id + '/remove', params);
+    RemoveUser(id) {
+        return fetch('/users/' + id + '/remove');
     },
 
     UpdateUser(params) {
@@ -197,6 +197,30 @@ export default {
 
     ResetPassword(params) {
         return fetch('/users/' + params.Id + '/resetpass?Pass=' + encodeURIComponent(params.Pass), params);
+    },
+
+    Templates(params) {
+        return fetch('/templates/list', params);
+    },
+
+    Template(id) {
+        return fetch('/templates/' + id + '/detail');
+    },
+
+    CreateTemplate(params) {
+        return fetch('/templates/create', params);
+    },
+
+    CopyTemplate(id, name) {
+        return fetch('/templates/' + id + '/copy/' + encodeURIComponent(name));
+    },
+
+    UpdateTemplate(params) {
+        return fetch('/templates/' + params.Id + '/update', params);
+    },
+
+    RemoveTemplate(id) {
+        return fetch('/templates/' + id + '/remove');
     }
 
 }

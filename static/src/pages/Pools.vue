@@ -236,8 +236,8 @@
             return;
           }
 
-          this.CreatePoolDlg = false;
           api.CreatePool(this.NewPool).then(data => {
+            this.CreatePoolDlg = false;
             this.init();
           });
         });
@@ -250,7 +250,7 @@
 
       removePool() {
         this.RemoveConfirmDlg = false;
-        api.RemovePool({ Id: this.SelectedPool.Id }).then(data => {
+        api.RemovePool(this.SelectedPool.Id).then(data => {
           this.init();
         })
       }

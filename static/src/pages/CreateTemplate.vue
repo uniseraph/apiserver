@@ -1,0 +1,711 @@
+<template>
+  <v-layout column>
+    <v-flex xs12>
+      <v-card>
+        <v-card-title>
+          <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
+          &nbsp;&nbsp;应用模板&nbsp;&nbsp;/&nbsp;&nbsp;新建模板
+          <v-spacer></v-spacer>
+        </v-card-title>
+        <div>
+          <v-container fluid>
+            <v-layout row wrap>
+              <v-flex xs2>
+                <v-subheader>应用名称<span class="required-star">*</span></v-subheader>
+              </v-flex>
+              <v-flex xs3>
+                <v-text-field
+                  ref="Title"
+                  v-model="Title"
+                  single-line
+                  required
+                  :rules="rules.Title"
+                  @input="rules.Title = rules0.Title"
+                ></v-text-field>
+              </v-flex>
+              <v-flex xs2>
+              </v-flex>
+              <v-flex xs2>
+                <v-subheader>应用ID<span class="required-star">*</span></v-subheader>
+              </v-flex>
+              <v-flex xs3>
+                <v-text-field
+                  ref="Name"
+                  v-model="Name"
+                  single-line
+                  required
+                  hint="应用ID改动将会影响到后续升级，请慎重"
+                  persistent-hint
+                  :rules="rules.Name"
+                  @input="rules.Name = rules0.Name"
+                ></v-text-field>
+              </v-flex>
+              <v-flex xs2>
+                <v-subheader>应用版本<span class="required-star">*</span></v-subheader>
+              </v-flex>
+              <v-flex xs3>
+                <v-text-field
+                  ref="Version"
+                  v-model="Version"
+                  single-line
+                  required
+                  :rules="rules.Version"
+                  @input="rules.Version = rules0.Version"
+                ></v-text-field>
+              </v-flex>
+              <v-flex xs2>
+              </v-flex>
+              <v-flex xs2>
+                <v-subheader>说明</v-subheader>
+              </v-flex>
+              <v-flex xs3>
+                <v-text-field
+                  v-model="Description"
+                  single-line
+                ></v-text-field>
+              </v-flex>
+            </v-layout>
+          </v-container>
+        </div>
+      </v-card>
+    </v-flex>
+    <v-flex xs12>
+      <v-card-title style="padding-left:0;">
+        &nbsp;&nbsp;服务列表
+        <v-spacer></v-spacer>
+        <v-btn outline small class="green green--text" @click.native="addServiceTemplate()">
+          <v-icon class="green--text">add</v-icon>添加服务
+        </v-btn>
+      </v-card-title>
+      <div>
+        <v-card v-for="(item, index) in ServiceTemplates" :key="item.Id" class="mb-2">
+          <v-card-title>
+            服务{{ index + 1 }}
+            <v-spacer></v-spacer>
+            <v-btn v-if="index < ServiceTemplates.length - 1" outline small icon class="blue blue--text mr-2" @click.native="downward(ServiceTemplates, index)" title="下移">
+              <v-icon>arrow_downward</v-icon>
+            </v-btn>
+            <v-btn v-if="index > 0" outline small icon class="green green--text mr-2" @click.native="upward(ServiceTemplates, index)" title="上移">
+              <v-icon>arrow_upward</v-icon>
+            </v-btn>
+            <v-btn outline small icon class="red--text text--lighten-2" @click.native="removei(ServiceTemplates, index)" title="删除">
+              <v-icon>close</v-icon>
+            </v-btn>
+          </v-card-title>
+          <div>
+            <v-container fluid>
+              <v-layout row wrap>
+                <v-flex xs2>
+                  <v-subheader>服务名称<span class="required-star">*</span></v-subheader>
+                </v-flex>
+                <v-flex xs3>
+                  <v-text-field
+                    :ref="'Service_Title_' + item.Id"
+                    v-model="item.Title"
+                    single-line
+                    required
+                    :rules="rules.Services[item.Id].Title"
+                    @input="rules.Services[item.Id].Title = rules0.Services.Title"
+                  ></v-text-field>
+                </v-flex>
+                <v-flex xs2>
+                </v-flex>
+                <v-flex xs2>
+                  <v-subheader>服务ID<span class="required-star">*</span></v-subheader>
+                </v-flex>
+                <v-flex xs3>
+                  <v-text-field
+                    :ref="'Service_Name_' + item.Id"
+                    v-model="item.Name"
+                    single-line
+                    required
+                    hint="服务ID改动将会影响到后续升级，请慎重"
+                    persistent-hint
+                    :rules="rules.Services[item.Id].Name"
+                    @input="rules.Services[item.Id].Name = rules0.Services.Name"
+                  ></v-text-field>
+                </v-flex>
+                <v-flex xs2>
+                  <v-subheader>镜像名称<span class="required-star">*</span></v-subheader>
+                </v-flex>
+                <v-flex xs3>
+                  <v-text-field
+                    :ref="'Service_ImageName_' + item.Id"
+                    v-model="item.ImageName"
+                    single-line
+                    required
+                    :rules="rules.Services[item.Id].ImageName"
+                    @input="rules.Services[item.Id].ImageName = rules0.Services.ImageName"
+                  ></v-text-field>
+                </v-flex>
+                <v-flex xs2>
+                </v-flex>
+                <v-flex xs2>
+                  <v-subheader>镜像Tag<span class="required-star">*</span></v-subheader>
+                </v-flex>
+                <v-flex xs3>
+                  <v-text-field
+                    :ref="'Service_ImageTag_' + item.Id"
+                    v-model="item.ImageTag"
+                    single-line
+                    required
+                    :rules="rules.Services[item.Id].ImageTag"
+                    @input="rules.Services[item.Id].ImageTag = rules0.Services.ImageTag"
+                  ></v-text-field>
+                </v-flex>
+                <v-flex xs2>
+                  <v-subheader>容器个数<span class="required-star">*</span></v-subheader>
+                </v-flex>
+                <v-flex xs3>
+                  <v-text-field
+                    :ref="'Service_ReplicaCount_' + item.Id"
+                    v-model="item.ReplicaCount"
+                    single-line
+                    required
+                    :rules="rules.Services[item.Id].ReplicaCount"
+                    @input="rules.Services[item.Id].ReplicaCount = rules0.Services.ReplicaCount"
+                  ></v-text-field>
+                </v-flex>
+                <v-flex xs2>
+                </v-flex>
+                <v-flex xs2>
+                  <v-subheader>说明</v-subheader>
+                </v-flex>
+                <v-flex xs3>
+                  <v-text-field
+                    v-model="item.Description"
+                    single-line
+                  ></v-text-field>
+                </v-flex>
+                <v-flex xs2>
+                  <v-subheader>启动命令</v-subheader>
+                </v-flex>
+                <v-flex xs10>
+                  <v-text-field
+                    v-model="item.Command"
+                    single-line
+                  ></v-text-field>
+                </v-flex>
+                <v-flex xs12 mt-5>
+                  <v-divider></v-divider>
+                  <v-card-title>
+                    <v-subheader>环境变量</v-subheader>
+                    <v-spacer></v-spacer>
+                    <v-btn icon class="blue--text text--lighten-2" @click.native="addEnv(item)">
+                      <v-icon light>add</v-icon>
+                    </v-btn>
+                  </v-card-title>
+                  <v-data-table
+                    :headers="headers_envs"
+                    :items="item.Envs"
+                    hide-actions
+                    class="elevation-1"
+                    no-data-text=""
+                  >
+                    <template slot="items" scope="props">
+                      <td>
+                        <v-text-field
+                          v-model="props.item.Name"
+                          :ref="'Env_Name_' + props.item.index"
+                          single-line
+                          required
+                          :rules="rules.Services[item.Id].Envs[props.item.Id].Name"
+                          @input="rules.Services[item.Id].Envs[props.item.Id].Name = rules0.Services.Envs.Name"
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-text-field
+                          v-model="props.item.Value"
+                          single-line
+                          required
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-btn icon class="red--text text--lighten-2" @click.native="removei(item.Envs, props.item.index)" title="删除">
+                          <v-icon>close</v-icon>
+                        </v-btn>
+                        <v-btn v-if="props.item.index < item.Envs.length - 1" icon class="blue--text blue--lighten-2 ml-2" @click.native="downward(item.Envs, props.item.index)" title="下移">
+                          <v-icon>arrow_downward</v-icon>
+                        </v-btn>
+                        <v-btn v-if="props.item.index > 0" icon class="green--text green--lighten-2 ml-2" @click.native="upward(item.Envs, props.item.index)" title="上移">
+                          <v-icon>arrow_upward</v-icon>
+                        </v-btn>
+                      </td>
+                    </template>
+                  </v-data-table>
+                </v-flex>
+                <v-flex xs12 mt-4>
+                  <v-divider></v-divider>
+                  <v-card-title>
+                    <v-subheader>端口映射</v-subheader>
+                    <v-spacer></v-spacer>
+                    <v-btn icon class="blue--text text--lighten-2" @click.native="addPortMapping(item)">
+                      <v-icon light>add</v-icon>
+                    </v-btn>
+                  </v-card-title>
+                  <v-data-table
+                    :headers="headers_portmappings"
+                    :items="item.PortMappings"
+                    hide-actions
+                    class="elevation-1"
+                    no-data-text=""
+                  >
+                    <template slot="items" scope="props">
+                      <td>
+                        <v-text-field
+                          v-model="props.item.ContainerPort"
+                          :ref="'PortMapping_ContainerPort_' + props.item.index"
+                          single-line
+                          required
+                          :rules="rules.Services[item.Id].PortMappings[props.item.Id].ContainerPort"
+                          @input="rules.Services[item.Id].PortMappings[props.item.Id].ContainerPort = rules0.Services.PortMappings.ContainerPort"
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-text-field
+                          v-model="props.item.HostPort"
+                          :ref="'PortMapping_HostPort_' + props.item.index"
+                          single-line
+                          required
+                          :rules="rules.Services[item.Id].PortMappings[props.item.Id].HostPort"
+                          @input="rules.Services[item.Id].PortMappings[props.item.Id].HostPort = rules0.Services.PortMappings.HostPort"
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-btn icon class="red--text text--lighten-2" @click.native="removei(item.PortMappings, props.item.index)" title="删除">
+                          <v-icon>close</v-icon>
+                        </v-btn>
+                        <v-btn v-if="props.item.index < item.PortMappings.length - 1" icon class="blue--text blue--lighten-2 ml-2" @click.native="downward(item.PortMappings, props.item.index)" title="下移">
+                          <v-icon>arrow_downward</v-icon>
+                        </v-btn>
+                        <v-btn v-if="props.item.index > 0" icon class="green--text green--lighten-2 ml-2" @click.native="upward(item.PortMappings, props.item.index)" title="上移">
+                          <v-icon>arrow_upward</v-icon>
+                        </v-btn>
+                      </td>
+                    </template>
+                  </v-data-table>
+                </v-flex>
+                <v-flex xs12 mt-4>
+                  <v-divider></v-divider>
+                  <v-card-title>
+                    <v-subheader>数据卷</v-subheader>
+                    <v-spacer></v-spacer>
+                    <v-btn icon class="blue--text text--lighten-2" @click.native="addVolumn(item)">
+                      <v-icon light>add</v-icon>
+                    </v-btn>
+                  </v-card-title>
+                  <v-data-table
+                    :headers="headers_volumns"
+                    :items="item.Volumns"
+                    hide-actions
+                    class="elevation-1"
+                    no-data-text=""
+                  >
+                    <template slot="items" scope="props">
+                      <td>
+                        <v-text-field
+                          v-model="props.item.Name"
+                          :ref="'Volumn_Name_' + props.item.index"
+                          single-line
+                          required
+                          :rules="rules.Services[item.Id].Volumns[props.item.Id].Name"
+                          @input="rules.Services[item.Id].Volumns[props.item.Id].Name = rules0.Services.Volumns.Name"
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-text-field
+                          v-model="props.item.Mount"
+                          :ref="'Volumn_Mount_' + props.item.index"
+                          single-line
+                          required
+                          :rules="rules.Services[item.Id].Volumns[props.item.Id].Mount"
+                          @input="rules.Services[item.Id].Volumns[props.item.Id].Mount = rules0.Services.Volumns.Mount"
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-btn icon class="red--text text--lighten-2" @click.native="removei(item.Volumns, props.item.index)" title="删除">
+                          <v-icon>close</v-icon>
+                        </v-btn>
+                        <v-btn v-if="props.item.index < item.Volumns.length - 1" icon class="blue--text blue--lighten-2 ml-2" @click.native="downward(item.Volumns, props.item.index)" title="下移">
+                          <v-icon>arrow_downward</v-icon>
+                        </v-btn>
+                        <v-btn v-if="props.item.index > 0" icon class="green--text green--lighten-2 ml-2" @click.native="upward(item.Volumns, props.item.index)" title="上移">
+                          <v-icon>arrow_upward</v-icon>
+                        </v-btn>
+                      </td>
+                    </template>
+                  </v-data-table>
+                </v-flex>
+                <v-flex xs12 mt-4>
+                  <v-divider></v-divider>
+                  <v-card-title>
+                    <v-subheader>标签</v-subheader>
+                    <v-spacer></v-spacer>
+                    <v-btn icon class="blue--text text--lighten-2" @click.native="addLabel(item)">
+                      <v-icon light>add</v-icon>
+                    </v-btn>
+                  </v-card-title>
+                  <v-data-table
+                    :headers="headers_labels"
+                    :items="item.Labels"
+                    hide-actions
+                    class="elevation-1"
+                    no-data-text=""
+                  >
+                    <template slot="items" scope="props">
+                      <td>
+                        <v-text-field
+                          v-model="props.item.Name"
+                          :ref="'Label_Name_' + props.item.index"
+                          single-line
+                          required
+                          :rules="rules.Services[item.Id].Labels[props.item.Id].Name"
+                          @input="rules.Services[item.Id].Labels[props.item.Id].Name = rules0.Services.Labels.Name"
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-text-field
+                          v-model="props.item.Value"
+                          :ref="'Label_Value_' + props.item.index"
+                          single-line
+                          required
+                          :rules="rules.Services[item.Id].Labels[props.item.Id].Value"
+                          @input="rules.Services[item.Id].Labels[props.item.Id].Value = rules0.Services.Labels.Value"
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-btn icon class="red--text text--lighten-2" @click.native="removei(item.Labels, props.item.index)" title="删除">
+                          <v-icon>close</v-icon>
+                        </v-btn>
+                        <v-btn v-if="props.item.index < item.Labels.length - 1" icon class="blue--text blue--lighten-2 ml-2" @click.native="downward(item.Labels, props.item.index)" title="下移">
+                          <v-icon>arrow_downward</v-icon>
+                        </v-btn>
+                        <v-btn v-if="props.item.index > 0" icon class="green--text green--lighten-2 ml-2" @click.native="upward(item.Labels, props.item.index)" title="上移">
+                          <v-icon>arrow_upward</v-icon>
+                        </v-btn>
+                      </td>
+                    </template>
+                  </v-data-table>
+                </v-flex>
+              </v-layout>
+            </v-container>
+          </div>
+        </v-card>
+        <div style="text-decoration:italic;color:#9F9F9F;">
+          提示：环境变量、端口映射、数据卷以及标签中的值可以引用参数目录中的参数名，例如：一个表示域名的环境变量可以定义为“eureka1.${DOMAIN_SUFFIX}”。
+        </div>
+      </div>
+    </v-flex>
+    <v-flex xs12>
+      <v-alert 
+            v-if="alertArea==='CreateTemplate'"
+            v-bind:success="alertType==='success'" 
+            v-bind:info="alertType==='info'" 
+            v-bind:warning="alertType==='warning'" 
+            v-bind:error="alertType==='error'" 
+            v-model="alertMsg" 
+            dismissible>{{ alertMsg }}</v-alert>
+    </v-flex>
+    <v-flex xs12 class="text-xs-center" mt-4>
+      <v-btn class="orange darken-2 white--text" @click.native="save">
+        <v-icon light left>save</v-icon>保存
+      </v-btn>   
+    </v-flex>
+  </v-layout>
+</template>
+
+<script>
+  import store, { mapGetters } from 'vuex'
+  import api from '../api/api'
+  import * as ui from '../util/ui'
+
+  let svcIdStart = 0;
+  let envIdStart = 0;
+  let portMappingIdStart = 0;
+  let volumnIdStart = 0;
+  let labelIdStart = 0;
+
+  export default {
+    data() {
+      return {
+        headers_envs: [
+          { text: '变量名', sortable: false, left: true },
+          { text: '变量值', sortable: false, left: true },
+          { text: '操作', sortable: false, left: true }
+        ],
+        headers_portmappings: [
+          { text: '容器端口', sortable: false, left: true },
+          { text: '宿主机端口', sortable: false, left: true },
+          { text: '操作', sortable: false, left: true }
+        ],
+        headers_volumns: [
+          { text: '数据卷名', sortable: false, left: true },
+          { text: '容器挂载路径', sortable: false, left: true },
+          { text: '操作', sortable: false, left: true }
+        ],
+        headers_labels: [
+          { text: '标签名', sortable: false, left: true },
+          { text: '标签值', sortable: false, left: true },
+          { text: '操作', sortable: false, left: true }
+        ],
+
+        Id: '',
+        Title: '',
+        Name: '',
+        Version: '',
+        Description: '',
+        ServiceTemplates: [],
+
+        rules: {
+          Services: []
+        },
+
+        rules0: {
+          Title: [
+            v => (v && v.length > 0 ? true : '请输入应用名称')
+          ],
+          Name: [
+            v => (v && v.length > 0 ? (v.match(/\s/) ? "应用ID不允许包含空格" : (/^[a-zA-Z]+\w*$/.test(v) ? true : '应用ID只能由英文字母、数字及下划线组成，并且以英文字母开头')) : '请输入应用ID')
+          ],
+          Version: [
+            v => (v && v.length > 0 ? true : '请输入应用版本号')
+          ],
+          Services: {
+            Title: [
+              v => (v && v.length > 0 ? true : '请输入服务名称')
+            ],
+            Name: [
+              v => (v && v.length > 0 ? (v.match(/\s/) ? '服务ID不允许包含空格' : (/^[a-zA-Z]+\w*$/.test(v) ? true : '服务ID只能由英文字母、数字及下划线组成，并且以英文字母开头')) : '请输入应用ID')
+            ],
+            ImageName: [
+              v => (v && v.length > 0 ? (v.match(/\s/) ? '镜像名称不允许包含空格' : true) : '请输入镜像名称')
+            ],
+            ImageTag: [
+              v => (v && v.length > 0 ? (v.match(/\s/) ? '镜像Tag不允许包含空格' : true) : '请输入镜像Tag')
+            ],
+            ReplicaCount: [
+              v => (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) >= 0 && parseInt(v) <= 1000 ? true : '容器个数必须为0-1000的整数') : '请输入容器个数')
+            ],
+            Envs: { 
+              Name: [
+                v => (v && v.length > 0 ? (v.match(/\s/) ? '环境变量名称不允许包含空格' : true) : '请输入环境变量名称')
+              ]
+            },
+            PortMappings: {
+              ContainerPort: [
+                v => (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) >= 0 && parseInt(v) <= 65535 ? true : '端口号必须为0-65535的整数') : '请输入端口号')
+              ],
+              HostPort: [
+                v => (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) >= 0 && parseInt(v) <= 65535 ? true : '端口号必须为0-65535的整数') : '请输入端口号')
+              ]
+            },
+            Volumns: {
+              Name: [
+                v => (v && v.length > 0 ? (v.match(/\s/) ? '数据卷名称不允许包含空格' : true) : '请输入数据卷名称')
+              ],
+              Mount: [
+                v => (v && v.length > 0 ? (v.match(/\s/) ? '数据卷挂载路径不允许包含空格' : true) : '请输入数据卷挂载路径')
+              ]
+            },
+            Labels: {
+              Name: [
+                v => (v && v.length > 0 ? (v.match(/\s/) ? '标签名称不允许包含空格' : true) : '请输入标签名称')
+              ]
+            }
+          }
+        }
+      }
+    },
+
+    computed: {
+      ...mapGetters([
+          'alertArea',
+          'alertType',
+          'alertMsg'
+      ])
+    },
+
+    mounted() {
+      ui.showAlertAt('CreateTemplate');
+      this.init();
+    },
+
+    destroyed() {
+      ui.showAlertAt();
+    },
+
+    methods: {
+      init() {
+        
+      },
+
+      goback() {
+        this.$router.go(-1);
+      },
+
+      addServiceTemplate() {
+        let id = svcIdStart++;
+        this.$set(this.rules.Services, id, {});
+        this.ServiceTemplates.push({
+          Id: id,
+          Title: '',
+          Name: '',
+          ImageName: '',
+          ImageTag: '',
+          ReplicaCount: 1,
+          Description: '',
+          Command: '',
+          Envs: [],
+          PortMappings: [],
+          Volumns: [],
+          Labels: []
+        });
+      },
+
+      addEnv(s) {
+        let id = envIdStart++;
+        if (!this.rules.Services[s.Id].Envs) {
+          this.rules.Services[s.Id].Envs = [];
+        }
+
+        this.$set(this.rules.Services[s.Id].Envs, id, {});
+        
+        s.Envs.push({ index: s.Envs.length, Id: id, Name: '', Value: '' });
+        this.patch(s.Envs);
+      },
+
+      addPortMapping(s) {
+        let id = portMappingIdStart++;
+        if (!this.rules.Services[s.Id].PortMappings) {
+          this.rules.Services[s.Id].PortMappings = [];
+        }
+
+        this.$set(this.rules.Services[s.Id].PortMappings, id, {});
+        
+        s.PortMappings.push({ index: s.PortMappings.length, Id: id, ContainerPort: '', HostPort: '' });
+        this.patch(s.PortMappings);
+      },
+
+      addVolumn(s) {
+        let id = volumnIdStart++;
+        if (!this.rules.Services[s.Id].Volumns) {
+          this.rules.Services[s.Id].Volumns = [];
+        }
+
+        this.$set(this.rules.Services[s.Id].Volumns, id, {});
+        
+        s.Volumns.push({ index: s.Volumns.length, Id: id, Name: '', Mount: '' });
+        this.patch(s.Volumns);
+      },
+
+      addLabel(s) {
+        let id = labelIdStart++;
+        if (!this.rules.Services[s.Id].Labels) {
+          this.rules.Services[s.Id].Labels = [];
+        }
+
+        this.$set(this.rules.Services[s.Id].Labels, id, {});
+        
+        s.Labels.push({ index: s.Labels.length, Id: id, Name: '', Value: '' });
+        this.patch(s.Labels);
+      },
+
+      downward(items, i) {
+        let a = items[i];
+        let b = items[i + 1];
+        this.$set(items, i, b);
+        this.$set(items, i + 1, a);
+        this.patch(items);
+      },
+
+      upward(items, i) {
+        let a = items[i];
+        let b = items[i - 1];
+        this.$set(items, i, b);
+        this.$set(items, i - 1, a);
+        this.patch(items);
+      },
+
+      removei(items, i) {
+        items.splice(i, 1);
+        this.patch(items);
+      },
+
+      /* Vuetify当前版本没有在slot中传递props.index，所以我们在item中预先设置index */
+      patch(items) {
+        let i = 0;
+        for (let item of items) {
+          item.index = i++;
+        }
+      },
+
+      save() {
+        let rules = {
+          Title: this.rules0.Title,
+          Name: this.rules0.Name,
+          Version: this.rules0.Version,
+          Services: []
+        };
+
+        for (let t of this.ServiceTemplates) {
+          let r = {
+            Title: this.rules0.Services.Title,
+            Name: this.rules0.Services.Name,
+            ImageName: this.rules0.Services.ImageName,
+            ImageTag: this.rules0.Services.ImageTag,
+            Envs: [],
+            PortMappings: [],
+            Volumns: [],
+            Labels: []
+          };
+
+          for (let e of t.Envs) {
+            r[e.Id] = rules0.Services.Envs;
+          }
+
+          for (let e of t.PortMappings) {
+            r[e.Id] = rules0.Services.PortMappings;
+          }
+
+          for (let e of t.Volumns) {
+            r[e.Id] = rules0.Services.Volumns;
+          }
+
+          for (let e of t.Labels) {
+            r[e.Id] = rules0.Services.Labels;
+          }
+
+          rules.Services[t.Id] = r;
+        }
+
+        this.rules = rules;
+
+        this.$nextTick(_ => {
+          if (!this.validateForm()) {
+            return;
+          }
+
+          let a = {
+            Title: this.Title,
+            Name: this.Name,
+            Version: this.Version,
+            Description: this.Description,
+            ServiceTemplates: this.ServiceTemplates
+          }
+
+          api.CreateTemplate(a).then(data => {
+            ui.alert('新增应用成功', 'success');
+            let that = this;
+            setTimeout(() => {
+              that.goback();
+            }, 1500);
+          })
+        });
+      }
+    }
+  }
+</script>
+
+<style lang="stylus">
+
+</style>
