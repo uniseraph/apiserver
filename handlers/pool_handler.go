@@ -57,6 +57,7 @@ type PoolsRegisterRequest struct{
 type PoolsRegisterResponse struct {
 	Id   string
 	Name string
+	Proxy string
 }
 func getPoolsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	mgoSession, err := utils.GetMgoSessionClone(ctx)
@@ -83,6 +84,15 @@ func getPoolsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 }
 
+//   /pools/{id:.*}/flush
+type PoolsFlushRequest struct {
+	Id string
+}
+
+func postPoolsFlush(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+
+}
 func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	if err := r.ParseForm(); err != nil {
@@ -101,7 +111,6 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-//	{Name: "a", Driver: "swarm", DriverOpts: {Version: "v1.0", EndPoint: "bbbb", APIVersion: "v1.23"}}
 
 	poolInfo := &types.PoolInfo{
 		Id:             bson.NewObjectId(),
@@ -158,6 +167,7 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	result := PoolsRegisterResponse{
 		Name: poolInfo.Name,
 		Id : poolInfo.Id.Hex(),
+		Proxy : poolInfo.ProxyEndpoints[0],
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

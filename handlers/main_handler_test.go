@@ -1,9 +1,11 @@
 package handlers_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
+	dockerclient "github.com/docker/docker/client"
 	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/handlers"
 	"github.com/zanecloud/apiserver/types"
@@ -291,7 +293,7 @@ func TestPool(t *testing.T) {
 		Driver: "swarm",
 		DriverOpts: types.DriverOpts{
 			Version:    "v1.0",
-			EndPoint:   "unix:///var/run/docker.sock",
+			EndPoint:   "47.92.49.245:2375",
 			APIVersion: "v1.23",
 		},
 	})
@@ -300,6 +302,19 @@ func TestPool(t *testing.T) {
 		t.Error(err)
 	} else {
 		t.Log(result)
+	}
+
+	r, _ := result.(handlers.PoolsRegisterResponse)
+	dockerclient, err := dockerclient.NewClient(r.Proxy, "v1.23", nil, map[string]string{})
+	if err != nil {
+		t.Error(err)
+	}
+
+	info, err := dockerclient.Info(context.Background())
+	if err != nil {
+		t.Error(err)
+	} else {
+		t.Log(info)
 	}
 }
 
