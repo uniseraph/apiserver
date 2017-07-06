@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
@@ -85,7 +86,10 @@ func getTrees(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 func createTree(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	req := EnvTreeMetaRequest{}
 
-	utils.HttpRequestBodyJsonParse(w, r, &req)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	utils.GetMgoCollections(ctx, w, []string{"env_tree_meta"}, func(cs map[string]*mgo.Collection) {
 		tree := &types.EnvTreeMeta{
@@ -113,7 +117,10 @@ func createTree(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 func updateTree(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	req := EnvTreeMetaRequest{}
 
-	utils.HttpRequestBodyJsonParse(w, r, &req)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	utils.GetMgoCollections(ctx, w, []string{"env_tree_meta"}, func(cs map[string]*mgo.Collection) {
 		id := mux.Vars(r)["id"]
