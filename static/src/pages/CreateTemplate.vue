@@ -156,7 +156,7 @@
                 <v-flex xs2>
                   <v-subheader>CPU个数</v-subheader>
                 </v-flex>
-                <v-flex xs3>
+                <v-flex xs1>
                   <v-text-field
                     :ref="'Service_CPU_' + item.Id"
                     v-model="item.CPU"
@@ -165,6 +165,9 @@
                     :rules="rules.Services[item.Id].CPU"
                     @input="rules.Services[item.Id].CPU = rules0.Services.CPU"
                   ></v-text-field>
+                </v-flex>
+                <v-flex xs2>
+                  <v-checkbox label="独占" v-model="item.ExclusiveCPU" dark></v-checkbox>
                 </v-flex>
                 <v-flex xs2>
                 </v-flex>
@@ -512,13 +515,22 @@
               v => (v && v.length > 0 ? (v.match(/\s/) ? '镜像Tag不允许包含空格' : true) : '请输入镜像Tag')
             ],
             CPU: [
-              v => (v && v.length > 0 ? (/^\d+\.?\d*$/.test(v) && parseFloat(v) > 0 ? true : 'CPU个数必须大于0，可以为小数') : true)
+              function(o) {
+                let v = o ? o.toString() : '';
+                return (v && v.length > 0 ? (/^\d+\.?\d*$/.test(v) && parseFloat(v) > 0 ? true : 'CPU个数必须大于0，可以为小数') : true)
+              }
             ],
             Memory: [
-              v => (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) > 0 ? true : '内存必须为大于0的整数') : '请输入内存大小')
+              function(o) {
+                let v = o ? o.toString() : '';
+                return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) > 0 ? true : '内存必须为大于0的整数') : '请输入内存大小')
+              }
             ],
             ReplicaCount: [
-              v => (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) >= 0 && parseInt(v) <= 1000 ? true : '容器个数必须为0-1000的整数') : '请输入容器个数')
+              function(o) {
+                let v = o ? o.toString() : '';
+                return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) >= 0 && parseInt(v) <= 1000 ? true : '容器个数必须为0-1000的整数') : '请输入容器个数')
+              }
             ],
             Envs: { 
               Name: [
@@ -692,6 +704,7 @@
             ImageTag: this.rules0.Services.ImageTag,
             CPU: this.rules0.Services.CPU,
             Memory: this.rules0.Services.Memory,
+            ReplicaCount: this.rules0.Services.ReplicaCount,
             Envs: [],
             PortMappings: [],
             Volumns: [],
