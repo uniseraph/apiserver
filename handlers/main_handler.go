@@ -65,10 +65,13 @@ var routes = map[string]map[string]*MyHandler{
 
 	},
 	"POST": {
+		"/pools/{id:.*}/flush":   &MyHandler{h: postPoolsFlush},
 		"/pools/{id:.*}/inspect": &MyHandler{h: getPoolJSON,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/pools/register":        &MyHandler{h: postPoolsRegister, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/pools/ps":              &MyHandler{h: getPoolsJSON, opChecker: checkUserPermission,roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/pools/json":            &MyHandler{h: getPoolsJSON, opChecker: checkUserPermission,roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+
+
 
 		"/users/{name:.*}/login":   &MyHandler{h: getUserLogin},
 		"/users/current":           &MyHandler{h: getUserCurrent, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},

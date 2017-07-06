@@ -11,6 +11,9 @@ import (
 	"io"
 	"net/http"
 	"time"
+	"github.com/zanecloud/apiserver/types"
+	"io/ioutil"
+	"github.com/docker/docker/client"
 )
 
 //计算MD5
@@ -96,4 +99,40 @@ func GetMgoCollections(ctx context.Context, w http.ResponseWriter, names []strin
 	}
 
 	cb(cs)
+}
+
+//
+
+func  getClusterInfo(ctx context.Context , endpoint string ) ( *types.ClusterInfo , error) {
+
+
+	_, addr, _, err := client.ParseHost(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	url := fmt.Sprintf("http://%s/api/v1.23/info",addr)
+
+	req , err := http.NewRequest(http.MethodPost , url , nil)
+	if err != nil {
+		return nil,err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	swarmClient:= http.Client{}
+
+	resp, err := swarmClient.Do(req)
+	if err!=nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+
+	result := &types.ClusterInfo{}
+	if err := json.NewDecoder(resp.Body).Decode(result) ; err!=nil{
+		return nil ,err
+	}
+
+	return result , nil
+
 }

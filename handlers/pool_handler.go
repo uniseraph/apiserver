@@ -10,6 +10,11 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
+	"github.com/Sirupsen/logrus"
+	"github.com/docker/docker/client"
+
+	"fmt"
+	"github.com/docker/swarm/swarmclient"
 )
 
 func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -50,7 +55,7 @@ type PoolsRegisterRequest struct{
 	Name       string
 	Driver     string
 	DriverOpts types.DriverOpts
-	Labels     map[string]interface{} `json:",omitempty"`
+	Labels     []string `json:",omitempty"`
 }
 
 
@@ -88,9 +93,88 @@ func getPoolsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 type PoolsFlushRequest struct {
 	Id string
 }
-
+type PoolRuntimeInfo struct {
+	Containers         int
+	ContainersRunning  int
+	ContainersPaused   int
+	ContainersStopped  int
+}
+type PoolsFlushResponse struct {
+	types.PoolInfo
+	//dockertypes.Info
+	Runtime  PoolRuntimeInfo
+}
 func postPoolsFlush(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
+	var result PoolsFlushResponse
+
+	id := mux.Vars(r)["id"]
+
+	mgoSession , err := utils.GetMgoSessionClone(ctx)
+	if err!=nil {
+		HttpError(w, err.Error(),http.StatusInternalServerError)
+		return
+	}
+	defer mgoSession.Close()
+
+	config := utils.GetAPIServerConfig(ctx)
+
+	c:= mgoSession.DB(config.MgoDB).C("pool")
+
+
+	if  err := c.FindId(bson.ObjectIdHex(id)).One(&result.PoolInfo) ; err !=nil {
+		HttpError(w, err.Error(),http.StatusInternalServerError)
+		return
+	}
+
+	//logrus.Debugf("postPoolsFlush::the pool info is %#v",result.PoolInfo)
+	if result.PoolInfo.Driver != "swarm" {
+		HttpError(w, "目前只支持swarm pool",http.StatusInternalServerError)
+		return
+	}
+
+
+	if len(result.ProxyEndpoints)==0 {
+		HttpError(w, "没有本地Pool 代理", http.StatusInternalServerError)
+		return
+	}
+
+	client , err := client.NewClient(result.ProxyEndpoints[0],result.DriverOpts.Version,nil,nil)
+
+	if err != nil {
+		HttpError(w, fmt.Sprintf("连接后端集群%s失败,原因是:%s",result.ProxyEndpoints[0],err.Error()), http.StatusInternalServerError)
+		return
+	}
+	defer  client.Close()
+
+	info , err := client.Info(ctx)
+
+	if err != nil {
+		HttpError(w, fmt.Sprintf("同步后端集群%s失败,原因是:%s",result.ProxyEndpoints[0],err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+        //同步集群的静态信息，需要写到mongodb的pool表
+	result.PoolInfo.Labels =  info.Labels
+	result.PoolInfo.NCPU = info.NCPU
+	result.PoolInfo.MemTotal = info.MemTotal
+	result.PoolInfo.ClusterStore = info.ClusterStore
+	result.PoolInfo.ClusterAdvertise = info.ClusterAdvertise
+
+	//同步集群的动态信息，不需要写到mongodb
+	result.Runtime.Containers = info.Containers
+	result.Runtime.ContainersPaused  = info.ContainersPaused
+	result.Runtime.ContainersRunning = info.ContainersRunning
+	result.Runtime.ContainersStopped = info.ContainersStopped
+
+
+	logrus.Debugf("postPoolsFlush::result is %#v",result)
+	
+	//httpJsonResponse(w,result)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(result)
 
 }
 func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -169,10 +253,15 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		Id : poolInfo.Id.Hex(),
 		Proxy : poolInfo.ProxyEndpoints[0],
 	}
+	//httpJsonResponse(w, result)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(result)
-
 	//fmt.Fprintf(w, "{%q:%q}", "Name", name)
 
+}
+func httpJsonResponse(w http.ResponseWriter, result interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(result)
 }

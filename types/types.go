@@ -40,10 +40,15 @@ type PoolInfo struct {
 	Name   string
 	Status string
 
+	NCPU int
+	MemTotal int64
+	ClusterStore       string
+	ClusterAdvertise   string
+
 	Driver         string
 	DriverOpts     DriverOpts
 	EnvTreeId      string
-	Labels         map[string]interface{} `json:",omitempty"`
+	Labels         []string `json:",omitempty"`
 	ProxyEndpoints []string               `json:",omitempty"`
 }
 
@@ -149,4 +154,28 @@ type EnvTreeNodeParamValue struct {
 	Pool        bson.ObjectId
 	CreatedTime int64  `json:",omitempty"`
 	UpdatedTime int64  `json:",omitempty"`
+}
+
+
+//调用docker info，获取swarm集群的信息
+type ClusterInfo struct {
+	Containers        int
+	ContainersRunning int
+	ContainersPaused  int
+	ContainersStopped int
+	SystemStatus      [][]string
+	MemoryLimit       bool
+	SwapLimit         bool
+	KernelMemory      bool
+	OomKillDisable    bool
+	KernelVersion     bool
+	OperatingSystem   string
+	Architecture      string
+	NCPU              int
+	MemTotal          int64
+	HttpProxy         string
+	HttpsProxy        string
+	ServerVersion     string
+	ClusterStore      string
+	ClusterAdvertise  string
 }
