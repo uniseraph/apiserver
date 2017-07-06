@@ -12,6 +12,9 @@ import UserDetail from './pages/UserDetail.vue'
 import ResetPassword from './pages/ResetPassword.vue'
 import Teams from './pages/Teams.vue'
 import TeamDetail from './pages/TeamDetail.vue'
+import Templates from './pages/Templates.vue'
+import CreateTemplate from './pages/CreateTemplate.vue'
+//import TemplateDetail from './pages/TemplateDetail.vue'
 
 Vue.use(VueRouter)
 
@@ -28,6 +31,9 @@ export default new VueRouter({
 		{ path: '/user/password/:id', component: ResetPassword },
 		{ path: '/teams', component: Teams },
 		{ path: '/team/:id', component: TeamDetail },
+		{ path: '/templates', component: Templates },
+		{ path: '/templates/create', component: CreateTemplate },
+		//{ path: '/template/:id', component: TemplateDetail },
 		{ path: '*', redirect: '/pools' }
 	]
 })

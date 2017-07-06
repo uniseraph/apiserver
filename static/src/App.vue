@@ -113,7 +113,7 @@
             </v-list-tile>
           </v-list-item>
           <v-list-item>
-            <v-list-tile ripple to="/compose" router>
+            <v-list-tile ripple to="/templates" router>
               <v-list-tile-avatar>
                 <v-icon light>share</v-icon>
               </v-list-tile-avatar>

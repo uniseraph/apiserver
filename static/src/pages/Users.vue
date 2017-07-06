@@ -99,7 +99,7 @@
 
       removeUser() {
         this.RemoveConfirmDlg = false;
-        api.RemoveUser({ Id: this.SelectedUser.Id }).then(data => {
+        api.RemoveUser(this.SelectedUser.Id).then(data => {
           this.init();
         })
       }
