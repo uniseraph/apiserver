@@ -51,7 +51,7 @@ var routes = map[string]map[string]*MyHandler{
 		"/envs/trees/create":                 &MyHandler{h: createTree, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/envs/trees/{id:.*}/update":         &MyHandler{h: updateTree, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/envs/trees/{id:.*}/remove":         &MyHandler{h: deleteTree, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/envs/dirs/list":                    &MyHandler{h: getTreeDirs, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/dirs/list":                    &MyHandler{h: getTreeDirs, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/envs/dirs/create":                  &MyHandler{h: createDir, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/envs/dirs/{id:.*}/update":          &MyHandler{h: updateDir, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/envs/dirs/{id:.*}/remove":          &MyHandler{h: deleteDir, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},

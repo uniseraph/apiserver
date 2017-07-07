@@ -126,6 +126,8 @@ type EnvTreeNodeParamKey struct {
 	Name string
 	//默认值
 	Default string
+	//EnvTreeNodeDir
+	Dir bson.ObjectId
 	//EnvTreeMeta
 	Tree        bson.ObjectId
 	CreatedTime int64 `json:",omitempty"`
@@ -138,8 +140,9 @@ type EnvTreeNodeParamKey struct {
 //这其实是一个Key和Pool的关联关系表
 //用来查询一个Key被哪些Pool所用，并且每个值都是什么
 type EnvTreeNodeParamValue struct {
-	Id    bson.ObjectId "_id"
-	Value string
+	Id          bson.ObjectId "_id"
+	Value       string
+	Description string
 	//对应的参数名称
 	//EnvTreeNodeParamKey
 	Key bson.ObjectId

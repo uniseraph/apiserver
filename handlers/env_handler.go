@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/gpmgo/gopm/modules/log"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
@@ -40,6 +41,16 @@ type EnvTreeNodeParamKeyRequest struct {
 
 type EnvTreeNodeParamValueRequest struct {
 	types.EnvTreeNodeParamValue
+}
+
+//参数键值对
+type EnvTreeNodeParamKVRequest struct {
+	Id          string `json:",omitempty"`
+	Name        string
+	Value       string
+	Description string
+	DirId       string `json:",omitempty"`
+	TreeId      string `json:",omitempty"`
 }
 
 /*
@@ -80,6 +91,16 @@ type EnvTreeNodeParamKeyResponse struct {
 
 type EnvTreeNodeParamValueResponse struct {
 	types.EnvTreeNodeParamValue
+}
+
+//参数键值对
+type EnvTreeNodeParamKVResponse struct {
+	Id          string
+	Name        string
+	Value       string
+	Description string
+	DirId       string `json:",omitempty"`
+	TreeId      string `json:",omitempty"`
 }
 
 func getTrees(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -139,13 +160,13 @@ func updateTree(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 		data := bson.M{}
 		if req.Name != "" {
-			data = bson.M{"Name": req.Name}
+			data["name"] = req.Name
 		}
 
 		if req.Description != "" {
-			data["Description"] = req.Description
+			data["description"] = req.Description
 		}
-		data["UpdatedTime"] = time.Now().Unix()
+		data["updatedTime"] = time.Now().Unix()
 
 		selector := bson.M{"_id": bson.ObjectIdHex(id)}
 
@@ -207,7 +228,6 @@ func getTreeDirs(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		fmt.Println("Results All: ", results)
 
 		//如果数的节点是空的
 		//则返回空对象
@@ -308,12 +328,95 @@ func createDir(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+//更新一个目录节点
 func updateDir(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	req := EnvTreeNodeDirRequest{}
 
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_dir"}, func(cs map[string]*mgo.Collection) {
+		id := mux.Vars(r)["id"]
+
+		data := bson.M{}
+		if req.Name != "" {
+			data["name"] = req.Name
+		}
+
+		data["updatedtime"] = time.Now().Unix()
+
+		selector := bson.M{"_id": bson.ObjectIdHex(id)}
+
+		if err := cs["env_tree_node_dir"].Update(selector, bson.M{"$set": data}); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		var dir = EnvTreeNodeDirResponse{
+			Id:   id,
+			Name: req.Name,
+		}
+
+		HttpOK(w, dir)
+	})
 }
 
+//删除目录节点
 func deleteDir(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_dir"}, func(cs map[string]*mgo.Collection) {
+		id := mux.Vars(r)["id"]
 
+		p_dir := &types.EnvTreeNodeDir{}
+		//检查id是否存在记录
+		if err := cs["env_tree_node_dir"].FindId(bson.ObjectIdHex(id)).One(&p_dir); err != nil {
+			HttpError(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		//目录节点下面没有参数值的情况下
+		//才允许删除该目录
+		if len(p_dir.Keys) > 0 {
+			HttpError(w, "this dir stil has some params, please remove params first.", http.StatusInternalServerError)
+			return
+		}
+
+		//pull方法从父节点children数组中删除自己的id记录
+		data := bson.M{
+			"$pull": bson.M{
+				"children": id,
+			},
+		}
+
+		//从父级节点的children数组中
+		//删除自己的记录，避免污染父节点
+		if err := cs["env_tree_node_dir"].UpdateId(p_dir.Parent, data); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, "no such a tree dir", http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		//删除自己
+		if err := cs["env_tree_node_dir"].Remove(bson.M{"_id": bson.ObjectIdHex(id)}); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, "no such a tree dir", http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, nil)
+	})
 }
 
 /*
@@ -324,28 +427,445 @@ func deleteDir(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 /envs/values/:id/remove
 /envs/values/:id/update-values
 */
-func getTreeValues(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
+/*
+TreeId -- 树Id
+DirId -- 目录节点Id，为空时表示返回所有参数，不为空时返回该目录下的参数
+Name -- 名称前缀搜索，可以为空
+PageSize -- 每页显示多少条
+Page -- 当前页
+*/
+type EnvValuesListRequest struct {
+	TreeId   string
+	DirId    string
+	Name     string
+	PageSize int
+	Page     int
+}
+
+func getTreeValues(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	req := EnvValuesListRequest{}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_param_key", "env_tree_node_param_value"}, func(cs map[string]*mgo.Collection) {
+		var keys []types.EnvTreeNodeParamKey
+		var values []types.EnvTreeNodeParamValue
+		var results []EnvTreeNodeParamKVResponse
+
+		data := bson.M{}
+
+		//TreeId不可为空
+		if len(req.TreeId) > 0 {
+			data["tree"] = bson.ObjectIdHex(req.TreeId)
+		} else {
+			HttpError(w, "Need TreeId", http.StatusInternalServerError)
+			return
+		}
+
+		if len(req.DirId) > 0 {
+			data["dir"] = bson.ObjectIdHex(req.DirId)
+		}
+		//如果有name参数
+		//则按照前缀匹配进行正则查找
+		if len(req.Name) > 0 {
+			data["name"] = bson.M{
+				"$regex": bson.RegEx{
+					Pattern: fmt.Sprintf("/%s/", req.Name),
+					Options: "",
+				},
+			}
+		}
+
+		//找到参数目录树中的全部匹配的KEY
+		if err := cs["env_tree_node_param_key"].Find(data).All(&keys); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		//如果找不到匹配的KEY
+		//则没必要再次查找KEY对应的VALUE，直接返回空内容即可
+		if len(keys) == 0 {
+			HttpOK(w, []EnvTreeNodeParamKVResponse{})
+			return
+		}
+
+		//找到KEY的Id数组，用于批量查询
+		v_ids := make([]bson.ObjectId, len(keys))
+		//构造KEY的ID和实例对应的MAP
+		//用于VALUES匹配查询
+		k_map := make(map[string]types.EnvTreeNodeParamKey)
+
+		for _, key := range keys {
+			v_ids = append(v_ids, key.Id)
+			k_map[key.Id.Hex()] = key
+		}
+
+		data = bson.M{
+			"tree": bson.ObjectIdHex(req.TreeId),
+			"key": bson.M{
+				"$in": v_ids,
+			},
+		}
+
+		//查询所有条件匹配参数值的总数
+		//不是参数KEY，是参数值VALUE
+		c, err := cs["env_tree_node_param_key"].Find(data).Count()
+		if err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		log.Info("query param size: %d", c)
+
+		//处理分页
+		if req.PageSize == 0 {
+			req.PageSize = 20
+		}
+		//根据KEY和TREE查找对应的VALUE
+		if err := cs["env_tree_node_param_value"].Find(data).Skip(req.Page * req.PageSize).Limit(req.PageSize).All(&values); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		//整理成客户端需要的数据结构
+		results = make([]EnvTreeNodeParamKVResponse, len(values))
+		for _, value := range values {
+			kv_rlt := EnvTreeNodeParamKVResponse{}
+			kv_rlt.Id = value.Id.Hex()
+			kv_rlt.Value = value.Value
+			//从对应的KEY实例中找到Name
+			if k, ok := k_map[value.Id.Hex()]; ok {
+				kv_rlt.Name = k.Name
+			}
+			kv_rlt.Description = value.Description
+
+			results = append(results, kv_rlt)
+		}
+
+		//计算一共有多少页
+		pc := c / req.PageSize
+		if c%req.PageSize > 0 {
+			pc += 1
+		}
+		rsp := map[string]interface{}{
+			"Total":     c,
+			"PageCount": pc,
+			"PageSize":  req.PageSize,
+			"Page":      req.Page,
+			"Data":      results,
+		}
+
+		HttpOK(w, rsp)
+	})
 }
 
 func getTreeValueDetails(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_param_value"}, func(cs map[string]*mgo.Collection) {
+		id := mux.Vars(r)["id"]
+		
 
+		cs["env_tree_node_param_value"].FindId(bson.ObjectIdHex(id))
+	})
 }
 
+//创建一个参数值
 func createValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	req := EnvTreeNodeParamKVRequest{}
 
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	//校验入参
+	if len(req.TreeId) <= 0 || len(req.DirId) <= 0 {
+		HttpError(w, "Params error!", http.StatusBadRequest)
+		return
+	}
+
+	//校验入参
+	if len(req.Name) <= 0 || len(req.Value) <= 0 {
+		HttpError(w, "Params error!", http.StatusBadRequest)
+		return
+	}
+
+	tables := []string{"env_tree_meta", "env_tree_node_dir", "env_tree_node_param_key", "env_tree_node_param_value"}
+	utils.GetMgoCollections(ctx, w, tables, func(cs map[string]*mgo.Collection) {
+		tree := &types.EnvTreeMeta{}
+		dir := &types.EnvTreeNodeDir{}
+		key := &types.EnvTreeNodeParamKey{}
+
+		//检查tree id是否存在记录
+		if err := cs["env_tree_meta"].FindId(bson.ObjectIdHex(req.TreeId)).One(&tree); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, "no such a tree", http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		//检查dir id是否存在记录
+		if err := cs["env_tree_node_dir"].FindId(bson.ObjectIdHex(req.DirId)).One(&dir); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, "no such a tree dir", http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		query := bson.M{
+			"Dir":  dir.Id,
+			"Tree": tree.Id,
+			"Name": req.Name,
+		}
+		//查找KEY是否存在
+		//如果不存在则创建一条新的参数KEY
+		err := cs["env_tree_node_param_key"].Find(query).One(&key)
+		if err == mgo.ErrNotFound {
+			//创建KEY实例
+			key = &types.EnvTreeNodeParamKey{
+				Id:          bson.NewObjectId(),
+				Name:        req.Name,
+				CreatedTime: time.Now().Unix(),
+				UpdatedTime: time.Now().Unix(),
+			}
+			if err := cs["env_tree_node_param_key"].Insert(key); err != nil {
+				HttpError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			data := bson.M{"keys": key.Id}
+			selector := bson.M{"_id": dir.Id}
+
+			//将此KEY插入dir目录节点的参数数组中
+			if err := cs["env_tree_node_dir"].Update(selector, bson.M{"$push": data}); err != nil {
+				if err == mgo.ErrNotFound {
+					HttpError(w, err.Error(), http.StatusNotFound)
+					return
+				}
+
+				HttpError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+		//KEY创建成功
+
+		//创建KEY的VALUE
+		value := &types.EnvTreeNodeParamValue{
+			Id:          bson.NewObjectId(),
+			Value:       req.Value,
+			Description: req.Description,
+			Key:         key.Id,
+			Tree:        tree.Id,
+			CreatedTime: time.Now().Unix(),
+			UpdatedTime: time.Now().Unix(),
+		}
+		if err := cs["env_tree_node_param_value"].Insert(value); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		//封装成客户端的返回对象
+		kv := EnvTreeNodeParamKVResponse{
+			Id:          value.Id.Hex(),
+			Name:        key.Name,
+			Value:       value.Value,
+			Description: value.Description,
+			DirId:       dir.Id.Hex(),
+			TreeId:      tree.Id.Hex(),
+		}
+
+		HttpOK(w, kv)
+	})
 }
 
+//更新某个VALUE的值
 func updateValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	req := EnvTreeNodeParamKVRequest{}
 
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	id := mux.Vars(r)["id"]
+	//校验入参
+	if len(id) <= 0 {
+		HttpError(w, "Params error!", http.StatusBadRequest)
+		return
+	}
+	req.Id = id
+
+	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_param_key", "env_tree_node_param_value"}, func(cs map[string]*mgo.Collection) {
+		data := bson.M{}
+
+		//因为Name是保存在KEY的结构中
+		//如果需要更新KEY
+		if req.Name != "" {
+			//根据VALUE的ID找到VALUE实例
+			v := &types.EnvTreeNodeParamValue{}
+			if err := cs["env_tree_node_param_value"].FindId(bson.ObjectIdHex(id)).One(&v); err != nil {
+				HttpError(w, "param id is invalide", http.StatusNotFound)
+				return
+			}
+			data := bson.M{
+				"name":        req.Name,
+				"updatedtime": time.Now().Unix(),
+			}
+			selector := bson.M{"_id": v.Key}
+
+			//根据VALUE实例的KEY ID更新KEY
+			if err := cs["env_tree_node_param_key"].Update(selector, bson.M{"$set": data}); err != nil {
+				if err == mgo.ErrNotFound {
+					HttpError(w, err.Error(), http.StatusNotFound)
+					return
+				}
+
+				HttpError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+
+		//如果这两个参数都为空
+		//则不需要更改VALUE实例
+		if req.Description == "" && req.Value == "" {
+			HttpOK(w, req)
+			return
+		}
+
+		//否则更新两个或者其中某个属性
+
+		if req.Description != "" {
+			data["description"] = req.Description
+		}
+		if req.Value != "" {
+			data["value"] = req.Value
+		}
+		data["updatedTime"] = time.Now().Unix()
+
+		selector := bson.M{"_id": bson.ObjectIdHex(id)}
+
+		if err := cs["env_tree_node_param_value"].Update(selector, bson.M{"$set": data}); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, req)
+	})
 }
 
+//删除参数必须同步各集群的当前参数值
+//其实是删除KEY
 func deleteValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_param_value"}, func(cs map[string]*mgo.Collection) {
+		id := mux.Vars(r)["id"]
 
+		//通过VALUE找到KEY的id，以用于批量删除VALUE
+		v := &types.EnvTreeNodeParamValue{}
+		if err := cs["env_tree_node_param_value"].FindId(bson.ObjectIdHex(id)).One(&v); err != nil {
+			HttpError(w, "param id is invalide", http.StatusNotFound)
+			return
+		}
+
+		//删除条件是KEY的ID以及TREE的ID
+		selector := bson.M{
+			"key":  v.Key,
+			"tree": v.Tree,
+		}
+
+		//删除所有同一个TREE中，相同KEY的VALUE
+		if err := cs["env_tree_node_param_value"].Remove(selector); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, "no such a tree", http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, nil)
+	})
 }
 
-func updateValueAttributes(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+type EnvValuesUpdateValues struct {
+	Id     string
+	PoolId string
+	Value  string
+}
 
+type EnvUpdateValueAttributesResponse struct {
+	Id     string
+	PoolId string
+	Value  string
+	Status int
+}
+
+//批量更新某个VALUE
+func updateValueAttributes(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	reqs := make([]*EnvValuesUpdateValues, 10)
+
+	if err := json.NewDecoder(r.Body).Decode(&reqs); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	//返回数据
+	//因为无法事物的方式批量更新
+	//所以返回结果里面要告知调用者，哪些插入失败，失败原因如何
+	var rsps []*EnvUpdateValueAttributesResponse
+
+	if len(reqs) <= 0 {
+		HttpError(w, "Need valid request", http.StatusBadRequest)
+		return
+	}
+
+	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_param_value"}, func(cs map[string]*mgo.Collection) {
+		for _, req := range reqs {
+			//如果这个请求参数结构中
+			//value为空，则没有必要更新
+			if len(req.Value) <= 0 {
+				continue
+			}
+			//根据id以及pool找到VALUE实例
+			//其实只需要id即可
+			selector := bson.M{
+				"_id":  req.Id,
+				"pool": req.PoolId,
+			}
+			//更新目标实例的value值
+			data := bson.M{
+				"value": req.Value,
+			}
+
+			rsp := &EnvUpdateValueAttributesResponse{
+				Id:     req.Id,
+				PoolId: req.PoolId,
+				Value:  req.Value,
+			}
+
+			//如果某次插入失败，因为不是事物，导致部分成功部分失败怎么办？
+			//告知前端每一个插入的结果，是否重试由前端处理
+			if err := cs["env_tree_node_param_value"].Update(selector, bson.M{"$set": data}); err != nil {
+				if err == mgo.ErrNotFound {
+					rsp.Status = http.StatusNotFound
+				}
+				rsp.Status = http.StatusInternalServerError
+			} else {
+				rsp.Status = http.StatusOK
+			}
+			rsps = append(rsps, rsp)
+		}
+
+		HttpOK(w, rsps)
+	})
 }
 
 /*
