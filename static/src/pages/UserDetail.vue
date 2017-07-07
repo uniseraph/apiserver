@@ -2,7 +2,7 @@
   <v-card>
     <v-card-title>
       <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
-      &nbsp;&nbsp;用户列表&nbsp;&nbsp;/&nbsp;&nbsp;{{ Name }}
+      &nbsp;&nbsp;用户列表&nbsp;&nbsp;/&nbsp;&nbsp;{{ Id ? Name : '新增用户' }}
       <v-spacer></v-spacer>
     </v-card-title>
     <div>
@@ -84,7 +84,7 @@
   export default {
     data() {
       return {
-        Id: '',
+        Id: this.$route.params ? this.$route.params.id : null,
         Name: '',
         Email: '',
         Tel: '',
@@ -114,15 +114,17 @@
 
     methods: {
       init() {
-        api.User(this.$route.params.id).then(data => {
-          this.Id = data.Id;
-          this.Name = data.Name;
-          this.Email = data.Email;
-          this.Tel = data.Tel;
-          this.CreatedTime = data.CreatedTime;
-          this.IsSysAdmin = (data.RoleSet & this.constants.ROLE_SYS_ADMIN) != 0;
-          this.IsAppAdmin = (data.RoleSet & this.constants.ROLE_APP_ADMIN) != 0;
-        })
+        if (this.Id) {
+          api.User(this.Id).then(data => {
+            this.Id = data.Id;
+            this.Name = data.Name;
+            this.Email = data.Email;
+            this.Tel = data.Tel;
+            this.CreatedTime = data.CreatedTime;
+            this.IsSysAdmin = (data.RoleSet & this.constants.ROLE_SYS_ADMIN) != 0;
+            this.IsAppAdmin = (data.RoleSet & this.constants.ROLE_APP_ADMIN) != 0;
+          })
+        }
       },
 
       goback() {
@@ -144,16 +146,28 @@
             roleSet |= this.constants.ROLE_APP_ADMIN;
           }
 
-          api.UpdateUser({
-            Id: this.Id,
-            Name: this.Name,
-            Email: this.Email,
-            Tel: this.Tel,
-            RoleSet: roleSet
-          }).then(data => {
-            ui.alert('用户资料修改成功', 'success');
-            this.init();
-          });
+          if (this.Id) {
+            api.UpdateUser({
+              Id: this.Id,
+              Name: this.Name,
+              Email: this.Email,
+              Tel: this.Tel,
+              RoleSet: roleSet
+            }).then(data => {
+              ui.alert('用户资料修改成功', 'success');
+              this.init();
+            });
+          } else {
+            api.CreateUser({
+              Name: this.Name,
+              Email: this.Email,
+              Tel: this.Tel,
+              RoleSet: roleSet
+            }).then(data => {
+              ui.alert('新增用户成功', 'success');
+              this.$router.replace('/users/' + data.Id);
+            });
+          }
         });
       }
     }

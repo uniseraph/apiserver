@@ -112,7 +112,7 @@
           { text: '操作', sortable: false, left: true }
         ],
 
-        Id: '',
+        Id: this.$route.params.id,
         Name: '',
         Value: '',
         Description: '',
@@ -146,7 +146,7 @@
 
     methods: {
       init() {
-        api.EnvValue(this.$route.params.id).then(data => {
+        api.EnvValue(this.Id).then(data => {
           this.Id = data.Id;
           this.Name = data.Name;
           this.Value = data.Value;

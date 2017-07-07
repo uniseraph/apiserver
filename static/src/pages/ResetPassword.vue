@@ -60,7 +60,7 @@
   export default {
     data() {
       return {
-        Id: '',
+        Id: this.$route.params.id,
         Name: '',
         Password1: '',
         Password2: '',
@@ -84,7 +84,7 @@
 
     methods: {
       init() {
-        api.User(this.$route.params.id).then(data => {
+        api.User(this.Id).then(data => {
           this.Id = data.Id;
           this.Name = data.Name;
         })

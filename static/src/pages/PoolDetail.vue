@@ -242,7 +242,7 @@
   export default {
     data() {
       return {
-        Id: '',
+        Id: this.$route.params.id,
         Name: '',
         EnvTreeId: null,
         EnvTree: {},
@@ -299,7 +299,7 @@
 
     methods: {
       init() {
-        api.Pool(this.$route.params.id).then(data => {
+        api.Pool(this.Id).then(data => {
           this.Id = data.Id;
           this.Name = data.Name;
           this.EnvTreeId = data.EnvTreeId;

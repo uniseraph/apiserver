@@ -4,7 +4,7 @@
       <v-card>
         <v-card-title>
           <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
-          &nbsp;&nbsp;应用模板&nbsp;&nbsp;/&nbsp;&nbsp;{{ Title }}
+          &nbsp;&nbsp;应用模板&nbsp;&nbsp;/&nbsp;&nbsp;{{ Id ? Title : '新增应用模板' }}
           <v-spacer></v-spacer>
         </v-card-title>
         <div>
@@ -162,7 +162,7 @@
                 <v-flex xs2>
                   <v-subheader>CPU个数</v-subheader>
                 </v-flex>
-                <v-flex xs1>
+                <v-flex xs2>
                   <v-text-field
                     :ref="'Service_CPU_' + item.Id"
                     v-model="item.CPU"
@@ -175,7 +175,7 @@
                 <v-flex xs2>
                   <v-checkbox label="独占" v-model="item.ExclusiveCPU" dark></v-checkbox>
                 </v-flex>
-                <v-flex xs2>
+                <v-flex xs1>
                 </v-flex>
                 <v-flex xs2>
                   <v-subheader>内存 (MB)<span class="required-star">*</span></v-subheader>
@@ -429,8 +429,8 @@
         volumnIdStart: 0,
         labelIdStart: 0,
 
-        Id: '',
-        Title: '',
+        Id: this.$route.params ? this.$route.params.id : null,
+        Title: this.$route.params ? this.$route.params.title : null,
         Name: '',
         Version: '',
         Description: '',
@@ -523,7 +523,11 @@
 
     methods: {
       init() {
-        api.Template(this.$route.params.id).then(data => {
+        if (!this.Id) {
+          return;
+        }
+
+        api.Template(this.Id).then(data => {
           this.svcIdStart = 0;
           this.envIdStart = 0;
           this.volumnIdStart = 0;
@@ -601,6 +605,11 @@
 
           this.rules = rules;
           this.Services = data.Services;
+
+          if (this.$route.params && this.$route.params.title) {
+            this.Id = null;
+            this.Title = this.$route.params.title;
+          }
         })
       },
 
@@ -753,10 +762,17 @@
             Services: this.Services
           }
 
-          api.UpdateTemplate(a).then(data => {
-            ui.alert('新增应用模板成功', 'success');
-            this.init();
-          })
+          if (this.Id) {
+            api.UpdateTemplate(a).then(data => {
+              ui.alert('应用模板修改成功', 'success');
+              this.init();
+            });
+          } else {
+            api.CreateTemplate(a).then(data => {
+              ui.alert('新增应用模板成功', 'success');
+              this.$router.replace('/templates/' + data.Id);
+            });
+          }
         });
       }
     }

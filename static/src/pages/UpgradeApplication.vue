@@ -2,7 +2,7 @@
   <v-card>
     <v-card-title>
       <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
-      &nbsp;&nbsp;应用管理&nbsp;&nbsp;/&nbsp;&nbsp;新增应用
+      &nbsp;&nbsp;应用管理&nbsp;&nbsp;/&nbsp;&nbsp;应用升级
       <v-spacer></v-spacer>
     </v-card-title>
     <div class="ml-4 mr-4">
@@ -46,47 +46,9 @@
       <div>
         <v-container fluid>
           <v-layout row wrap>
-            <v-flex xs2>
-              <v-subheader>目标集群<span class="required-star">*</span></v-subheader>
-            </v-flex>
-            <v-flex xs3>
-              <v-select
-                :items="PoolList"
-                item-text="Name"
-                item-value="Id"
-                v-model="PoolId"
-                label="集群"
-                dark
-                single-line
-              ></v-select>
-            </v-flex>
-            <v-flex xs2>
-            </v-flex>
-            <v-flex xs2>
-              <v-subheader>应用名称<span class="required-star">*</span></v-subheader>
-            </v-flex>
-            <v-flex xs3>
-              <v-text-field
-                ref="Title"
-                v-model="Title"
-                single-line
-                required
-                :rules="rules.Title"
-                @input="rules.Title = rules0.Title"
-              ></v-text-field>
-            </v-flex>
-            <v-flex xs2>
-              <v-subheader>说明</v-subheader>
-            </v-flex>
-            <v-flex xs10>
-              <v-text-field
-                v-model="Description"
-                single-line
-              ></v-text-field>
-            </v-flex>
             <v-flex xs12 mt-4 class="text-md-center">
               <v-btn class="orange darken-2 white--text" @click.native="save">
-                <v-icon light left>save</v-icon>发布应用
+                <v-icon light left>save</v-icon>升级应用
               </v-btn>     
             </v-flex>
             <v-flex xs3>
@@ -157,10 +119,6 @@
 
     methods: {
       init() {
-        api.Pools().then(data => {
-          this.PoolList = data;
-          this.PoolId = this.$route.params.poolId;
-        })  
       },
 
       goback() {

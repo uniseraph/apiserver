@@ -49,9 +49,11 @@
           <td>{{ props.item.UpdatedTime | formatDate }}</td>
           <td>{{ props.item.Updater.Name }}</td>
           <td>
-            <v-btn outline small icon class="green green--text" @click.native="copy(props.item)" title="复制应用模板">
-                <v-icon>content_copy</v-icon>
-            </v-btn>
+            <router-link :to="'/templates/copy/' + props.item.Id + '/' + encodeURIComponent('Copy of ' + props.item.Title)">
+              <v-btn outline small icon class="green green--text" title="复制应用模板">
+                  <v-icon>content_copy</v-icon>
+              </v-btn>
+            </router-link>
             <v-btn outline small icon class="orange orange--text" @click.native="confirmBeforeRemove(props.item)" title="删除应用模板">
               <v-icon>close</v-icon>
             </v-btn>
@@ -136,12 +138,6 @@
           this.items = data.Data;
           this.totalItems = data.Total;
         });
-      },
-
-      copy(template) {
-        api.CopyTemplate(template.Id, 'Copy of ' + template.Title).then(data => {
-          this.init();
-        })
       },
 
       confirmBeforeRemove(template) {

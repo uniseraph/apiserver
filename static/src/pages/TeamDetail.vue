@@ -106,7 +106,7 @@
   export default {
     data() {
       return {
-        Id: '',
+        Id: this.$route.params.id,
         Name: '',
         Description: '',
         LeaderId: false,
@@ -155,7 +155,7 @@
 
     methods: {
       init() {
-        api.Team(this.$route.params.id).then(data => {
+        api.Team(this.Id).then(data => {
           this.Id = data.Id;
           this.Name = data.Name;
           this.Description = data.Description;

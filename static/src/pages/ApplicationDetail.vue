@@ -422,7 +422,7 @@
         volumnIdStart: 0,
         labelIdStart: 0,
 
-        Id: '',
+        Id: this.$route.params.id,
         Title: '',
         Name: '',
         Version: '',
@@ -471,7 +471,7 @@
 
     methods: {
       init() {
-        api.Template(this.$route.params.id).then(data => {
+        api.Template(this.Id).then(data => {
           this.svcIdStart = 0;
           this.envIdStart = 0;
           this.volumnIdStart = 0;
