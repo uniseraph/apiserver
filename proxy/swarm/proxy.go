@@ -51,10 +51,10 @@ func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 
 	logrus.Debugf("proxy.Start:: PoolInfo is %#v", p.PoolInfo)
 
-	if p.PoolInfo.ProxyEndpoints[0] != "" {
-		//有可能apiserver换了一台机器重启，所以proxy的ip会发送变化,这种情况下也没必要保存端口不变
-		//TODO
-		if parts := strings.SplitN(p.PoolInfo.ProxyEndpoints[0], "://", 2); len(parts) == 2 {
+	if p.PoolInfo.ProxyEndpoint != "" {
+		//TODO 有可能apiserver换了一台机器重启，所以proxy的ip会发送变化,这种情况下也没必要保存端口不变
+		//目前保持端口不变
+		if parts := strings.SplitN(p.PoolInfo.ProxyEndpoint, "://", 2); len(parts) == 2 {
 			paddr = parts[1]
 		} else {
 			paddr = parts[0]

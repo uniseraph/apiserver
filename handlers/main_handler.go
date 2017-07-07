@@ -119,6 +119,17 @@ var routes = map[string]map[string]*MyHandler{
 		"/envs/values/{id:.*}/remove": &MyHandler{h: deleteValue,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/envs/values/{id:.*}/update-values": &MyHandler{h: updateValueAttributes,  opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 
+		"/templates/list":&MyHandler{h: getTemplateList} ,
+		"/templates/{id:.*}/inspect":&MyHandler{h: getTemplate} ,
+		"/templates/{id:.*}/detail":&MyHandler{h: getTemplate} ,
+		"/templates/create":&MyHandler{h: createTemplate, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN} ,
+		"/templates/{id:.*}/copy":&MyHandler{h: copyTemplate, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN} ,
+		"/templates/{id:.*}/update":&MyHandler{h: updateTemplate, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN} ,
+		"/templates/{id:.*}/remove":&MyHandler{h: removeTemplate, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN} ,
+
+
+
+
 	},
 	"PUT":    {},
 	"DELETE": {},

@@ -130,12 +130,12 @@ func postPoolsFlush(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if len(result.ProxyEndpoints) == 0 {
+	if len(result.ProxyEndpoint) == 0 {
 		HttpError(w, "没有集群代理", http.StatusInternalServerError)
 		return
 	}
 
-	clusterInfo, err := utils.GetClusterInfo(ctx, result.ProxyEndpoints[0])
+	clusterInfo, err := utils.GetClusterInfo(ctx, result.ProxyEndpoint)
 	if err != nil {
 		HttpError(w, "获取集群信息错误"+err.Error(), http.StatusInternalServerError)
 		return
@@ -143,8 +143,8 @@ func postPoolsFlush(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	//同步集群的静态信息，需要写到mongodb的pool表
 	result.PoolInfo.Labels = clusterInfo.Labels
-	result.PoolInfo.NCPU = clusterInfo.NCPU
-	result.PoolInfo.MemTotal = clusterInfo.MemTotal
+	result.PoolInfo.CPUs = clusterInfo.NCPU
+	result.PoolInfo.Memory = clusterInfo.MemTotal
 	result.PoolInfo.ClusterStore = clusterInfo.ClusterStore
 	result.PoolInfo.ClusterAdvertise = clusterInfo.ClusterAdvertise
 
@@ -230,12 +230,12 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	poolInfo := &types.PoolInfo{
-		Id:             bson.NewObjectId(),
-		Driver:         req.Driver,
-		DriverOpts:     req.DriverOpts,
-		Labels:         req.Labels,
-		Name:           req.Name,
-		ProxyEndpoints: make([]string, 1),
+		Id:            bson.NewObjectId(),
+		Driver:        req.Driver,
+		DriverOpts:    req.DriverOpts,
+		Labels:        req.Labels,
+		Name:          req.Name,
+		CreatedTime:   time.Now().Unix(),
 	}
 
 	if name != "" {
@@ -272,7 +272,7 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	poolInfo.ProxyEndpoints[0] = p.Endpoint()
+	poolInfo.ProxyEndpoint = p.Endpoint()
 	poolInfo.Status = "running"
 
 	if err = c.Insert(poolInfo); err != nil {
@@ -283,7 +283,7 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	result := PoolsRegisterResponse{
 		Name:  poolInfo.Name,
 		Id:    poolInfo.Id.Hex(),
-		Proxy: poolInfo.ProxyEndpoints[0],
+		Proxy: poolInfo.ProxyEndpoint,
 	}
 	//httpJsonResponse(w, result)
 	w.Header().Set("Content-Type", "application/json")
