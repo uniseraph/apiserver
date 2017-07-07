@@ -124,8 +124,7 @@ func startProxys(ctx context.Context) {
 			logrus.Errorf("startProxys:: startProxy error:%s", err.Error())
 		}
 
-		pool.ProxyEndpoints = make([]string, 1)
-		pool.ProxyEndpoints[0] = proxy.Endpoint()
+		pool.ProxyEndpoint = proxy.Endpoint()
 
 	}
 

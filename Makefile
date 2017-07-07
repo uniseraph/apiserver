@@ -52,7 +52,7 @@ clean:
 cleancli:
 	rm -rf apicli
 
-test:apicli
+test:
 	mongo zanecloud --eval "db.user.remove({'name':'sadan'})"
 	mongo zanecloud --eval "db.team.remove({'name':'team1'})"
 	mongo zanecloud --eval "db.pool.remove({'name':'pool1'})"

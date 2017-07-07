@@ -2,15 +2,15 @@ package handlers
 
 import (
 	"context"
-	"strconv"
 	"github.com/Sirupsen/logrus"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
+	"strconv"
 	"time"
-	"github.com/google/uuid"
 )
 
 //当前用户登录接口
@@ -70,8 +70,8 @@ func postSessionCreate(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	sessionKey := sessionUUID.String()
 	//准备session的内容
 	sessionContents := map[string]interface{}{
-		"uid": result.Id.Hex(),
-		"roleSet": strconv.FormatUint(uint64(result.RoleSet),10),  //fmt.Sprintf("%d", result.RoleSet),
+		"uid":     result.Id.Hex(),
+		"roleSet": strconv.FormatUint(uint64(result.RoleSet), 10), //fmt.Sprintf("%d", result.RoleSet),
 	}
 	err = client.HMSet(utils.RedisSessionKey(sessionKey), sessionContents).Err()
 	if err != nil {
@@ -98,7 +98,7 @@ func postSessionCreate(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 //当前用户登出接口
-func postSessionDestroy(ctx context.Context, w http.ResponseWriter, r *http.Request)  {
+func postSessionDestroy(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	err := utils.DestroySession(ctx, r)
 	if err != nil {
 		logrus.Fatalf("logout failed with error: %#v", err)

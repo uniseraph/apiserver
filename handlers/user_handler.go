@@ -4,25 +4,25 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"github.com/Sirupsen/logrus"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
+	"strconv"
 	"time"
-	"github.com/google/uuid"
 )
+
 //TODO 不应该走checkUserPermission过滤角色权限
 //		"/users/current":           &MyHandler{h: getUserCurrent ,opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 func getUserCurrent(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
-
-	result , err :=utils.GetCurrentUser(ctx)
+	result, err := utils.GetCurrentUser(ctx)
 	if err != nil {
-		HttpError(w,err.Error(),http.StatusForbidden)
+		HttpError(w, err.Error(), http.StatusForbidden)
 		return
 	}
 
@@ -34,7 +34,6 @@ func getUserCurrent(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(result)
 
 }
-
 
 func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
@@ -92,8 +91,8 @@ func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	sessionKey := sessionUUID.String()
 	//准备session的内容
 	sessionContents := map[string]interface{}{
-		"uid": result.Id.Hex(),
-		"roleSet": strconv.FormatUint(uint64(result.RoleSet),10),  //fmt.Sprintf("%d", result.RoleSet),
+		"uid":     result.Id.Hex(),
+		"roleSet": strconv.FormatUint(uint64(result.RoleSet), 10), //fmt.Sprintf("%d", result.RoleSet),
 	}
 	err = client.HMSet(utils.RedisSessionKey(sessionKey), sessionContents).Err()
 	if err != nil {
@@ -116,7 +115,7 @@ func getUserLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	logrus.Debugf("getUserLogin::get the cookie %#v", sessionIDCookie)
 
 	//密码不要在detail信息中出现
-	result.Pass=""
+	result.Pass = ""
 
 	http.SetCookie(w, sessionIDCookie)
 	w.WriteHeader(http.StatusOK)
@@ -151,7 +150,6 @@ func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 		HttpError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
 
 	//以下为遗留问题
 	//为了兼容从url的参数字符串中读取参数，该参数优先于body的json
@@ -207,7 +205,7 @@ func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 	user := &types.User{Name: req.Name,
 		Id:          bson.NewObjectId(),
 		Pass:        encryptedPassword,
-		Salt:	     salt,
+		Salt:        salt,
 		Email:       req.Email,
 		Comments:    req.Comments,
 		RoleSet:     req.RoleSet,
@@ -223,7 +221,7 @@ func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusOK)
 	//fmt.Fprintf(w, "{%q:%q}", "Id", user.Id.Hex())
 
-	resp := &UsersCreateResponse{Id:user.Id.Hex()}
+	resp := &UsersCreateResponse{Id: user.Id.Hex()}
 	json.NewEncoder(w).Encode(resp)
 }
 
@@ -318,7 +316,7 @@ func getUsersJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	c := mgoSession.DB(mgoDB).C("user")
 
-	results:=make ( []types.User ,0)
+	results := make([]types.User, 0, 200)
 	if err := c.Find(bson.M{}).All(&results); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -404,7 +402,6 @@ func postUserJoin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	c_user := mgoSession.DB(mgoDB).C("user")
 	user := &types.User{}
 	if err := c_user.Find(bson.M{"_id": bson.ObjectIdHex(userId)}).One(user); err != nil {
@@ -417,29 +414,24 @@ func postUserJoin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	//如果当前用户不是改团队的主管并且当前用户不是系统管理员，则没有权限
-	if team.Leader.Id != currentUser.Id.Hex()  && (currentUser.RoleSet & types.ROLESET_SYSADMIN == 0) {
-		HttpError(w, fmt.Sprintf("current user:%s isn't the team:%s  leader ，and current user's roleset:%d dont include sysadmin", currentUser.Id.Hex(), teamId,currentUser.RoleSet), http.StatusForbidden)
+	if team.Leader.Id != currentUser.Id.Hex() && (currentUser.RoleSet&types.ROLESET_SYSADMIN == 0) {
+		HttpError(w, fmt.Sprintf("current user:%s isn't the team:%s  leader ，and current user's roleset:%d dont include sysadmin", currentUser.Id.Hex(), teamId, currentUser.RoleSet), http.StatusForbidden)
 		return
 	}
 
-
-	if err:= c_user.Update(bson.M{"_id":bson.ObjectIdHex(userId)} ,  bson.M{ "$addToSet" : bson.M{"teamids":bson.ObjectIdHex(teamId)}   } ); err!=nil {
+	if err := c_user.Update(bson.M{"_id": bson.ObjectIdHex(userId)}, bson.M{"$addToSet": bson.M{"teamids": bson.ObjectIdHex(teamId)}}); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	//if err:= c_team.Update(bson.M{"_id":bson.ObjectIdHex(teamId)} ,  bson.M{ "$addToSet" : bson.M{"userids":bson.ObjectIdHex(userId)}   } ); err!=nil {
-	if err:= c_team.Update(bson.M{"_id":bson.ObjectIdHex(teamId)} ,  bson.M{ "$addToSet" : bson.M{"users":user}   } ); err!=nil {
+	if err := c_team.Update(bson.M{"_id": bson.ObjectIdHex(teamId)}, bson.M{"$addToSet": bson.M{"users": user}}); err != nil {
 
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// TODO没有事务保护
-
-
-
-
 
 	w.WriteHeader(http.StatusOK)
 
@@ -465,7 +457,6 @@ func postUserQuit(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	mgoSession, err := utils.GetMgoSessionClone(ctx)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
@@ -475,7 +466,6 @@ func postUserQuit(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	defer mgoSession.Close()
 
 	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
-
 
 	c_team := mgoSession.DB(mgoDB).C("team")
 	team := &types.Team{}
@@ -487,7 +477,6 @@ func postUserQuit(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 
 	c_user := mgoSession.DB(mgoDB).C("user")
 	user := &types.User{}
@@ -501,30 +490,26 @@ func postUserQuit(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	//如果当前用户不是改团队的主管并且当前用户不是系统管理员，则没有权限
-	if team.Leader.Id != currentUser.Id.Hex()  && (currentUser.RoleSet & types.ROLESET_SYSADMIN == 0) {
-		HttpError(w, fmt.Sprintf("current user:%s isn't the team:%s  leader ，and current user's roleset:%d dont include sysadmin", currentUser.Id.Hex(), teamId,currentUser.RoleSet), http.StatusForbidden)
+	if team.Leader.Id != currentUser.Id.Hex() && (currentUser.RoleSet&types.ROLESET_SYSADMIN == 0) {
+		HttpError(w, fmt.Sprintf("current user:%s isn't the team:%s  leader ，and current user's roleset:%d dont include sysadmin", currentUser.Id.Hex(), teamId, currentUser.RoleSet), http.StatusForbidden)
 		return
 	}
 
-
-
 	if err := c_team.UpdateId(bson.ObjectIdHex(teamId),
-		bson.M{"$pull" : bson.M{ "users": bson.M{"_id": bson.ObjectIdHex(userId)}  } } ) ; err!=nil{
+		bson.M{"$pull": bson.M{"users": bson.M{"_id": bson.ObjectIdHex(userId)}}}); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if err := c_user.UpdateId(bson.ObjectIdHex(userId),
-		bson.M{"$pull" : bson.M{"teamids": bson.ObjectIdHex(teamId)}}) ; err!=nil{
+		bson.M{"$pull": bson.M{"teamids": bson.ObjectIdHex(teamId)}}); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-
 	w.WriteHeader(http.StatusOK)
 
 }
-
 
 //"/users/{id:.*}/update":    &MyHandler{h: postUserUpdate, opChecker: checkUserPermission,roleset: types.ROLESET_SYSADMIN | types.ROLESET_NORMAL},
 
@@ -585,7 +570,7 @@ func postUserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	if req.Comments != "" {
 		data["comments"] = req.Comments
 	}
-	
+
 	logrus.Debugf("postUserUpdate::the data is %#v", data)
 
 	if err := c.Update(selector, bson.M{"$set": data}); err != nil {

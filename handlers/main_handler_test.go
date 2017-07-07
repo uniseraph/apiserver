@@ -1,11 +1,9 @@
 package handlers_test
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
-	dockerclient "github.com/docker/docker/client"
 	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/handlers"
 	"github.com/zanecloud/apiserver/types"
@@ -27,7 +25,11 @@ func TestMain(m *testing.M) {
 	client = &http.Client{}
 	//登录root用户
 	//获得测试使用的登录态cookie
-	resp, _ := sessionCreate(client)
+	resp, err := sessionCreate(client)
+	if err != nil {
+		fmt.Printf("creatession err:%s", err.Error())
+		os.Exit(-1)
+	}
 	cookies = resp.Cookies()
 
 	//执行测试用例
@@ -305,16 +307,24 @@ func TestPool(t *testing.T) {
 	}
 
 	r, _ := result.(handlers.PoolsRegisterResponse)
-	dockerclient, err := dockerclient.NewClient(r.Proxy, "v1.23", nil, map[string]string{})
-	if err != nil {
-		t.Error(err)
-	}
 
-	info, err := dockerclient.Info(context.Background())
+	response, err := flushPool(r.Id)
+
 	if err != nil {
 		t.Error(err)
 	} else {
-		t.Log(info)
+		//fmt.Printf("response is %#v",response)
+		t.Log(response)
+		//	buf , _ := json.Marshal(response)
+		//	t.Log(string(buf) )
+	}
+
+	pool, err := inspectPool(r.Id)
+
+	if err != nil {
+		t.Error(err)
+	} else {
+		t.Log(pool)
 	}
 }
 
@@ -399,11 +409,11 @@ func sessionCreate(client *http.Client) (resp *http.Response, err error) {
 
 	req.Header.Set("Content-Type", "application/json")
 	resp, err = client.Do(req)
-	defer resp.Body.Close()
 	if err != nil {
 		log.Errorf("login post err:%s", err.Error())
 		return
 	}
+	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -542,6 +552,78 @@ func quitTeam(userId string, teamId string) error {
 	}
 
 	return nil
+}
+
+func flushPool(id string) (handlers.PoolsFlushResponse, error) {
+
+	var response handlers.PoolsFlushResponse
+
+	url := fmt.Sprintf("http://localhost:8080/api/pools/%s/flush", id)
+
+	req, err := http.NewRequest(http.MethodPost, url, nil)
+	if err != nil {
+		return response, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return response, err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	//fmt.Println("flushPools result is " + string(body) + "\n")
+	if err != nil {
+		return response, err
+	}
+
+	json.Unmarshal(body, &response)
+
+	//fmt.Printf("flushPools response is %#v \n",response)
+	return response, nil
+
+}
+
+func inspectPool(id string) (*types.PoolInfo, error) {
+
+	var result types.PoolInfo
+
+	url := fmt.Sprintf("http://localhost:8080/api/pools/%s/inspect", id)
+
+	req, err := http.NewRequest(http.MethodPost, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	//fmt.Println("flushPools result is " + string(body) + "\n")
+	if err != nil {
+		return nil, err
+	}
+
+	json.Unmarshal(body, &result)
+
+	//fmt.Printf("flushPools response is %#v \n",response)
+	return &result, nil
+
 }
 
 func createTeam(team *types.Team) (string, error) {
@@ -1100,6 +1182,7 @@ func cleanUpDatabase() {
 		{"mongo", "zanecloud --eval \"db.user.remove({'name':'sadan'})\""},
 		{"mongo", "zanecloud --eval \"db.team.remove({'name':'team1'})\""},
 		{"mongo", "zanecloud --eval \"db.pool.remove({'name':'pool1'})\""},
+		{"mongo", "zanecloud --eval \"db.template.remove({})\""},
 	}
 
 	for _, arr := range cmds {

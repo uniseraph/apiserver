@@ -2,6 +2,7 @@ package types
 
 import (
 	"crypto/tls"
+	"github.com/docker/docker/api/types"
 	"github.com/docker/go-connections/tlsconfig"
 	"gopkg.in/mgo.v2/bson"
 	"math"
@@ -40,20 +41,29 @@ type PoolInfo struct {
 	Name   string
 	Status string
 
-	Driver         string
-	DriverOpts     DriverOpts
-	EnvTreeId      string
-	Labels         map[string]interface{} `json:",omitempty"`
-	ProxyEndpoints []string               `json:",omitempty"`
+	CPUs             int
+	Memory           int64
+	Disk             int64
+	ClusterStore     string
+	ClusterAdvertise string
+	Strategy         string
+	Filters          string
+	Driver           string
+	DriverOpts       DriverOpts
+	EnvTreeId        string
+	Labels           []string `json:",omitempty"`
+	ProxyEndpoint    string   `json:",omitempty"`
+	UpdatedTime      int64
+	CreatedTime      int64
 }
 
 type Roleset uint64
 
 type User struct {
-	Id   bson.ObjectId "_id"
-	Name string
-	Pass string `json:",omitempty"`
-	Salt string `json:"-"`
+	Id          bson.ObjectId "_id"
+	Name        string
+	Pass        string `json:",omitempty"`
+	Salt        string `json:"-"`
 	RoleSet     Roleset
 	Email       string
 	TeamIds     []bson.ObjectId
@@ -91,45 +101,45 @@ type Team struct {
 
 //EnvTreeMeta has one EnvTreeNodeDir entry point
 type EnvTreeMeta struct {
-	Id 	    bson.ObjectId "_id"
+	Id          bson.ObjectId "_id"
 	Name        string
 	Description string
-	CreatedTime int64  `json:",omitempty"`
-	UpdatedTime int64  `json:",omitempty"`
+	CreatedTime int64 `json:",omitempty"`
+	UpdatedTime int64 `json:",omitempty"`
 }
 
 //EnvTreeNodeDir has many sub EnvTreeNodeDirs and EnvTreeNodeParamKeys} pairs
 //EnvTreeNodeDir belongs to EnvTreeMeta
 type EnvTreeNodeDir struct {
-	Id 	    bson.ObjectId "_id"
-	Name        string
+	Id   bson.ObjectId "_id"
+	Name string
 	//一个父目录
 	//最顶级的父目录为空，用于结合EnvTreeMeta查询该树的起点
 	//EnvTreeNodeDir
-	Parent      bson.ObjectId
+	Parent bson.ObjectId
 	//多个子目录
 	//EnvTreeNodeDir
-	Children    []bson.ObjectId
+	Children []bson.ObjectId
 	//多个值
 	//EnvTreeNodeParamKey
-	Keys        []bson.ObjectId
+	Keys []bson.ObjectId
 	//EnvTreeMeta
-	Tree 	    bson.ObjectId
-	CreatedTime int64  `json:",omitempty"`
-	UpdatedTime int64  `json:",omitempty"`
+	Tree        bson.ObjectId
+	CreatedTime int64 `json:",omitempty"`
+	UpdatedTime int64 `json:",omitempty"`
 }
 
 //参数目录树节点的参数名称
 //EnvTreeNodeParamKey has many EnvTreeNodeParamValue
 type EnvTreeNodeParamKey struct {
-	Id 	    bson.ObjectId "_id"
-	Name        string
+	Id   bson.ObjectId "_id"
+	Name string
 	//默认值
-	Default     string
+	Default string
 	//EnvTreeMeta
-	Tree 	    bson.ObjectId
-	CreatedTime int64  `json:",omitempty"`
-	UpdatedTime int64  `json:",omitempty"`
+	Tree        bson.ObjectId
+	CreatedTime int64 `json:",omitempty"`
+	UpdatedTime int64 `json:",omitempty"`
 }
 
 //参数目录树节点的参数值
@@ -138,15 +148,85 @@ type EnvTreeNodeParamKey struct {
 //这其实是一个Key和Pool的关联关系表
 //用来查询一个Key被哪些Pool所用，并且每个值都是什么
 type EnvTreeNodeParamValue struct {
-	Id 	    bson.ObjectId "_id"
-	Value  	    string
+	Id    bson.ObjectId "_id"
+	Value string
 	//对应的参数名称
 	//EnvTreeNodeParamKey
-	Key         bson.ObjectId
+	Key bson.ObjectId
 	//EnvTreeMeta
-	Tree 	    bson.ObjectId
+	Tree bson.ObjectId
 	//PoolInfo
 	Pool        bson.ObjectId
+	CreatedTime int64 `json:",omitempty"`
+	UpdatedTime int64 `json:",omitempty"`
+}
+
+//调用docker info，获取swarm集群的信息
+type ClusterInfo struct {
+	types.Info
+	SystemStatus [][]string
+}
+
+type Node struct {
+	//Id             bson.ObjectId "_id"
+	PoolId         string
+	PoolName       string
+	Hostname       string
+	Endpoint       string
+	NodeId         string
+	Status         string
+	Containers     string
+	ReservedCPUs   string
+	ReservedMemory string
+
+	//ContainersRunning int
+	//ContainersPaused  int
+	//ContainersStopped int
+	Labels        map[string]string
+	ServerVersion string
+}
+
+type Service struct {
+	Title        string
+	Name         string
+	ImageName    string
+	ImageTag     string
+	CPU          int
+	ExclusiveCPU bool
+	Memory       int
+	ReplicaCount int
+	Description  int
+	Command      string
+	Envs         []Env
+	Volumns      []Volumne
+	Labels       []Label
+}
+
+type Env struct {
+	Name  string
+	Value string
+}
+type Label struct {
+	Name  string
+	Value string
+}
+type Volumne struct {
+	Name          string
+	Driver        string
+	ContainerPath string
+	HostPath      string
+}
+
+type Template struct {
+	Id          bson.ObjectId "_id"
+	Title       string
+	Name        string
+	Version     string
+	Description string
+	Services    []Service
+
+	CreatorId   string `json:",omitempty"`
 	CreatedTime int64  `json:",omitempty"`
+	UpdaterId   string `json:",omitempty"`
 	UpdatedTime int64  `json:",omitempty"`
 }
