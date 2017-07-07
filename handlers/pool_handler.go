@@ -230,12 +230,12 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	poolInfo := &types.PoolInfo{
-		Id:            bson.NewObjectId(),
-		Driver:        req.Driver,
-		DriverOpts:    req.DriverOpts,
-		Labels:        req.Labels,
-		Name:          req.Name,
-		CreatedTime:   time.Now().Unix(),
+		Id:          bson.NewObjectId(),
+		Driver:      req.Driver,
+		DriverOpts:  req.DriverOpts,
+		Labels:      req.Labels,
+		Name:        req.Name,
+		CreatedTime: time.Now().Unix(),
 	}
 
 	if name != "" {

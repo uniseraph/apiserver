@@ -25,7 +25,7 @@ const KEY_LISTENER_ADDR = "addr"
 const KEY_LISTENER_PORT = "port"
 const KEY_APISERVER_CONFIG = "apiserver.config"
 const KEY_CURRENT_USER = "user.self"
-const KEY_ROOT_DIR= "root.dir"
+const KEY_ROOT_DIR = "root.dir"
 
 func GetAPIServerConfig(ctx context.Context) *store.APIServerConfig {
 	config, ok := ctx.Value(KEY_APISERVER_CONFIG).(*store.APIServerConfig)

@@ -2,11 +2,11 @@ package utils
 
 import (
 	"context"
-	"net/http"
 	"github.com/Sirupsen/logrus"
+	"net/http"
 )
 
-func GetSessionContent(ctx context.Context, w http.ResponseWriter, r *http.Request) (sessionContent map[string]string, err error)  {
+func GetSessionContent(ctx context.Context, w http.ResponseWriter, r *http.Request) (sessionContent map[string]string, err error) {
 	cookie, err := r.Cookie("sessionID")
 	if err != nil {
 		return
@@ -37,7 +37,7 @@ func GetSessionContent(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 //清楚redis中的session记录
 //实现当前用户登出
-func DestroySession(ctx context.Context, r *http.Request) (err error){
+func DestroySession(ctx context.Context, r *http.Request) (err error) {
 	cookie, err := r.Cookie("sessionID")
 	if err != nil {
 		return

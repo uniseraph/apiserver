@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
@@ -11,7 +12,6 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
 	"time"
-	"github.com/Sirupsen/logrus"
 )
 
 type TemplateListRequest struct {
@@ -37,7 +37,7 @@ func getTemplateList(ctx context.Context, w http.ResponseWriter, r *http.Request
 	}
 
 	if req.Page == 0 {
-		HttpError(w, "从第一页开始",http.StatusBadRequest)
+		HttpError(w, "从第一页开始", http.StatusBadRequest)
 		return
 	}
 
@@ -60,24 +60,24 @@ func getTemplateList(ctx context.Context, w http.ResponseWriter, r *http.Request
 		Data: make([]types.Template, 0, 100),
 	}
 
-	pattern := fmt.Sprintf("^%s",req.Keyword)
+	pattern := fmt.Sprintf("^%s", req.Keyword)
 
-	regex1:= bson.M{"name": bson.M{"$regex": bson.RegEx{Pattern:pattern, Options:"i"}}}
+	regex1 := bson.M{"name": bson.M{"$regex": bson.RegEx{Pattern: pattern, Options: "i"}}}
 
 	regex2 := bson.M{"title": bson.M{"$regex": bson.RegEx{pattern, "i"}}}
 
 	selector := bson.M{"$or": []bson.M{regex1, regex2}}
 
-	logrus.Debugf("getTemplateList::过滤条件为%#v",regex1)
+	logrus.Debugf("getTemplateList::过滤条件为%#v", regex1)
 
 	if result.Total, err = c.Find(selector).Count(); err != nil {
 		HttpError(w, fmt.Sprintf("查询记录数出错，%s", err.Error()), http.StatusInternalServerError)
 		return
 	}
 
-	logrus.Debugf("getTemplateList::符合条件的template有%d个",result.Total)
+	logrus.Debugf("getTemplateList::符合条件的template有%d个", result.Total)
 
-	if err := c.Find(selector).Sort("title").Limit(req.PageSize).Skip(req.PageSize * req.Page).All(&result.Data); err != nil {
+	if err := c.Find(selector).Sort("title").Limit(req.PageSize).Skip(req.PageSize * (req.Page - 1)).All(&result.Data); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -187,8 +187,6 @@ func createTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 }
 
-
-
 type TemplateCopyRequest struct {
 	Title string
 }
@@ -196,8 +194,6 @@ type TemplateCopyRequest struct {
 type TemplateCopyResponse struct {
 	TemplateCreateResponse
 }
-
-
 
 func copyTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	req := &TemplateCopyRequest{}
@@ -207,7 +203,7 @@ func copyTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id :=  mux.Vars(r)["id"]
+	id := mux.Vars(r)["id"]
 
 	//TODO 检查Name规则 ^[a-zA-Z]+\w*$
 	mgoSession, err := utils.GetMgoSessionClone(ctx)
@@ -227,7 +223,7 @@ func copyTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		HttpError(w, err.Error(), http.StatusNotFound)
 		return
 	}
-	if err!= nil {
+	if err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -239,7 +235,7 @@ func copyTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	result.Id = bson.NewObjectId()
-
+	result.Title = req.Title
 	result.CreatorId = user.Id.Hex()
 	result.UpdaterId = user.Id.Hex()
 	result.CreatedTime = time.Now().Unix()
@@ -257,15 +253,102 @@ func copyTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	rsp.Description = result.Description
 	rsp.Version = result.Version
 
+	httpJsonResponse(w, rsp)
+
+}
+
+type TemplateUpdateRequest struct {
+	types.Template
+}
+
+type TemplateUpdateResponse struct {
+	TemplateCreateResponse
+}
+
+func updateTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	req := &TemplateUpdateRequest{}
+
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	id := mux.Vars(r)["id"]
+
+	//TODO 检查Name规则 ^[a-zA-Z]+\w*$
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer mgoSession.Close()
+
+	config := utils.GetAPIServerConfig(ctx)
+
+	c := mgoSession.DB(config.MgoDB).C("template")
+
+	result := &types.Template{}
+	err = c.FindId(bson.ObjectIdHex(id)).One(result)
+	if err == mgo.ErrNotFound {
+		HttpError(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	user, err := utils.GetCurrentUser(ctx)
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
+	result.Id = bson.NewObjectId()
+	result.CreatorId = user.Id.Hex()
+	result.UpdaterId = user.Id.Hex()
+	result.CreatedTime = time.Now().Unix()
+	result.UpdatedTime = result.CreatedTime
+
+	if err := c.UpdateId(bson.ObjectIdHex(id), result); err != nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rsp := TemplateUpdateResponse{}
+	rsp.Id = result.Id.Hex()
+	rsp.Name = result.Name
+	rsp.Title = result.Title
+	rsp.Description = result.Description
+	rsp.Version = result.Version
 
 	httpJsonResponse(w, rsp)
 
 }
 
-func updateTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-
-}
-
 func removeTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
 
+	//TODO 检查Name规则 ^[a-zA-Z]+\w*$
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer mgoSession.Close()
+
+	config := utils.GetAPIServerConfig(ctx)
+
+	c := mgoSession.DB(config.MgoDB).C("template")
+
+	if err := c.RemoveId(bson.ObjectIdHex(id)); err != nil {
+		if err == mgo.ErrNotFound {
+			HttpError(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

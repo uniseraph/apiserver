@@ -1183,7 +1183,6 @@ func cleanUpDatabase() {
 		{"mongo", "zanecloud --eval \"db.team.remove({'name':'team1'})\""},
 		{"mongo", "zanecloud --eval \"db.pool.remove({'name':'pool1'})\""},
 		{"mongo", "zanecloud --eval \"db.template.remove({})\""},
-
 	}
 
 	for _, arr := range cmds {
