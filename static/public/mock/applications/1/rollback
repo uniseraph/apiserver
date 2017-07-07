@@ -1,0 +1,40 @@
+{ 
+	"Id": "1", 
+	"Title": "Eureka集群", 
+	"Name": "eureka", 
+	"Version": "V1.0.1", 
+	"Description": "Eureka集群应用", 
+	"Status": "running",
+	"UpdatedTime": 111111111111, 
+	"UpdaterId": "1", 
+	"Updater": { "Id": "1", "Name": "User1" },
+
+	"Services": [
+		{
+			"Title": "Eureka1",
+			"Name": "eureka1",
+			"ImageName": "springcloud/config",
+			"ImageTag": "1.0.1",
+			"CPU": 2,
+			"ExclusiveCPU": true,
+			"Memory": 500,
+			"ReplicaCount": 1,
+			"Description": "第一个Eureka服务",
+			"Command": "",
+			"Envs": [
+				{ "Name": "spring.profiles.active", "Value": "eureka1" },
+				{ "Name": "eureka1.instance.hostname", "Value": "eureka1.consul" },
+				{ "Name": "eureka2.instance.hostname", "Value": "eureka2.consul" },
+				{ "Name": "eureka3.instance.hostname", "Value": "eureka3.consul" }
+			]
+		}
+	],
+
+	"Teams": [
+		{ "Id": "1", "Name": "Team1" },
+		{ "Id": "3", "Name": "Team3" }
+	],
+	"Users": [
+		{ "Id": "1", "Name": "User1" }
+	]
+}

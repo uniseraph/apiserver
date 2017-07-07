@@ -6,6 +6,16 @@
           <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
           &nbsp;&nbsp;应用管理&nbsp;&nbsp;/&nbsp;&nbsp;{{ Title }}
           <v-spacer></v-spacer>
+          <router-link :to="'/applications/' + Id + '/upgrade'" style="text-decoration:none;">
+            <v-btn class="green darken-2 white--text" small>
+              <v-icon light left>open_in_browser</v-icon>升级
+            </v-btn>
+          </router-link>
+          <router-link :to="'/applications/' + Id + '/rollback'" style="text-decoration:none;">
+            <v-btn class="orange darken-2 white--text ml-4" small>
+              <v-icon light left>replay</v-icon>回滚
+            </v-btn>
+          </router-link>
         </v-card-title>
         <div>
           <v-container fluid>
@@ -471,7 +481,7 @@
 
     methods: {
       init() {
-        api.Template(this.Id).then(data => {
+        api.Application(this.Id).then(data => {
           this.svcIdStart = 0;
           this.envIdStart = 0;
           this.volumnIdStart = 0;

@@ -286,8 +286,10 @@
 
     watch: {
         pagination: {
-          handler() {
-            this.getDataFromApi();
+          handler(v, o) {
+            if (v.rowsPerPage != o.rowsPerPage || v.page != o.page || v.sortBy != o.sortBy || v.descending != o.descending) {
+              this.getDataFromApi();
+            }
           },
 
           deep: true
@@ -340,7 +342,9 @@
               this.nodeClicked(node);
             }
           }
-        })
+        });
+
+        this.getDataFromApi();
       },
 
       goback() {
@@ -411,6 +415,7 @@
 
       getDataFromApi() {
         let params = {
+          TreeId: this.TreeId,
           DirId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : '', // 这里用''不用null主要是因为router.replace会出错
           Name: this.Keyword,
           PageSize: this.pagination.rowsPerPage, 

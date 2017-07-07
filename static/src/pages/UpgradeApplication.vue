@@ -5,6 +5,57 @@
       &nbsp;&nbsp;应用管理&nbsp;&nbsp;/&nbsp;&nbsp;应用升级
       <v-spacer></v-spacer>
     </v-card-title>
+    <div>
+      <v-container fluid>
+        <v-layout row wrap>
+          <v-flex xs2>
+            <v-subheader>应用名称</v-subheader>
+          </v-flex>
+          <v-flex xs3>
+            <v-text-field
+              v-model="Title"
+              single-line
+              readonly
+            ></v-text-field>
+          </v-flex>
+          <v-flex xs2>
+          </v-flex>
+          <v-flex xs2>
+            <v-subheader>应用ID</v-subheader>
+          </v-flex>
+          <v-flex xs3>
+            <v-text-field
+              v-model="Name"
+              single-line
+              readonly
+            ></v-text-field>
+          </v-flex>
+          <v-flex xs2>
+            <v-subheader>应用版本</v-subheader>
+          </v-flex>
+          <v-flex xs3>
+            <v-text-field
+              v-model="Version"
+              single-line
+              readonly
+            ></v-text-field>
+          </v-flex>
+          <v-flex xs2>
+          </v-flex>
+          <v-flex xs2>
+            <v-subheader>说明</v-subheader>
+          </v-flex>
+          <v-flex xs3>
+            <v-text-field
+              v-model="Description"
+              single-line
+              readonly
+            ></v-text-field>
+          </v-flex>
+        </v-layout>
+      </v-container>
+    </div>
+    <v-divider></v-divider>
     <div class="ml-4 mr-4">
       <v-card-title>
         请选择应用模板
@@ -29,12 +80,12 @@
           no-data-text=""
         >
           <template slot="items" scope="props">
-            <td><v-radio label="" v-model="ApplicationTemplateId" :value="props.item.Id" @change="selectTemplate(props.item)"></v-radio></td>
+            <td><v-radio label="" v-model="ApplicationTemplateId" :value="props.item.Id"></v-radio></td>
             <td><router-link :to="'/templates/' + props.item.Id">{{ props.item.Title }}</router-link></td>
             <td>{{ props.item.Name }}</td>
             <td>{{ props.item.Version }}</td>
             <td>{{ props.item.Description }}</td>
-            <td>{{ props.item.UpdatedTime | formatDate }}</td>
+            <td>{{ props.item.UpdatedTime | formatDateTime }}</td>
             <td>{{ props.item.Updater.Name }}</td>
           </template>
         </v-data-table>
@@ -77,14 +128,23 @@
         ],
         items: [],
         totalItems: 0,
-        pagination: { rowsPerPage: 2, totalItems: 0, page: 1, sortBy: null, descending: false },
+        pagination: { 
+          rowsPerPage: this.$route.query ? (this.$route.query.PageSize ? parseInt(this.$route.query.PageSize) : 20) : 20, 
+          totalItems: 0, 
+          page: this.$route.query ? (this.$route.query.Page ? parseInt(this.$route.query.Page) : 1) : 1, 
+          sortBy: this.$route.query ? (this.$route.query.SortBy ? parseInt(this.$route.query.SortBy) : null) : null, 
+          descending: this.$route.query ? (this.$route.query.Desc ? parseInt(this.$route.query.Desc) : false) : false 
+        },
 
         PoolList: [],
         Keyword: '',
 
         ApplicationTemplateId: null,
-        PoolId: this.$route.params.poolId,
+
+        Id: this.$route.params.id,
         Title: '',
+        Name: '',
+        Version: '',
         Description: '',
 
         rules: {},
@@ -92,12 +152,6 @@
         rules0: {
           ApplicationTemplateId: [
             v => (v && v.length > 0 ? true : '请选择应用模板')
-          ],
-          PoolId: [
-            v => (v && v.length > 0 ? true : '请选择集群')
-          ],
-          Name: [
-            v => (v && v.length > 0 ? true : '请填写应用名称')
           ]
         }
       }
@@ -106,7 +160,9 @@
     watch: {
         pagination: {
           handler(v, o) {
-            this.getDataFromApi();
+            if (v.rowsPerPage != o.rowsPerPage || v.page != o.page || v.sortBy != o.sortBy || v.descending != o.descending) {
+              this.getDataFromApi();
+            }
           },
 
           deep: true
@@ -119,6 +175,15 @@
 
     methods: {
       init() {
+        api.Application(this.Id).then(data => {
+          this.Id = data.Id;
+          this.Title = data.Title;
+          this.Name = data.Name;
+          this.Version = data.Version;
+          this.Description = data.Description;
+        });
+
+        this.getDataFromApi();
       },
 
       goback() {
@@ -128,6 +193,7 @@
       getDataFromApi() {
         let params = {
           Keyword: this.Keyword,
+          Name: this.Name,
           PageSize: this.pagination.rowsPerPage, 
           Page: this.pagination.page
         };
@@ -138,11 +204,6 @@
           this.items = data.Data;
           this.totalItems = data.Total;
         });
-      },
-
-      selectTemplate(template) {
-        this.Title = template.Title;
-        this.Description = template.Description;
       },
 
       save() {
@@ -158,14 +219,12 @@
           }
 
           let params = {
-            ApplicationTemplateId: this.ApplicationTemplateId,
-            PoolId: this.PoolId,
-            Title: this.Title,
-            Description: this.Description
+            Id: this.Id,
+            ApplicationTemplateId: this.ApplicationTemplateId
           };
 
-          api.Applications(params).then(data => {
-            ui.alert('发布应用成功', 'success');
+          api.UpgradeApplication(params).then(data => {
+            ui.alert('升级应用成功', 'success');
             let that = this;
             setTimeout(() => {
               that.goback();

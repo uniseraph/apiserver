@@ -46,7 +46,7 @@
           <td>{{ props.item.Name }}</td>
           <td>{{ props.item.Version }}</td>
           <td>{{ props.item.Description }}</td>
-          <td>{{ props.item.UpdatedTime | formatDate }}</td>
+          <td>{{ props.item.UpdatedTime | formatDateTime }}</td>
           <td>{{ props.item.Updater.Name }}</td>
           <td>
             <router-link :to="'/templates/copy/' + props.item.Id + '/' + encodeURIComponent('Copy of ' + props.item.Title)">
@@ -103,7 +103,9 @@
     watch: {
         pagination: {
           handler(v, o) {
-            this.getDataFromApi();
+            if (v.rowsPerPage != o.rowsPerPage || v.page != o.page || v.sortBy != o.sortBy || v.descending != o.descending) {
+              this.getDataFromApi();
+            }
           },
 
           deep: true

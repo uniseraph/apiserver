@@ -115,7 +115,13 @@
         ],
         items: [],
         totalItems: 0,
-        pagination: { rowsPerPage: 2, totalItems: 0, page: 1, sortBy: null, descending: false },
+        pagination: { 
+          rowsPerPage: this.$route.query ? (this.$route.query.PageSize ? parseInt(this.$route.query.PageSize) : 20) : 20, 
+          totalItems: 0, 
+          page: this.$route.query ? (this.$route.query.Page ? parseInt(this.$route.query.Page) : 1) : 1, 
+          sortBy: this.$route.query ? (this.$route.query.SortBy ? parseInt(this.$route.query.SortBy) : null) : null, 
+          descending: this.$route.query ? (this.$route.query.Desc ? parseInt(this.$route.query.Desc) : false) : false 
+        },
 
         PoolList: [],
         Keyword: '',
@@ -144,7 +150,9 @@
     watch: {
         pagination: {
           handler(v, o) {
-            this.getDataFromApi();
+            if (v.rowsPerPage != o.rowsPerPage || v.page != o.page || v.sortBy != o.sortBy || v.descending != o.descending) {
+              this.getDataFromApi();
+            }
           },
 
           deep: true
@@ -157,10 +165,12 @@
 
     methods: {
       init() {
+        this.getDataFromApi();
+        
         api.Pools().then(data => {
           this.PoolList = data;
           this.PoolId = this.$route.params.poolId;
-        })  
+        });
       },
 
       goback() {

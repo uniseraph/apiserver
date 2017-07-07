@@ -2,21 +2,64 @@
   <v-card>
     <v-card-title>
       <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
-      &nbsp;&nbsp;应用管理&nbsp;&nbsp;/&nbsp;&nbsp;新增应用
+      &nbsp;&nbsp;应用管理&nbsp;&nbsp;/&nbsp;&nbsp;应用回滚
       <v-spacer></v-spacer>
     </v-card-title>
+    <div>
+      <v-container fluid>
+        <v-layout row wrap>
+          <v-flex xs2>
+            <v-subheader>应用名称</v-subheader>
+          </v-flex>
+          <v-flex xs3>
+            <v-text-field
+              v-model="Title"
+              single-line
+              readonly
+            ></v-text-field>
+          </v-flex>
+          <v-flex xs2>
+          </v-flex>
+          <v-flex xs2>
+            <v-subheader>应用ID</v-subheader>
+          </v-flex>
+          <v-flex xs3>
+            <v-text-field
+              v-model="Name"
+              single-line
+              readonly
+            ></v-text-field>
+          </v-flex>
+          <v-flex xs2>
+            <v-subheader>应用版本</v-subheader>
+          </v-flex>
+          <v-flex xs3>
+            <v-text-field
+              v-model="Version"
+              single-line
+              readonly
+            ></v-text-field>
+          </v-flex>
+          <v-flex xs2>
+          </v-flex>
+          <v-flex xs2>
+            <v-subheader>说明</v-subheader>
+          </v-flex>
+          <v-flex xs3>
+            <v-text-field
+              v-model="Description"
+              single-line
+              readonly
+            ></v-text-field>
+          </v-flex>
+        </v-layout>
+      </v-container>
+    </div>
+    <v-divider></v-divider>
     <div class="ml-4 mr-4">
       <v-card-title>
-        请选择应用模板
+        发布记录
         <v-spacer></v-spacer>
-        <v-text-field
-            append-icon="search"
-            label="模板名称"
-            single-line
-            hide-details
-            v-model="Keyword"
-            @keydown.enter.native="getDataFromApi"
-          ></v-text-field>
       </v-card-title>
       <div>
         <v-data-table
@@ -29,13 +72,11 @@
           no-data-text=""
         >
           <template slot="items" scope="props">
-            <td><v-radio label="" v-model="ApplicationTemplateId" :value="props.item.Id" @change="selectTemplate(props.item)"></v-radio></td>
-            <td><router-link :to="'/templates/' + props.item.Id">{{ props.item.Title }}</router-link></td>
-            <td>{{ props.item.Name }}</td>
+            <td><v-radio label="" v-model="DeploymentHistoryId" :value="props.item.Id"></v-radio></td>
             <td>{{ props.item.Version }}</td>
-            <td>{{ props.item.Description }}</td>
-            <td>{{ props.item.UpdatedTime | formatDate }}</td>
-            <td>{{ props.item.Updater.Name }}</td>
+            <td>{{ props.item.OperationType == 'upgrade' ? '升级' : '回滚' }}</td>
+            <td>{{ props.item.CreatedTime | formatDateTime }}</td>
+            <td>{{ props.item.Creator.Name }}</td>
           </template>
         </v-data-table>
         <div class="text-xs-center pt-2 pb-2">
@@ -46,47 +87,9 @@
       <div>
         <v-container fluid>
           <v-layout row wrap>
-            <v-flex xs2>
-              <v-subheader>目标集群<span class="required-star">*</span></v-subheader>
-            </v-flex>
-            <v-flex xs3>
-              <v-select
-                :items="PoolList"
-                item-text="Name"
-                item-value="Id"
-                v-model="PoolId"
-                label="集群"
-                dark
-                single-line
-              ></v-select>
-            </v-flex>
-            <v-flex xs2>
-            </v-flex>
-            <v-flex xs2>
-              <v-subheader>应用名称<span class="required-star">*</span></v-subheader>
-            </v-flex>
-            <v-flex xs3>
-              <v-text-field
-                ref="Title"
-                v-model="Title"
-                single-line
-                required
-                :rules="rules.Title"
-                @input="rules.Title = rules0.Title"
-              ></v-text-field>
-            </v-flex>
-            <v-flex xs2>
-              <v-subheader>说明</v-subheader>
-            </v-flex>
-            <v-flex xs10>
-              <v-text-field
-                v-model="Description"
-                single-line
-              ></v-text-field>
-            </v-flex>
             <v-flex xs12 mt-4 class="text-md-center">
               <v-btn class="orange darken-2 white--text" @click.native="save">
-                <v-icon light left>save</v-icon>发布应用
+                <v-icon light left>save</v-icon>回滚应用
               </v-btn>     
             </v-flex>
             <v-flex xs3>
@@ -107,35 +110,37 @@
       return {
         headers: [
           { text: '选择', sortable: false, left: true },
-          { text: '应用名称', sortable: false, left: true },
-          { text: '应用ID', sortable: false, left: true },
           { text: '应用版本', sortable: false, left: true },
-          { text: '说明', sortable: false, left: true },
+          { text: '发布类型', sortable: false, left: true },
           { text: '更新时间', sortable: false, left: true },
+          { text: '操作人', sortable: false, left: true }
         ],
         items: [],
         totalItems: 0,
-        pagination: { rowsPerPage: 2, totalItems: 0, page: 1, sortBy: null, descending: false },
+        pagination: { 
+          rowsPerPage: this.$route.query ? (this.$route.query.PageSize ? parseInt(this.$route.query.PageSize) : 20) : 20, 
+          totalItems: 0, 
+          page: this.$route.query ? (this.$route.query.Page ? parseInt(this.$route.query.Page) : 1) : 1, 
+          sortBy: this.$route.query ? (this.$route.query.SortBy ? parseInt(this.$route.query.SortBy) : null) : null, 
+          descending: this.$route.query ? (this.$route.query.Desc ? parseInt(this.$route.query.Desc) : false) : false 
+        },
 
         PoolList: [],
         Keyword: '',
 
-        ApplicationTemplateId: null,
-        PoolId: this.$route.params.poolId,
+        DeploymentHistoryId: null,
+
+        Id: this.$route.params.id,
         Title: '',
+        Name: '',
+        Version: '',
         Description: '',
 
         rules: {},
 
         rules0: {
-          ApplicationTemplateId: [
-            v => (v && v.length > 0 ? true : '请选择应用模板')
-          ],
-          PoolId: [
-            v => (v && v.length > 0 ? true : '请选择集群')
-          ],
-          Name: [
-            v => (v && v.length > 0 ? true : '请填写应用名称')
+          DeploymentHistoryId: [
+            v => (v && v.length > 0 ? true : '请选择发布记录')
           ]
         }
       }
@@ -144,7 +149,9 @@
     watch: {
         pagination: {
           handler(v, o) {
-            this.getDataFromApi();
+            if (v.rowsPerPage != o.rowsPerPage || v.page != o.page || v.sortBy != o.sortBy || v.descending != o.descending) {
+              this.getDataFromApi();
+            }
           },
 
           deep: true
@@ -157,10 +164,15 @@
 
     methods: {
       init() {
-        api.Pools().then(data => {
-          this.PoolList = data;
-          this.PoolId = this.$route.params.poolId;
-        })  
+        api.Application(this.Id).then(data => {
+          this.Id = data.Id;
+          this.Title = data.Title;
+          this.Name = data.Name;
+          this.Version = data.Version;
+          this.Description = data.Description;
+        });
+
+        this.getDataFromApi();
       },
 
       goback() {
@@ -169,12 +181,12 @@
 
       getDataFromApi() {
         let params = {
-          Keyword: this.Keyword,
+          Id: this.Id,
           PageSize: this.pagination.rowsPerPage, 
           Page: this.pagination.page
         };
 
-        api.Templates(params).then(data => {
+        api.DeploymentHistory(params).then(data => {
           this.pagination.totalItems = data.Total;
           this.pagination.page = data.Page;
           this.items = data.Data;
@@ -182,16 +194,11 @@
         });
       },
 
-      selectTemplate(template) {
-        this.Title = template.Title;
-        this.Description = template.Description;
-      },
-
       save() {
         this.rules = this.rules0;
         this.$nextTick(_ => {
-          if (!this.ApplicationTemplateId) {
-            ui.alert('请选择应用模板');
+          if (!this.DeploymentHistoryId) {
+            ui.alert('请选择发布记录');
             return;
           }
 
@@ -200,14 +207,12 @@
           }
 
           let params = {
-            ApplicationTemplateId: this.ApplicationTemplateId,
-            PoolId: this.PoolId,
-            Title: this.Title,
-            Description: this.Description
+            Id: this.Id,
+            DeploymentHistoryId: this.DeploymentHistoryId
           };
 
-          api.Applications(params).then(data => {
-            ui.alert('发布应用成功', 'success');
+          api.RollbackApplication(params).then(data => {
+            ui.alert('回滚应用成功', 'success');
             let that = this;
             setTimeout(() => {
               that.goback();

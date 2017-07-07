@@ -94,7 +94,9 @@
     watch: {
         pagination: {
           handler(v, o) {
-            this.getDataFromApi();
+            if (v.rowsPerPage != o.rowsPerPage || v.page != o.page || v.sortBy != o.sortBy || v.descending != o.descending) {
+              this.getDataFromApi();
+            }
           },
 
           deep: true

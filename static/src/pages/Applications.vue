@@ -58,7 +58,7 @@
           <td>{{ props.item.Version }}</td>
           <td>{{ props.item.Description }}</td>
           <td :class="{ 'green--text': props.item.Status==='running', 'orange--text': props.item.Status==='stopped', 'red--text': props.item.Status!=='running' && props.item.Status!=='stopped' }">{{ props.item.Status==='running' ? '运行中' : (props.item.Status==='stopped' ? '已停止' : '未知') }}</td>
-          <td>{{ props.item.UpdatedTime | formatDate }}</td>
+          <td>{{ props.item.UpdatedTime | formatDateTime }}</td>
           <td>{{ props.item.Updater.Name }}</td>
           <td>
             <v-btn v-if="props.item.Status==='running'" outline small icon class="red red--text" @click.native="stopApplicatoin(props.item)" title="停止应用">
@@ -119,7 +119,9 @@
     watch: {
         pagination: {
           handler(v, o) {
-            this.getDataFromApi();
+            if (v.rowsPerPage != o.rowsPerPage || v.page != o.page || v.sortBy != o.sortBy || v.descending != o.descending) {
+              this.getDataFromApi();
+            }
           },
 
           deep: true
@@ -138,9 +140,7 @@
             this.PoolId = data[0].Id;
           }
 
-          if (this.PoolId) {
-            this.getDataFromApi();
-          }
+          this.getDataFromApi();
         })  
       },
 
@@ -150,6 +150,10 @@
       },
 
       getDataFromApi() {
+        if (!this.PoolId) {
+          return;
+        }
+
         let params = {
           PoolId: this.PoolId,
           Keyword: this.Keyword,

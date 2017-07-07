@@ -228,6 +228,10 @@ export default {
         return fetch('/applications/list', params);
     },
 
+    Application(id) {
+        return fetch('/applications/' + id + '/detail');
+    },
+
     CreateApplication(params) {
         return fetch('/applications/create', params);
     },
