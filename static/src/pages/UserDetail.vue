@@ -78,7 +78,6 @@
 </template>
 
 <script>
-  import router from '../router'
   import api from '../api/api'
   import * as ui from '../util/ui'
 

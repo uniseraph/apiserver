@@ -107,7 +107,7 @@
       >
         <template slot="items" scope="props">
           <td>{{ props.item.Id }}</td>
-          <td><router-link :to="'/env/tree/' + props.item.Id + '/' + encodeURIComponent(props.item.Name)">{{ props.item.Name }}</router-link></td>
+          <td><router-link :to="'/env/trees/' + props.item.Id + '/' + encodeURIComponent(props.item.Name)">{{ props.item.Name }}</router-link></td>
           <td>{{ props.item.Description }}</td>
           <td>
             <v-btn outline small icon class="green green--text" @click.native="edit(props.item)" title="修改">

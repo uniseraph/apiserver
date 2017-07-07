@@ -1,18 +1,29 @@
 <template>
   <v-card>
     <v-card-title>
-      应用模板
+      应用管理
       <v-spacer></v-spacer>
+      <v-select
+          :items="PoolList"
+          item-text="Name"
+          item-value="Id"
+          v-model="PoolId"
+          label="集群"
+          dark
+          @input="poolChanged"
+          single-line
+        ></v-select>
       <v-text-field
           append-icon="search"
-          label="模板名称"
+          label="应用名称"
           single-line
           hide-details
           v-model="Keyword"
           @keydown.enter.native="getDataFromApi"
+          class="ml-4"
         ></v-text-field>
-      <router-link :to="'/templates/create'">
-        <v-btn class="primary white--text ml-4"><v-icon light>add</v-icon>新增应用模板</v-btn>
+      <router-link :to="'/applications/create/' + PoolId">
+        <v-btn class="primary white--text ml-4"><v-icon light>add</v-icon>新增应用</v-btn>
       </router-link>
     </v-card-title>
     <div>
@@ -23,10 +34,10 @@
               <v-card-title>提示</v-card-title>
             </v-card-row>
             <v-card-row>
-              <v-card-text>你确认要删除应用模板{{ SelectedTemplate.Name }}吗？</v-card-text>
+              <v-card-text>你确认要删除应用{{ SelectedApplication.Name }}吗？</v-card-text>
             </v-card-row>
             <v-card-row actions>
-              <v-btn class="green--text darken-1" flat="flat" @click.native="removeTemplate">确认</v-btn>
+              <v-btn class="green--text darken-1" flat="flat" @click.native="removeApplication">确认</v-btn>
               <v-btn class="green--text darken-1" flat="flat" @click.native="RemoveConfirmDlg = false">取消</v-btn>
             </v-card-row>
           </v-card>
@@ -38,21 +49,25 @@
         :total-items="totalItems"
         :pagination.sync="pagination"
         hide-actions
-        class="templates-table elevation-1"
+        class="applications-table elevation-1"
         no-data-text=""
       >
         <template slot="items" scope="props">
-          <td><router-link :to="'/template/' + props.item.Id">{{ props.item.Title }}</router-link></td>
+          <td><router-link :to="'/applications/' + props.item.Id">{{ props.item.Title }}</router-link></td>
           <td>{{ props.item.Name }}</td>
           <td>{{ props.item.Version }}</td>
           <td>{{ props.item.Description }}</td>
+          <td :class="{ 'green--text': props.item.Status==='running', 'orange--text': props.item.Status==='stopped', 'red--text': props.item.Status!=='running' && props.item.Status!=='stopped' }">{{ props.item.Status==='running' ? '运行中' : (props.item.Status==='stopped' ? '已停止' : '未知') }}</td>
           <td>{{ props.item.UpdatedTime | formatDate }}</td>
           <td>{{ props.item.Updater.Name }}</td>
           <td>
-            <v-btn outline small icon class="green green--text" @click.native="copy(props.item)" title="复制应用模板">
-                <v-icon>content_copy</v-icon>
+            <v-btn v-if="props.item.Status==='running'" outline small icon class="red red--text" @click.native="stopApplicatoin(props.item)" title="停止应用">
+              <v-icon>pause</v-icon>
             </v-btn>
-            <v-btn outline small icon class="orange orange--text" @click.native="confirmBeforeRemove(props.item)" title="删除应用模板">
+            <v-btn v-if="props.item.Status==='stopped'" outline small icon class="blue blue--text" @click.native="startApplication(props.item)" title="启动应用">
+              <v-icon>play_arrow</v-icon>
+            </v-btn>
+            <v-btn v-if="props.item.Status==='stopped'" outline small icon class="orange orange--text" @click.native="confirmBeforeRemove(props.item)" title="删除应用">
               <v-icon>close</v-icon>
             </v-btn>
           </td>
@@ -77,18 +92,27 @@
           { text: '应用ID', sortable: false, left: true },
           { text: '应用版本', sortable: false, left: true },
           { text: '说明', sortable: false, left: true },
+          { text: '状态', sortable: false, left: true },
           { text: '更新时间', sortable: false, left: true },
           { text: '操作人', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
         items: [],
         totalItems: 0,
-        pagination: { rowsPerPage: 2, totalItems: 0, page: 1, sortBy: null, descending: false },
+        pagination: { 
+          rowsPerPage: this.$route.query ? (this.$route.query.PageSize ? parseInt(this.$route.query.PageSize) : 20) : 20, 
+          totalItems: 0, 
+          page: this.$route.query ? (this.$route.query.Page ? parseInt(this.$route.query.Page) : 1) : 1, 
+          sortBy: this.$route.query ? (this.$route.query.SortBy ? parseInt(this.$route.query.SortBy) : null) : null, 
+          descending: this.$route.query ? (this.$route.query.Desc ? parseInt(this.$route.query.Desc) : false) : false 
+        },
 
-        Keyword: '',
+        PoolList: [],
+        PoolId: this.$route.query ? (this.$route.query.PoolId ? parseInt(this.$route.query.PoolId) : null) : null, 
+        Keyword: this.$route.query ? (this.$route.query.Keyword ? parseInt(this.$route.query.Keyword) : '') : '',
 
         RemoveConfirmDlg: false,
-        SelectedTemplate: {}
+        SelectedApplication: {}
       }
     },
 
@@ -108,17 +132,38 @@
 
     methods: {
       init() {
+        api.Pools().then(data => {
+          this.PoolList = data;
+          if (!this.PoolId && data.length > 0) {
+            this.PoolId = data[0].Id;
+          }
+
+          if (this.PoolId) {
+            this.getDataFromApi();
+          }
+        })  
+      },
+
+      poolChanged(id) {
+        this.PoolId = id;
         this.getDataFromApi();
       },
 
       getDataFromApi() {
         let params = {
+          PoolId: this.PoolId,
           Keyword: this.Keyword,
           PageSize: this.pagination.rowsPerPage, 
           Page: this.pagination.page
         };
 
-        api.Templates(params).then(data => {
+        this.$router.replace({
+          name: this.$route.name,
+          params: this.$route.params,
+          query: params
+        });
+
+        api.Applications(params).then(data => {
           this.pagination.totalItems = data.Total;
           this.pagination.page = data.Page;
           this.items = data.Data;
@@ -126,21 +171,27 @@
         });
       },
 
-      copy(template) {
-        api.CopyTemplate(this.SelectedTemplate.Id, 'Copy of ' + this.SelectedTemplate.Title).then(data => {
-          this.init();
+      startApplication(application) {
+        api.StartApplication(application.Id).then(data => {
+          this.getDataFromApi();
         })
       },
 
-      confirmBeforeRemove(template) {
-        this.SelectedTemplate = template;
+      stopApplication(application) {
+        api.StopApplication(application.Id).then(data => {
+          this.getDataFromApi();
+        })
+      },
+
+      confirmBeforeRemove(application) {
+        this.SelectedApplication = application;
         this.RemoveConfirmDlg = true;
       },
 
-      removeTemplate() {
+      removeApplication() {
         this.RemoveConfirmDlg = false;
-        api.RemoveTemplate(this.SelectedTemplate.Id).then(data => {
-          this.init();
+        api.RemoveApplication(this.SelectedApplication.Id).then(data => {
+          this.getDataFromApi();
         })
       }
     }
@@ -148,7 +199,7 @@
 </script>
 
 <style lang="stylus">
-.templates-table
+.applications-table
   tr
     .btn
       visibility: hidden

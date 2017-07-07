@@ -211,8 +211,9 @@ export default {
         return fetch('/templates/create', params);
     },
 
-    CopyTemplate(id, name) {
-        return fetch('/templates/' + id + '/copy/' + encodeURIComponent(name));
+    CopyTemplate(id, title) {
+        let params = { Title: title };
+        return fetch('/templates/' + id + '/copy', params);
     },
 
     UpdateTemplate(params) {
@@ -240,39 +241,47 @@ export default {
     },
 
     RemoveApplication(id) {
-        return fetch('/applications/' + id);
+        return fetch('/applications/' + id + '/remove');
+    },
+
+    Containers(params) {
+        return fetch('/applications/' + params.Id + '/containers', params);
+    },
+
+    RestartContainer(id) {
+        return fetch('/applications/containers/' + id + '/restart');
     },
 
     ScaleService(params) {
-        return fetch('/applications/services/' + params.Id + '/scale', params);
+        return fetch('/applications/' + params.Id + '/scale', params);
     },
 
     DeploymentHistory(params) {
-        return fetch('/applications/' + id + '/history');
+        return fetch('/applications/' + params.Id + '/history');
     },
 
     UpgradeApplication(params) {
-        return fetch('/applications/' + id + '/upgrade');
+        return fetch('/applications/' + params.Id + '/upgrade');
     },
 
     RollbackApplication(params) {
-        return fetch('/applications/' + id + '/rollback');
+        return fetch('/applications/' + params.Id + '/rollback');
     },
 
     AddTeamToApplication(params) {
-        return fetch('/applications/' + id + '/add-team');
+        return fetch('/applications/' + params.Id + '/add-team');
     },
 
     RemoveUserToApplication(params) {
-        return fetch('/applications/' + id + '/remove-team');
+        return fetch('/applications/' + params.Id + '/remove-team');
     },
 
     AddUserToApplication(params) {
-        return fetch('/applications/' + id + '/add-user');
+        return fetch('/applications/' + params.Id + '/add-user');
     },
 
     RemoveUserToApplication(params) {
-        return fetch('/applications/' + id + '/remove-user');
+        return fetch('/applications/' + params.Id + '/remove-user');
     }
 
 }

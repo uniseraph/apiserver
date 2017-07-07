@@ -73,26 +73,32 @@
       <v-card-title style="padding-left:0;">
         &nbsp;&nbsp;服务列表
         <v-spacer></v-spacer>
-        <v-btn outline small class="green green--text" @click.native="addServiceTemplate()">
+        <v-btn outline small class="green green--text" @click.native="addService()">
           <v-icon class="green--text">add</v-icon>添加服务
         </v-btn>
       </v-card-title>
       <div>
-        <v-card v-for="(item, index) in ServiceTemplates" :key="item.Id" class="mb-2">
+        <v-card v-for="(item, index) in Services" :key="item.Id" class="mb-2">
           <v-card-title>
-            服务{{ index + 1 }}
+            服务{{ index + 1 }}: {{ item.Title }}
             <v-spacer></v-spacer>
-            <v-btn v-if="index < ServiceTemplates.length - 1" outline small icon class="blue blue--text mr-2" @click.native="downward(ServiceTemplates, index)" title="下移">
+            <v-btn v-if="item.hidden" outline small icon class="blue blue--text mr-2" @click.native="hideService(item, false)" title="展开">
+              <v-icon>arrow_drop_down</v-icon>
+            </v-btn>
+            <v-btn v-if="!item.hidden" outline small icon class="blue blue--text mr-2" @click.native="hideService(item, true)" title="折叠">
+              <v-icon>arrow_drop_up</v-icon>
+            </v-btn>
+            <v-btn v-if="index < Services.length - 1" outline small icon class="blue blue--text mr-2" @click.native="downward(Services, index)" title="下移">
               <v-icon>arrow_downward</v-icon>
             </v-btn>
-            <v-btn v-if="index > 0" outline small icon class="green green--text mr-2" @click.native="upward(ServiceTemplates, index)" title="上移">
+            <v-btn v-if="index > 0" outline small icon class="green green--text mr-2" @click.native="upward(Services, index)" title="上移">
               <v-icon>arrow_upward</v-icon>
             </v-btn>
-            <v-btn outline small icon class="red--text text--lighten-2" @click.native="removei(ServiceTemplates, index)" title="删除">
+            <v-btn outline small icon class="red--text text--lighten-2" @click.native="removei(Services, index)" title="删除">
               <v-icon>close</v-icon>
             </v-btn>
           </v-card-title>
-          <div>
+          <div v-show="!item.hidden">
             <v-container fluid>
               <v-layout row wrap>
                 <v-flex xs2>
@@ -268,57 +274,6 @@
                 <v-flex xs12 mt-4>
                   <v-divider></v-divider>
                   <v-card-title>
-                    <v-subheader>端口映射</v-subheader>
-                    <v-spacer></v-spacer>
-                    <v-btn icon class="blue--text text--lighten-2" @click.native="addPortMapping(item)">
-                      <v-icon light>add</v-icon>
-                    </v-btn>
-                  </v-card-title>
-                  <v-data-table
-                    :headers="headers_portmappings"
-                    :items="item.PortMappings"
-                    hide-actions
-                    class="elevation-1"
-                    no-data-text=""
-                  >
-                    <template slot="items" scope="props">
-                      <td>
-                        <v-text-field
-                          v-model="props.item.ContainerPort"
-                          :ref="'PortMapping_ContainerPort_' + props.item.index"
-                          single-line
-                          required
-                          :rules="rules.Services[item.Id].PortMappings[props.item.Id].ContainerPort"
-                          @input="rules.Services[item.Id].PortMappings[props.item.Id].ContainerPort = rules0.Services.PortMappings.ContainerPort"
-                        ></v-text-field>
-                      </td>
-                      <td>
-                        <v-text-field
-                          v-model="props.item.HostPort"
-                          :ref="'PortMapping_HostPort_' + props.item.index"
-                          single-line
-                          required
-                          :rules="rules.Services[item.Id].PortMappings[props.item.Id].HostPort"
-                          @input="rules.Services[item.Id].PortMappings[props.item.Id].HostPort = rules0.Services.PortMappings.HostPort"
-                        ></v-text-field>
-                      </td>
-                      <td>
-                        <v-btn icon class="red--text text--lighten-2" @click.native="removei(item.PortMappings, props.item.index)" title="删除">
-                          <v-icon>close</v-icon>
-                        </v-btn>
-                        <v-btn v-if="props.item.index < item.PortMappings.length - 1" icon class="blue--text blue--lighten-2 ml-2" @click.native="downward(item.PortMappings, props.item.index)" title="下移">
-                          <v-icon>arrow_downward</v-icon>
-                        </v-btn>
-                        <v-btn v-if="props.item.index > 0" icon class="green--text green--lighten-2 ml-2" @click.native="upward(item.PortMappings, props.item.index)" title="上移">
-                          <v-icon>arrow_upward</v-icon>
-                        </v-btn>
-                      </td>
-                    </template>
-                  </v-data-table>
-                </v-flex>
-                <v-flex xs12 mt-4>
-                  <v-divider></v-divider>
-                  <v-card-title>
                     <v-subheader>数据卷</v-subheader>
                     <v-spacer></v-spacer>
                     <v-btn icon class="blue--text text--lighten-2" @click.native="addVolumn(item)">
@@ -423,7 +378,7 @@
           </div>
         </v-card>
         <div style="text-decoration:italic;color:#9F9F9F;">
-          提示：环境变量、端口映射、数据卷以及标签中的值可以引用参数目录中的参数名，例如：一个表示域名的环境变量可以定义为“eureka1.${DOMAIN_SUFFIX}”。
+          提示：环境变量、数据卷以及标签中的值可以引用参数目录中的参数名，例如：一个表示域名的环境变量可以定义为“eureka1.${DOMAIN_SUFFIX}”。
         </div>
       </div>
     </v-flex>
@@ -458,11 +413,6 @@
           { text: '变量值', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
-        headers_portmappings: [
-          { text: '容器端口', sortable: false, left: true },
-          { text: '宿主机端口', sortable: false, left: true },
-          { text: '操作', sortable: false, left: true }
-        ],
         headers_volumns: [
           { text: '数据卷名', sortable: false, left: true },
           { text: '容器挂载路径', sortable: false, left: true },
@@ -476,7 +426,6 @@
 
         svcIdStart: 0,
         envIdStart: 0,
-        portMappingIdStart: 0,
         volumnIdStart: 0,
         labelIdStart: 0,
 
@@ -485,7 +434,7 @@
         Name: '',
         Version: '',
         Description: '',
-        ServiceTemplates: [],
+        Services: [],
 
         rules: {
           Services: []
@@ -537,14 +486,6 @@
                 v => (v && v.length > 0 ? (v.match(/\s/) ? '环境变量名称不允许包含空格' : true) : '请输入环境变量名称')
               ]
             },
-            PortMappings: {
-              ContainerPort: [
-                v => (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) >= 0 && parseInt(v) <= 65535 ? true : '端口号必须为0-65535的整数') : '请输入端口号')
-              ],
-              HostPort: [
-                v => (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) >= 0 && parseInt(v) <= 65535 ? true : '端口号必须为0-65535的整数') : '请输入端口号')
-              ]
-            },
             Volumns: {
               Name: [
                 v => (v && v.length > 0 ? (v.match(/\s/) ? '数据卷名称不允许包含空格' : true) : '请输入数据卷名称')
@@ -585,7 +526,6 @@
         api.Template(this.$route.params.id).then(data => {
           this.svcIdStart = 0;
           this.envIdStart = 0;
-          this.portMappingIdStart = 0;
           this.volumnIdStart = 0;
           this.labelIdStart = 0;
 
@@ -602,11 +542,12 @@
             Services: []
           };
 
-          if (!data.ServiceTemplates) {
-            data.ServiceTemplates = [];
+          if (!data.Services) {
+            data.Services = [];
           } else {
-            for (let st of data.ServiceTemplates) {
+            for (let st of data.Services) {
               st.index = st.Id = this.svcIdStart++;
+              st.hidden = true;
 
               let r = {
                 Title: this.rules0.Services.Title,
@@ -617,7 +558,6 @@
                 Memory: this.rules0.Services.Memory,
                 ReplicaCount: this.rules0.Services.ReplicaCount,
                 Envs: [],
-                PortMappings: [],
                 Volumns: [],
                 Labels: []
               };
@@ -630,17 +570,6 @@
                   e.index = i++;
                   e.Id = this.envIdStart++;
                   r.Envs[e.Id] = this.rules0.Services.Envs;
-                }
-              }
-
-              if (!st.PortMappings) {
-                st.PortMappings = [];
-              } else {
-                let i = 0;
-                for (let e of st.Envs) {
-                  e.index = i++;
-                  e.Id = this.portMappingIdStart++;
-                  r.PortMappings[e.Id] = this.rules0.Services.PortMappings;
                 }
               }
 
@@ -671,7 +600,7 @@
           }
 
           this.rules = rules;
-          this.ServiceTemplates = data.ServiceTemplates;
+          this.Services = data.Services;
         })
       },
 
@@ -679,10 +608,10 @@
         this.$router.go(-1);
       },
 
-      addServiceTemplate() {
+      addService() {
         let id = this.svcIdStart++;
         this.$set(this.rules.Services, id, {});
-        this.ServiceTemplates.push({
+        this.Services.push({
           Id: id,
           Title: '',
           Name: '',
@@ -695,9 +624,9 @@
           Description: '',
           Command: '',
           Envs: [],
-          PortMappings: [],
           Volumns: [],
-          Labels: []
+          Labels: [],
+          hidden: false
         });
       },
 
@@ -711,18 +640,6 @@
         
         s.Envs.push({ index: s.Envs.length, Id: id, Name: '', Value: '' });
         this.patch(s.Envs);
-      },
-
-      addPortMapping(s) {
-        let id = this.portMappingIdStart++;
-        if (!this.rules.Services[s.Id].PortMappings) {
-          this.rules.Services[s.Id].PortMappings = [];
-        }
-
-        this.$set(this.rules.Services[s.Id].PortMappings, id, {});
-        
-        s.PortMappings.push({ index: s.PortMappings.length, Id: id, ContainerPort: '', HostPort: '' });
-        this.patch(s.PortMappings);
       },
 
       addVolumn(s) {
@@ -770,6 +687,10 @@
         this.patch(items);
       },
 
+      hideService(item, h) {
+        item.hidden = h;
+      },
+
       /* Vuetify当前版本没有在slot中传递props.index，所以我们在item中预先设置index */
       patch(items) {
         let i = 0;
@@ -786,7 +707,7 @@
           Services: []
         };
 
-        for (let t of this.ServiceTemplates) {
+        for (let t of this.Services) {
           let r = {
             Title: this.rules0.Services.Title,
             Name: this.rules0.Services.Name,
@@ -796,7 +717,6 @@
             Memory: this.rules0.Services.Memory,
             ReplicaCount: this.rules0.Services.ReplicaCount,
             Envs: [],
-            PortMappings: [],
             Volumns: [],
             Labels: []
           };
@@ -804,11 +724,7 @@
           for (let e of t.Envs) {
             r.Envs[e.Id] = this.rules0.Services.Envs;
           }
-
-          for (let e of t.PortMappings) {
-            r.PortMappings[e.Id] = this.rules0.Services.PortMappings;
-          }
-
+          
           for (let e of t.Volumns) {
             r.Volumns[e.Id] = this.rules0.Services.Volumns;
           }
@@ -834,7 +750,7 @@
             Name: this.Name,
             Version: this.Version,
             Description: this.Description,
-            ServiceTemplates: this.ServiceTemplates
+            Services: this.Services
           }
 
           api.UpdateTemplate(a).then(data => {

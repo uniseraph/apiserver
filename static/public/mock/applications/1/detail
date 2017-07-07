@@ -3,7 +3,8 @@
 	"Title": "Eureka集群", 
 	"Name": "eureka", 
 	"Version": "V1.0.1", 
-	"Description": "Eureka集群应用模板", 
+	"Description": "Eureka集群应用", 
+	"Status": "running",
 	"UpdatedTime": 111111111111, 
 	"UpdaterId": "1", 
 	"Updater": { "Id": "1", "Name": "User1" },
@@ -27,5 +28,13 @@
 				{ "Name": "eureka3.instance.hostname", "Value": "eureka3.consul" }
 			]
 		}
+	],
+
+	"Teams": [
+		{ "Id": "1", "Name": "Team1" },
+		{ "Id": "3", "Name": "Team3" }
+	],
+	"Users": [
+		{ "Id": "1", "Name": "User1" }
 	]
 }

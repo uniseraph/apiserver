@@ -1,33 +1,23 @@
 <template>
   <v-card>
     <v-card-title>
-      应用模板
+      <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
+      容器列表 / {{ ServiceTitle }}
       <v-spacer></v-spacer>
-      <v-text-field
-          append-icon="search"
-          label="模板名称"
-          single-line
-          hide-details
-          v-model="Keyword"
-          @keydown.enter.native="getDataFromApi"
-        ></v-text-field>
-      <router-link :to="'/templates/create'">
-        <v-btn class="primary white--text ml-4"><v-icon light>add</v-icon>新增应用模板</v-btn>
-      </router-link>
     </v-card-title>
     <div>
       <v-layout row justify-center>
-        <v-dialog v-model="RemoveConfirmDlg" persistent>
+        <v-dialog v-model="RestartConfirmDlg" persistent>
           <v-card>
             <v-card-row>
               <v-card-title>提示</v-card-title>
             </v-card-row>
             <v-card-row>
-              <v-card-text>你确认要删除应用模板{{ SelectedTemplate.Name }}吗？</v-card-text>
+              <v-card-text>你确认要重启容器{{ SelectedContainer.Name }}吗？</v-card-text>
             </v-card-row>
             <v-card-row actions>
-              <v-btn class="green--text darken-1" flat="flat" @click.native="removeTemplate">确认</v-btn>
-              <v-btn class="green--text darken-1" flat="flat" @click.native="RemoveConfirmDlg = false">取消</v-btn>
+              <v-btn class="green--text darken-1" flat="flat" @click.native="restartContainer">确认</v-btn>
+              <v-btn class="green--text darken-1" flat="flat" @click.native="RestartConfirmDlg = false">取消</v-btn>
             </v-card-row>
           </v-card>
         </v-dialog>
@@ -38,22 +28,20 @@
         :total-items="totalItems"
         :pagination.sync="pagination"
         hide-actions
-        class="templates-table elevation-1"
+        class="containers-table elevation-1"
         no-data-text=""
       >
         <template slot="items" scope="props">
-          <td><router-link :to="'/templates/' + props.item.Id">{{ props.item.Title }}</router-link></td>
+          <td>{{ props.item.Id }}</td>
           <td>{{ props.item.Name }}</td>
-          <td>{{ props.item.Version }}</td>
-          <td>{{ props.item.Description }}</td>
-          <td>{{ props.item.UpdatedTime | formatDate }}</td>
-          <td>{{ props.item.Updater.Name }}</td>
+          <td :class="{ 'green--text': props.item.Status==='running', 'orange--text': props.item.Status==='stopped', 'red--text': props.item.Status!=='running' && props.item.Status!=='stopped' }">{{ props.item.Status==='running' ? '运行中' : (props.item.Status==='stopped' ? '已停止' : '未知') }}</td>
+          <td>{{ props.item.Network ? props.item.Network.IP : '' }}</td>
+          <td>{{ props.item.StartedTime | formatDateTime }}</td>
+          <td>{{ props.item.Node ? props.item.Node.Name : '' }}</td>
+          <td>{{ props.item.Node ? props.item.Node.IP : '' }}</td>
           <td>
-            <v-btn outline small icon class="green green--text" @click.native="copy(props.item)" title="复制应用模板">
-                <v-icon>content_copy</v-icon>
-            </v-btn>
-            <v-btn outline small icon class="orange orange--text" @click.native="confirmBeforeRemove(props.item)" title="删除应用模板">
-              <v-icon>close</v-icon>
+            <v-btn outline small icon class="orange orange--text" @click.native="confirmBeforeRestart(props.item)" title="重启容器">
+              <v-icon>refresh</v-icon>
             </v-btn>
           </td>
         </template>
@@ -73,12 +61,13 @@
     data() {
       return {
         headers: [
-          { text: '应用名称', sortable: false, left: true },
-          { text: '应用ID', sortable: false, left: true },
-          { text: '应用版本', sortable: false, left: true },
-          { text: '说明', sortable: false, left: true },
-          { text: '更新时间', sortable: false, left: true },
-          { text: '操作人', sortable: false, left: true },
+          { text: '容器ID', sortable: false, left: true },
+          { text: '容器名', sortable: false, left: true },
+          { text: '状态', sortable: false, left: true },
+          { text: 'IP', sortable: false, left: true },
+          { text: '启动时间', sortable: false, left: true },
+          { text: '宿主机名', sortable: false, left: true },
+          { text: '宿主机IP', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
         items: [],
@@ -91,10 +80,14 @@
           descending: this.$route.query ? (this.$route.query.Desc ? parseInt(this.$route.query.Desc) : false) : false 
         },
 
+        ApplicationId: this.$route.params.applicationId,
+        ServiceName: this.$route.params.serviceName,
+        ServiceTitle: this.$route.params.serviceTitle,
+
         Keyword: this.$route.query ? (this.$route.query.Keyword ? parseInt(this.$route.query.Keyword) : '') : '',
 
-        RemoveConfirmDlg: false,
-        SelectedTemplate: {}
+        RestartConfirmDlg: false,
+        SelectedContainer: {}
       }
     },
 
@@ -117,8 +110,26 @@
         this.getDataFromApi();
       },
 
+      goback() {
+        this.$router.go(-1);
+      },
+
+      confirmBeforeRestart(container) {
+        this.SelectedContainer = container;
+        this.RestartConfirmDlg = true;
+      },
+
+      restartContainer() {
+        this.RestartConfirmDlg = false;
+        api.RestartContainer(this.SelectedContainer.Id).then(data => {
+          this.getDataFromApi();
+        });
+      },
+
       getDataFromApi() {
         let params = {
+          Id: this.ApplicationId,
+          ServiceName: this.ServiceName,
           Keyword: this.Keyword,
           PageSize: this.pagination.rowsPerPage, 
           Page: this.pagination.page
@@ -130,37 +141,19 @@
           query: params
         });
 
-        api.Templates(params).then(data => {
+        api.Containers(params).then(data => {
           this.pagination.totalItems = data.Total;
           this.pagination.page = data.Page;
           this.items = data.Data;
           this.totalItems = data.Total;
         });
-      },
-
-      copy(template) {
-        api.CopyTemplate(template.Id, 'Copy of ' + template.Title).then(data => {
-          this.init();
-        })
-      },
-
-      confirmBeforeRemove(template) {
-        this.SelectedTemplate = template;
-        this.RemoveConfirmDlg = true;
-      },
-
-      removeTemplate() {
-        this.RemoveConfirmDlg = false;
-        api.RemoveTemplate(this.SelectedTemplate.Id).then(data => {
-          this.init();
-        })
       }
     }
   }
 </script>
 
 <style lang="stylus">
-.templates-table
+.containers-table
   tr
     .btn
       visibility: hidden

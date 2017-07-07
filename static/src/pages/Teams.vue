@@ -69,7 +69,7 @@
       >
         <template slot="items" scope="props">
           <td>{{ props.item.Id }}</td>
-          <td><router-link :to="'/team/' + props.item.Id">{{ props.item.Name }}</router-link></td>
+          <td><router-link :to="'/teams/' + props.item.Id">{{ props.item.Name }}</router-link></td>
           <td>{{ props.item.Leader.Name }}</td>
           <td>{{ props.item.Description }}</td>
           <td>{{ props.item.CreatedTime | formatDate }}</td>

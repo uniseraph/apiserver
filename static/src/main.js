@@ -27,6 +27,18 @@ Vue.filter('formatDateTime', function(value) {
     return new Date(value).toLocaleString();
 });
 
+Vue.filter('dividedBy1024', function(value) {
+	if (!value) {
+		return '';
+	}
+
+	if (typeof value !== 'number') {
+		value = parseInt(value.toString());
+	}
+	
+    return Math.floor(value / 1024);
+});
+
 new Vue({
   el: '#app',
   store,

@@ -106,7 +106,6 @@
 </template>
 
 <script>
-  import router from '../router'
   import api from '../api/api'
   import * as ui from '../util/ui'
 
@@ -144,7 +143,7 @@
     },
 
     mounted() {
-      this.$router.go(-1);
+      
     },
 
     methods: {
@@ -153,7 +152,7 @@
       },
 
       goback() {
-        router.go(-1);
+        this.$router.go(-1);
       },
 
       save() {
