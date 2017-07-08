@@ -3,13 +3,13 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"github.com/zanecloud/apiserver/application"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
 	"time"
-	"gopkg.in/mgo.v2"
-	"github.com/zanecloud/apiserver/application"
 )
 
 type ApplicationCreateRequest struct {
@@ -34,32 +34,27 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	config := utils.GetAPIServerConfig(ctx)
 	currentuser, _ := utils.GetCurrentUser(ctx)
 
-
 	colPool := mgoSession.DB(config.MgoDB).C("pool")
 	pool := &types.PoolInfo{}
-	if err := colPool.FindId(bson.ObjectIdHex(req.PoolId)).One(pool) ; err !=nil {
-		if err==mgo.ErrNotFound{
-			HttpError(w, err.Error(),http.StatusNotFound)
+	if err := colPool.FindId(bson.ObjectIdHex(req.PoolId)).One(pool); err != nil {
+		if err == mgo.ErrNotFound {
+			HttpError(w, err.Error(), http.StatusNotFound)
 			return
 		}
-		HttpError(w,err.Error(),http.StatusInternalServerError)
-		return 
-	}
-
-
-	colTemplate := mgoSession.DB(config.MgoDB).C("template")
-	template := &types.Template{}
-	if err := colTemplate.FindId(bson.ObjectIdHex(req.PoolId)).One(template) ; err !=nil {
-		if err==mgo.ErrNotFound{
-			HttpError(w, err.Error(),http.StatusNotFound)
-			return
-		}
-		HttpError(w,err.Error(),http.StatusInternalServerError)
+		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-
-
+	colTemplate := mgoSession.DB(config.MgoDB).C("template")
+	template := &types.Template{}
+	if err := colTemplate.FindId(bson.ObjectIdHex(req.PoolId)).One(template); err != nil {
+		if err == mgo.ErrNotFound {
+			HttpError(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	c := mgoSession.DB(config.MgoDB).C("application")
 
@@ -70,6 +65,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	app.Title = req.Title
 	app.Description = req.Description
 	app.PoolId = req.PoolId
+	app.Name = template.Name
 
 	app.CreatorId = currentuser.Id.Hex()
 	app.UpdaterId = currentuser.Id.Hex()
@@ -77,25 +73,20 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	app.CreatedTime = time.Now().Unix()
 	app.UpdatedTime = time.Now().Unix()
 
-	app.Services = mergeServices(template.Services,pool)
-
+	app.Services = mergeServices(template.Services, pool)
 
 	if err := c.Insert(app); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-
-
-	if err := application.CreateApplication(app,pool) ; err!= nil{
+	if err := application.CreateApplication(app, pool); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	httpJsonResponse(w,app)
+	httpJsonResponse(w, app)
 }
-
-
 
 func mergeServices(services []types.Service, info *types.PoolInfo) []types.Service {
 
