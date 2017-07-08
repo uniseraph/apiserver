@@ -22,6 +22,21 @@
           </v-card>
         </v-dialog>
       </v-layout>
+      <v-layout row justify-center>
+        <v-dialog v-model="RestartConfirmDlg" persistent>
+          <v-card>
+            <v-card-row>
+              <v-card-title>{{ SelectedContainer.Name }}登录命令</v-card-title>
+            </v-card-row>
+            <v-card-row>
+              <v-card-text></v-card-text>
+            </v-card-row>
+            <v-card-row actions>
+              <v-btn class="green--text darken-1" flat="flat" @click.native="RestartConfirmDlg = false">关闭</v-btn>
+            </v-card-row>
+          </v-card>
+        </v-dialog>
+      </v-layout>
       <v-data-table
         :headers="headers"
         :items="items"

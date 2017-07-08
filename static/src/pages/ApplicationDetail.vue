@@ -209,6 +209,13 @@
                     readonly
                   ></v-text-field>
                 </v-flex>
+                <v-flex xs2>
+                </v-flex>
+                <v-flex xs3>
+                  <v-checkbox label="异常终止后自动重启" v-model="item.Restart" :true-value="'always'" :false-value="false" dark disabled></v-checkbox>
+                </v-flex>
+                <v-flex xs7>
+                </v-flex>
                 <v-flex xs12 mt-5 v-if="item.Envs && item.Envs.length > 0">
                   <v-divider></v-divider>
                   <v-card-title>

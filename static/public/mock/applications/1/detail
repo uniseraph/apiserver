@@ -21,6 +21,7 @@
 			"ReplicaCount": 1,
 			"Description": "第一个Eureka服务",
 			"Command": "",
+			"Restart": "always",
 			"Envs": [
 				{ "Name": "spring.profiles.active", "Value": "eureka1" },
 				{ "Name": "eureka1.instance.hostname", "Value": "eureka1.consul" },

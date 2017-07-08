@@ -169,11 +169,11 @@
                     single-line
                     placeholder="自动分配"
                     :rules="rules.Services[item.Id].CPU"
-                    @input="rules.Services[item.Id].CPU = rules0.Services.CPU"
+                    @input="rules.Services[item.Id].CPU = rules0.Services.CPU; if (!(item.CPU > 0)) item.ExclusiveCPU = false;"
                   ></v-text-field>
                 </v-flex>
                 <v-flex xs2>
-                  <v-checkbox label="独占" v-model="item.ExclusiveCPU" dark></v-checkbox>
+                  <v-checkbox label="独占" v-model="item.ExclusiveCPU" dark :disabled="!(item.CPU > 0)"></v-checkbox>
                 </v-flex>
                 <v-flex xs1>
                 </v-flex>
@@ -222,6 +222,13 @@
                     v-model="item.Command"
                     single-line
                   ></v-text-field>
+                </v-flex>
+                <v-flex xs2>
+                </v-flex>
+                <v-flex xs3>
+                  <v-checkbox label="异常终止后自动重启" v-model="item.Restart" :true-value="'always'" :false-value="false" dark></v-checkbox>
+                </v-flex>
+                <v-flex xs7>
                 </v-flex>
                 <v-flex xs12 mt-5>
                   <v-divider></v-divider>
@@ -632,6 +639,7 @@
           ReplicaCount: 1,
           Description: '',
           Command: '',
+          Restart: 'always',
           Envs: [],
           Volumns: [],
           Labels: [],

@@ -139,8 +139,8 @@ export default {
         return fetch('/envs/values/' + id + '/remove');
     },
 
-    UpdateEnvValues(params) {
-        return fetch('/envs/values/update', params);
+    UpdateEnvValues(id, params) {
+        return fetch('/envs/values/' + id + '/update-values', params);
     },
 
     Teams(params) {

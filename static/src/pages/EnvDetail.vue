@@ -185,11 +185,10 @@
             return;
           }
 
-          api.UpdateEnvValue({
-            Id: this.Id,
+          api.UpdateEnvValue(this.Id, [{
             PoolId: item.PoolId,
             Value: item.Value
-          }).then(data => {
+          }]).then(data => {
             ui.alert('集群参数值修改成功', 'success');
           });
         });
