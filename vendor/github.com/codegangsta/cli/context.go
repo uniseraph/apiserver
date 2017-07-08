@@ -137,7 +137,7 @@ func (c *Context) FlagNames() (names []string) {
 	return
 }
 
-// GlobalFlagNames returns a slice of global flag names used by the app.
+// GlobalFlagNames returns a slice of global flag names used by the application.
 func (c *Context) GlobalFlagNames() (names []string) {
 	for _, flag := range c.App.Flags {
 		name := strings.Split(flag.GetName(), ",")[0]

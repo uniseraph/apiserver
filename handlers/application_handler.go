@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 	"gopkg.in/mgo.v2"
+	"github.com/zanecloud/apiserver/application"
 )
 
 type ApplicationCreateRequest struct {
@@ -40,7 +41,8 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		if err==mgo.ErrNotFound{
 			HttpErrorAndPanic(w, err.Error(),http.StatusNotFound)
 		}
-		HttpErrorAndPanic(w,err.Error(),http.StatusInternalServerError)
+		HttpError(w,err.Error(),http.StatusInternalServerError)
+		return 
 	}
 
 
@@ -81,6 +83,11 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 
+
+	if err := application.CreateApplication(app,pool) ; err!= nil{
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	httpJsonResponse(w,app)
 }

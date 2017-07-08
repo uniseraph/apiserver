@@ -1,8 +1,8 @@
-package app
+package application
 
 import "github.com/zanecloud/apiserver/types"
 
-type App interface {
+type Application interface {
 	Create() error
 	Start()  error
 

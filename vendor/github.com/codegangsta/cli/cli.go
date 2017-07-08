@@ -7,14 +7,14 @@
 //
 // Of course this application does not do much, so let's make this an actual application:
 //   func main() {
-//     app := cli.NewApp()
-//     app.Name = "greet"
-//     app.Usage = "say a greeting"
-//     app.Action = func(c *cli.Context) error {
+//     application := cli.NewApp()
+//     application.Name = "greet"
+//     application.Usage = "say a greeting"
+//     application.Action = func(c *cli.Context) error {
 //       println("Greetings")
 //     }
 //
-//     app.Run(os.Args)
+//     application.Run(os.Args)
 //   }
 package cli
 
