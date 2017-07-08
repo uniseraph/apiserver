@@ -8,7 +8,6 @@
           item-text="Name"
           item-value="Id"
           v-model="PoolId"
-          label="集群"
           dark
           @input="poolChanged"
         ></v-select>
