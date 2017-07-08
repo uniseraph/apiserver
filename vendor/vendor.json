@@ -243,6 +243,12 @@
 			"revisionTime": "2017-05-24T00:31:38Z"
 		},
 		{
+			"checksumSHA1": "+k58oVsPE5qcJOpN7om0nezEE1o=",
+			"path": "github.com/gpmgo/gopm/modules/log",
+			"revision": "7072332d09d69570756850cb3928e7ae34724789",
+			"revisionTime": "2017-04-07T01:02:47Z"
+		},
+		{
 			"checksumSHA1": "2AyUkWjutec6p+470tgio8mYOxI=",
 			"path": "github.com/opencontainers/go-digest",
 			"revision": "eaa60544f31ccf3b0653b1a118b76d33418ff41b",

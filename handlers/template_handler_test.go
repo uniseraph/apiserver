@@ -27,6 +27,7 @@ func TestTemplate(t *testing.T) {
 		})
 		if err != nil {
 			t.Error(err)
+			return
 		} else {
 			t.Log("create template success ")
 			t.Log(templateResponse)

@@ -39,7 +39,8 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	pool := &types.PoolInfo{}
 	if err := colPool.FindId(bson.ObjectIdHex(req.PoolId)).One(pool) ; err !=nil {
 		if err==mgo.ErrNotFound{
-			HttpErrorAndPanic(w, err.Error(),http.StatusNotFound)
+			HttpError(w, err.Error(),http.StatusNotFound)
+			return
 		}
 		HttpError(w,err.Error(),http.StatusInternalServerError)
 		return 
@@ -50,9 +51,11 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	template := &types.Template{}
 	if err := colTemplate.FindId(bson.ObjectIdHex(req.PoolId)).One(template) ; err !=nil {
 		if err==mgo.ErrNotFound{
-			HttpErrorAndPanic(w, err.Error(),http.StatusNotFound)
+			HttpError(w, err.Error(),http.StatusNotFound)
+			return
 		}
-		HttpErrorAndPanic(w,err.Error(),http.StatusInternalServerError)
+		HttpError(w,err.Error(),http.StatusInternalServerError)
+		return
 	}
 
 
