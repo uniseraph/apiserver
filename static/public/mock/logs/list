@@ -8,7 +8,7 @@
 		{ 
 			"Id": "1", 
 			"PoolId": "1", 
-			"Pool": { "Id": "1", "Name": "Eureka集群" }, 
+			"Pool": { "Id": "1", "Name": "Pool1" }, 
 			"UserId": "1", 
 			"User": { "Id": "1", "Name": "User1" }, 
 			"Module": "Application",
@@ -21,7 +21,7 @@
 		{ 
 			"Id": "2", 
 			"PoolId": "1", 
-			"Pool": { "Id": "1", "Name": "Eureka集群" }, 
+			"Pool": { "Id": "1", "Name": "Pool1" }, 
 			"UserId": "1", 
 			"User": { "Id": "1", "Name": "User1" }, 
 			"Module": "Application",

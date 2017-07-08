@@ -139,7 +139,7 @@ export default {
         return fetch('/envs/values/' + id + '/remove');
     },
 
-    UpdateEnvValues(id, params) {
+    UpdatePoolValues(id, params) {
         return fetch('/envs/values/' + id + '/update-values', params);
     },
 

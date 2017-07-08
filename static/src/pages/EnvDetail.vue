@@ -181,7 +181,7 @@
             return;
           }
 
-          api.UpdateEnvValue(this.Id, [{
+          api.UpdatePoolValues(this.Id, [{
             PoolId: item.PoolId,
             Value: item.Value
           }]).then(data => {
