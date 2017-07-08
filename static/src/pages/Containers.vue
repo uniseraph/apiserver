@@ -23,7 +23,7 @@
         </v-dialog>
       </v-layout>
       <v-layout row justify-center>
-        <v-dialog v-model="SSHInfoDlg" persistent width="580">
+        <v-dialog v-model="SSHInfoDlg" persistent width="450">
           <v-card>
             <v-card-row>
               <v-card-title>{{ SelectedContainer.Name }}登录信息</v-card-title>
@@ -31,22 +31,13 @@
             <v-card-row>
               <v-card-text>
                 <v-text-field
-                  label="命令"
+                  label="登录命令"
                   ref="SSHInfo_Command"
                   v-model="SSHInfo.Command"
                   readonly
                   @focus="selectAll('SSHInfo_Command')"
-                ></v-text-field>
-              </v-card-text>
-            </v-card-row>
-            <v-card-row>
-              <v-card-text>
-                <v-text-field
-                  label="密码"
-                  ref="SSHInfo_Password"
-                  v-model="SSHInfo.Password"
-                  readonly
-                  @focus="selectAll('SSHInfo_Password')"
+                  hint="此登录命令有效期为5分钟"
+                  persistent-hint
                 ></v-text-field>
               </v-card-text>
             </v-card-row>
@@ -68,7 +59,7 @@
         <template slot="items" scope="props">
           <td>{{ props.item.Id }}</td>
           <td>{{ props.item.Name }}</td>
-          <td :class="{ 'green--text': props.item.Status==='running', 'orange--text': props.item.Status==='stopped', 'red--text': props.item.Status!=='running' && props.item.Status!=='stopped' }">{{ props.item.Status==='running' ? '运行中' : (props.item.Status==='stopped' ? '已停止' : '未知') }}</td>
+          <td :class="applicationClass(props.item.Status)">{{ applicationStatus(props.item.Status) }}</td>
           <td>{{ props.item.Network ? props.item.Network.IP : '' }}</td>
           <td>{{ props.item.StartedTime | formatDateTime }}</td>
           <td>{{ props.item.Node ? props.item.Node.Name : '' }}</td>
@@ -113,15 +104,15 @@
           rowsPerPage: this.$route.query ? (this.$route.query.PageSize ? parseInt(this.$route.query.PageSize) : 20) : 20, 
           totalItems: 0, 
           page: this.$route.query ? (this.$route.query.Page ? parseInt(this.$route.query.Page) : 1) : 1, 
-          sortBy: this.$route.query ? (this.$route.query.SortBy ? parseInt(this.$route.query.SortBy) : null) : null, 
-          descending: this.$route.query ? (this.$route.query.Desc ? parseInt(this.$route.query.Desc) : false) : false 
+          sortBy: this.$route.query ? (this.$route.query.SortBy || '') : '', 
+          descending: this.$route.query ? (this.$route.query.Desc || false) : false 
         },
 
         ApplicationId: this.$route.params.applicationId,
         ServiceName: this.$route.params.serviceName,
         ServiceTitle: this.$route.params.serviceTitle,
 
-        Keyword: this.$route.query ? (this.$route.query.Keyword ? parseInt(this.$route.query.Keyword) : '') : '',
+        Keyword: this.$route.query ? (this.$route.query.Keyword || '') : '',
 
         RestartConfirmDlg: false,
         SelectedContainer: {},

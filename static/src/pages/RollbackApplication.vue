@@ -70,7 +70,9 @@
           <template slot="items" scope="props">
             <td><v-radio label="" v-model="DeploymentHistoryId" :value="props.item.Id"></v-radio></td>
             <td>{{ props.item.Version }}</td>
-            <td>{{ props.item.OperationType == 'upgrade' ? '升级' : '回滚' }}</td>
+            <td v-if="props.item.OperationType == 'create'">新增</td>
+            <td v-if="props.item.OperationType == 'upgrade'">升级</td>
+            <td v-if="props.item.OperationType == 'rollback'">回滚</td>
             <td>{{ props.item.CreatedTime | formatDateTime }}</td>
             <td>{{ props.item.Creator.Name }}</td>
           </template>
@@ -117,8 +119,8 @@
           rowsPerPage: this.$route.query ? (this.$route.query.PageSize ? parseInt(this.$route.query.PageSize) : 20) : 20, 
           totalItems: 0, 
           page: this.$route.query ? (this.$route.query.Page ? parseInt(this.$route.query.Page) : 1) : 1, 
-          sortBy: this.$route.query ? (this.$route.query.SortBy ? parseInt(this.$route.query.SortBy) : null) : null, 
-          descending: this.$route.query ? (this.$route.query.Desc ? parseInt(this.$route.query.Desc) : false) : false 
+          sortBy: this.$route.query ? (this.$route.query.SortBy || '') : '', 
+          descending: this.$route.query ? (this.$route.query.Desc || false) : false 
         },
 
         PoolList: [],

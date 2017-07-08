@@ -12,7 +12,7 @@ Vue.use(common)
 Vue.use(constants)
 
 Vue.filter('formatDate', function(value) {
-	if (!value) {
+	if (!value || value.length == 0) {
 		return '';
 	}
 
@@ -20,7 +20,7 @@ Vue.filter('formatDate', function(value) {
 });
 
 Vue.filter('formatDateTime', function(value) {
-	if (!value) {
+	if (!value || value.length == 0) {
 		return '';
 	}
 	
@@ -28,7 +28,7 @@ Vue.filter('formatDateTime', function(value) {
 });
 
 Vue.filter('dividedBy1024', function(value) {
-	if (!value) {
+	if (!value || value.length == 0) {
 		return '';
 	}
 

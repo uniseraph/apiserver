@@ -19,6 +19,8 @@ import CreateApplication from './pages/CreateApplication.vue'
 import UpgradeApplication from './pages/UpgradeApplication.vue'
 import RollbackApplication from './pages/RollbackApplication.vue'
 import Containers from './pages/Containers.vue'
+import Logs from './pages/Logs.vue'
+import Audit from './pages/Audit.vue'
 
 Vue.use(VueRouter)
 
@@ -45,6 +47,8 @@ export default new VueRouter({
 		{ path: '/applications/:id/rollback', component: RollbackApplication },
 		{ path: '/applications/:id', component: ApplicationDetail },
 		{ path: '/applications', component: Applications },
+		{ path: '/logs', component: Logs },
+		{ path: '/audit', component: Audit },
 		{ path: '*', redirect: '/pools' }
 	]
 })

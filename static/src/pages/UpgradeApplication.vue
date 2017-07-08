@@ -127,8 +127,8 @@
           rowsPerPage: this.$route.query ? (this.$route.query.PageSize ? parseInt(this.$route.query.PageSize) : 20) : 20, 
           totalItems: 0, 
           page: this.$route.query ? (this.$route.query.Page ? parseInt(this.$route.query.Page) : 1) : 1, 
-          sortBy: this.$route.query ? (this.$route.query.SortBy ? parseInt(this.$route.query.SortBy) : null) : null, 
-          descending: this.$route.query ? (this.$route.query.Desc ? parseInt(this.$route.query.Desc) : false) : false 
+          sortBy: this.$route.query ? (this.$route.query.SortBy || '') : '', 
+          descending: this.$route.query ? (this.$route.query.Desc || false) : false 
         },
 
         PoolList: [],

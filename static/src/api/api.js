@@ -290,6 +290,14 @@ export default {
 
     RemoveUserToApplication(params) {
         return fetch('/applications/' + params.Id + '/remove-user');
+    },
+
+    Logs(params) {
+        return fetch('/logs/list', params);
+    },
+
+    Audit(params) {
+        return fetch('/audit/list', params);
     }
 
 }

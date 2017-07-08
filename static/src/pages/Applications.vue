@@ -54,9 +54,9 @@
           <td>{{ props.item.Name }}</td>
           <td>{{ props.item.Version }}</td>
           <td>{{ props.item.Description }}</td>
-          <td :class="{ 'green--text': props.item.Status==='running', 'orange--text': props.item.Status==='stopped', 'red--text': props.item.Status!=='running' && props.item.Status!=='stopped' }">{{ props.item.Status==='running' ? '运行中' : (props.item.Status==='stopped' ? '已停止' : '未知') }}</td>
+          <td :class="applicationClass(props.item.Status)">{{ applicationStatus(props.item.Status) }}</td>
           <td>{{ props.item.UpdatedTime | formatDateTime }}</td>
-          <td>{{ props.item.Updater.Name }}</td>
+          <td>{{ props.item.UpdaterName }}</td>
           <td>
             <v-btn v-if="props.item.Status==='running'" outline small icon class="red red--text" @click.native="stopApplicatoin(props.item)" title="停止应用">
               <v-icon>pause</v-icon>
@@ -100,13 +100,13 @@
           rowsPerPage: this.$route.query ? (this.$route.query.PageSize ? parseInt(this.$route.query.PageSize) : 20) : 20, 
           totalItems: 0, 
           page: this.$route.query ? (this.$route.query.Page ? parseInt(this.$route.query.Page) : 1) : 1, 
-          sortBy: this.$route.query ? (this.$route.query.SortBy ? parseInt(this.$route.query.SortBy) : null) : null, 
-          descending: this.$route.query ? (this.$route.query.Desc ? parseInt(this.$route.query.Desc) : false) : false 
+          sortBy: this.$route.query ? (this.$route.query.SortBy || '') : '', 
+          descending: this.$route.query ? (this.$route.query.Desc || false) : false 
         },
 
         PoolList: [],
-        PoolId: this.$route.query ? (this.$route.query.PoolId ? parseInt(this.$route.query.PoolId) : null) : null, 
-        Keyword: this.$route.query ? (this.$route.query.Keyword ? parseInt(this.$route.query.Keyword) : '') : '',
+        PoolId: this.$route.query ? (this.$route.query.PoolId || '') : '', 
+        Keyword: this.$route.query ? (this.$route.query.Keyword || '') : '',
 
         RemoveConfirmDlg: false,
         SelectedApplication: {}
@@ -142,12 +142,11 @@
       },
 
       poolChanged(id) {
-        this.PoolId = id;
         this.getDataFromApi();
       },
 
       getDataFromApi() {
-        if (!this.PoolId) {
+        if (!this.PoolId || this.PoolId.length == 0) {
           return;
         }
 
