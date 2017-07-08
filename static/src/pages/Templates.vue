@@ -6,7 +6,6 @@
       <v-text-field
           append-icon="search"
           label="模板名称"
-          single-line
           hide-details
           v-model="Keyword"
           @keydown.enter.native="getDataFromApi"

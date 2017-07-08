@@ -15,7 +15,6 @@
             <v-text-field
               ref="Name"
               v-model="Name"
-              single-line
               required
               :rules="rules.Name"
               @input="rules.Name = rules0.Name"
@@ -30,7 +29,6 @@
             <v-text-field
               ref="Email"
               v-model="Email"
-              single-line
               required
               :rules="rules.Email"
               @input="rules.Email = rules0.Email"
@@ -43,7 +41,6 @@
             <v-text-field
               ref="Tel"
               v-model="Tel"
-              single-line
               required
               :rules="rules.Tel"
               @input="rules.Tel = rules0.Tel"

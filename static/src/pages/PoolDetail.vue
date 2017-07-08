@@ -17,7 +17,6 @@
                 <v-text-field
                   v-model="Name"
                   ref="all_Name"
-                  single-line
                   required
                   :rules="rules.Name"
                   @input="rules.Name = rules0.Name"
@@ -31,7 +30,6 @@
               <v-flex xs3>
                 <v-text-field
                   v-model="EnvTree.Name"
-                  single-line
                   readonly
                 ></v-text-field>
                 <!--v-select
@@ -41,7 +39,6 @@
                   v-model="EnvTreeId"
                   label="请选择"
                   dark
-                  single-line
                 ></v-select-->
               </v-flex>
               <v-flex xs2>
@@ -50,7 +47,6 @@
               <v-flex xs3>
                 <v-text-field
                   v-model="Driver"
-                  single-line
                   readonly
                 ></v-text-field>
                 <!--v-select
@@ -59,7 +55,6 @@
                   ref="all_Driver"
                   label="请选择"
                   dark
-                  single-line
                   required
                   :rules="rules.Driver"
                 ></v-select-->
@@ -72,7 +67,6 @@
               <v-flex v-if="Driver == 'swarm'" xs3>
                 <v-text-field
                   v-model="DriverOpts.Version"
-                  single-line
                   readonly
                 ></v-text-field>
                 <!--v-select
@@ -81,7 +75,6 @@
                   ref="swarm_Version"
                   label="请选择"
                   dark
-                  single-line
                   required
                   :rules="rules.DriverOpts.swarm.Version"
                 ></v-select-->
@@ -92,13 +85,11 @@
               <v-flex v-if="Driver == 'swarm'" xs3>
                 <v-text-field
                   v-model="DriverOpts.EndPoint"
-                  single-line
                   readonly
                 ></v-text-field>
                 <!--v-text-field
                   v-model="DriverOpts.EndPoint"
                   ref="swarm_EndPoint"
-                  single-line
                   required
                   :rules="rules.DriverOpts.swarm.EndPoint"
                   @input="rules.DriverOpts.swarm.EndPoint = rules0.DriverOpts.swarm.EndPoint"
@@ -112,7 +103,6 @@
               <v-flex v-if="Driver == 'swarm'" xs3>
                 <v-text-field
                   v-model="DriverOpts.APIVersion"
-                  single-line
                   readonly
                 ></v-text-field>
                 <!--v-select
@@ -121,7 +111,6 @@
                   ref="swarm_APIVersion"
                   label="请选择"
                   dark
-                  single-line
                   required
                   :rules="rules.DriverOpts.swarm.APIVersion"
                 ></v-select-->
@@ -163,7 +152,6 @@
                   v-model="AuthorizeToTeam"
                   dark
                   max-height="auto"
-                  single-line
                   autocomplete
                 >
               </v-select>
@@ -203,7 +191,6 @@
                   v-model="AuthorizeToUser"
                   dark
                   max-height="auto"
-                  single-line
                   autocomplete
                 >
               </v-select>

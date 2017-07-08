@@ -14,7 +14,6 @@
           <v-flex xs3>
             <v-text-field
               v-model="Title"
-              single-line
               readonly
             ></v-text-field>
           </v-flex>
@@ -26,7 +25,6 @@
           <v-flex xs3>
             <v-text-field
               v-model="Name"
-              single-line
               readonly
             ></v-text-field>
           </v-flex>
@@ -36,7 +34,6 @@
           <v-flex xs3>
             <v-text-field
               v-model="Version"
-              single-line
               readonly
             ></v-text-field>
           </v-flex>
@@ -48,7 +45,6 @@
           <v-flex xs3>
             <v-text-field
               v-model="Description"
-              single-line
               readonly
             ></v-text-field>
           </v-flex>
@@ -63,7 +59,6 @@
         <v-text-field
             append-icon="search"
             label="模板名称"
-            single-line
             hide-details
             v-model="Keyword"
             @keydown.enter.native="getDataFromApi"

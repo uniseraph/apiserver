@@ -17,7 +17,6 @@
                 <v-text-field
                   ref="Title"
                   v-model="Title"
-                  single-line
                   required
                   :rules="rules.Title"
                   @input="rules.Title = rules0.Title"
@@ -32,7 +31,6 @@
                 <v-text-field
                   ref="Name"
                   v-model="Name"
-                  single-line
                   required
                   hint="应用ID改动将会影响到后续升级，请慎重"
                   persistent-hint
@@ -47,7 +45,6 @@
                 <v-text-field
                   ref="Version"
                   v-model="Version"
-                  single-line
                   required
                   :rules="rules.Version"
                   @input="rules.Version = rules0.Version"
@@ -61,7 +58,6 @@
               <v-flex xs3>
                 <v-text-field
                   v-model="Description"
-                  single-line
                 ></v-text-field>
               </v-flex>
             </v-layout>
@@ -108,7 +104,6 @@
                   <v-text-field
                     :ref="'Service_Title_' + item.Id"
                     v-model="item.Title"
-                    single-line
                     required
                     :rules="rules.Services[item.Id].Title"
                     @input="rules.Services[item.Id].Title = rules0.Services.Title"
@@ -123,7 +118,6 @@
                   <v-text-field
                     :ref="'Service_Name_' + item.Id"
                     v-model="item.Name"
-                    single-line
                     required
                     hint="服务ID改动将会影响到后续升级，请慎重"
                     persistent-hint
@@ -138,7 +132,6 @@
                   <v-text-field
                     :ref="'Service_ImageName_' + item.Id"
                     v-model="item.ImageName"
-                    single-line
                     required
                     :rules="rules.Services[item.Id].ImageName"
                     @input="rules.Services[item.Id].ImageName = rules0.Services.ImageName"
@@ -153,7 +146,6 @@
                   <v-text-field
                     :ref="'Service_ImageTag_' + item.Id"
                     v-model="item.ImageTag"
-                    single-line
                     required
                     :rules="rules.Services[item.Id].ImageTag"
                     @input="rules.Services[item.Id].ImageTag = rules0.Services.ImageTag"
@@ -166,7 +158,6 @@
                   <v-text-field
                     :ref="'Service_CPU_' + item.Id"
                     v-model="item.CPU"
-                    single-line
                     placeholder="自动分配"
                     :rules="rules.Services[item.Id].CPU"
                     @input="rules.Services[item.Id].CPU = rules0.Services.CPU; if (!(item.CPU > 0)) item.ExclusiveCPU = false;"
@@ -184,7 +175,6 @@
                   <v-text-field
                     :ref="'Service_Memory_' + item.Id"
                     v-model="item.Memory"
-                    single-line
                     required
                     :rules="rules.Services[item.Id].Memory"
                     @input="rules.Services[item.Id].Memory = rules0.Services.Memory"
@@ -197,7 +187,6 @@
                   <v-text-field
                     :ref="'Service_ReplicaCount_' + item.Id"
                     v-model="item.ReplicaCount"
-                    single-line
                     required
                     :rules="rules.Services[item.Id].ReplicaCount"
                     @input="rules.Services[item.Id].ReplicaCount = rules0.Services.ReplicaCount"
@@ -211,7 +200,6 @@
                 <v-flex xs3>
                   <v-text-field
                     v-model="item.Description"
-                    single-line
                   ></v-text-field>
                 </v-flex>
                 <v-flex xs2>
@@ -220,13 +208,12 @@
                 <v-flex xs10>
                   <v-text-field
                     v-model="item.Command"
-                    single-line
                   ></v-text-field>
                 </v-flex>
                 <v-flex xs2>
                 </v-flex>
                 <v-flex xs3>
-                  <v-checkbox label="异常终止后自动重启" v-model="item.Restart" :true-value="'always'" :false-value="false" dark></v-checkbox>
+                  <v-checkbox label="异常终止后自动重启" v-model="item.Restart" :true-value="'always'" :false-value="null" dark></v-checkbox>
                 </v-flex>
                 <v-flex xs7>
                 </v-flex>
@@ -251,7 +238,6 @@
                         <v-text-field
                           v-model="props.item.Name"
                           :ref="'Env_Name_' + props.item.index"
-                          single-line
                           required
                           :rules="rules.Services[item.Id].Envs[props.item.Id].Name"
                           @input="rules.Services[item.Id].Envs[props.item.Id].Name = rules0.Services.Envs.Name"
@@ -260,7 +246,6 @@
                       <td>
                         <v-text-field
                           v-model="props.item.Value"
-                          single-line
                           required
                         ></v-text-field>
                       </td>
@@ -299,7 +284,6 @@
                         <v-text-field
                           v-model="props.item.Name"
                           :ref="'Volumn_Name_' + props.item.index"
-                          single-line
                           required
                           :rules="rules.Services[item.Id].Volumns[props.item.Id].Name"
                           @input="rules.Services[item.Id].Volumns[props.item.Id].Name = rules0.Services.Volumns.Name"
@@ -309,7 +293,6 @@
                         <v-text-field
                           v-model="props.item.Mount"
                           :ref="'Volumn_Mount_' + props.item.index"
-                          single-line
                           required
                           :rules="rules.Services[item.Id].Volumns[props.item.Id].Mount"
                           @input="rules.Services[item.Id].Volumns[props.item.Id].Mount = rules0.Services.Volumns.Mount"
@@ -350,7 +333,6 @@
                         <v-text-field
                           v-model="props.item.Name"
                           :ref="'Label_Name_' + props.item.index"
-                          single-line
                           required
                           :rules="rules.Services[item.Id].Labels[props.item.Id].Name"
                           @input="rules.Services[item.Id].Labels[props.item.Id].Name = rules0.Services.Labels.Name"
@@ -360,7 +342,6 @@
                         <v-text-field
                           v-model="props.item.Value"
                           :ref="'Label_Value_' + props.item.index"
-                          single-line
                           required
                           :rules="rules.Services[item.Id].Labels[props.item.Id].Value"
                           @input="rules.Services[item.Id].Labels[props.item.Id].Value = rules0.Services.Labels.Value"

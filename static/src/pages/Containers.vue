@@ -23,16 +23,35 @@
         </v-dialog>
       </v-layout>
       <v-layout row justify-center>
-        <v-dialog v-model="RestartConfirmDlg" persistent>
+        <v-dialog v-model="SSHInfoDlg" persistent width="580">
           <v-card>
             <v-card-row>
-              <v-card-title>{{ SelectedContainer.Name }}登录命令</v-card-title>
+              <v-card-title>{{ SelectedContainer.Name }}登录信息</v-card-title>
             </v-card-row>
             <v-card-row>
-              <v-card-text></v-card-text>
+              <v-card-text>
+                <v-text-field
+                  label="命令"
+                  ref="SSHInfo_Command"
+                  v-model="SSHInfo.Command"
+                  readonly
+                  @focus="selectAll('SSHInfo_Command')"
+                ></v-text-field>
+              </v-card-text>
+            </v-card-row>
+            <v-card-row>
+              <v-card-text>
+                <v-text-field
+                  label="密码"
+                  ref="SSHInfo_Password"
+                  v-model="SSHInfo.Password"
+                  readonly
+                  @focus="selectAll('SSHInfo_Password')"
+                ></v-text-field>
+              </v-card-text>
             </v-card-row>
             <v-card-row actions>
-              <v-btn class="green--text darken-1" flat="flat" @click.native="RestartConfirmDlg = false">关闭</v-btn>
+              <v-btn class="green--text darken-1" flat="flat" @click.native="SSHInfoDlg = false">关闭</v-btn>
             </v-card-row>
           </v-card>
         </v-dialog>
@@ -55,6 +74,9 @@
           <td>{{ props.item.Node ? props.item.Node.Name : '' }}</td>
           <td>{{ props.item.Node ? props.item.Node.IP : '' }}</td>
           <td>
+            <v-btn outline small icon class="green green--text" @click.native="displaySSHInfo(props.item)" title="登录信息">
+              <v-icon>lock_outline</v-icon>
+            </v-btn>
             <v-btn outline small icon class="orange orange--text" @click.native="confirmBeforeRestart(props.item)" title="重启容器">
               <v-icon>refresh</v-icon>
             </v-btn>
@@ -102,7 +124,10 @@
         Keyword: this.$route.query ? (this.$route.query.Keyword ? parseInt(this.$route.query.Keyword) : '') : '',
 
         RestartConfirmDlg: false,
-        SelectedContainer: {}
+        SelectedContainer: {},
+
+        SSHInfoDlg: false,
+        SSHInfo: {}
       }
     },
 
@@ -129,6 +154,13 @@
 
       goback() {
         this.$router.go(-1);
+      },
+
+      displaySSHInfo(container) {
+        api.ContainerSSHInfo(container.Id).then(data => {
+          this.SSHInfo = data;
+          this.SSHInfoDlg = true;
+        });
       },
 
       confirmBeforeRestart(container) {
@@ -164,6 +196,10 @@
           this.items = data.Data;
           this.totalItems = data.Total;
         });
+      },
+
+      selectAll(i) {
+        this.$refs[i].$refs.input.select();
       }
     }
   }

@@ -11,12 +11,10 @@
           label="集群"
           dark
           @input="poolChanged"
-          single-line
         ></v-select>
       <v-text-field
           append-icon="search"
           label="应用名称"
-          single-line
           hide-details
           v-model="Keyword"
           @keydown.enter.native="getDataFromApi"

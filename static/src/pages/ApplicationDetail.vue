@@ -26,7 +26,6 @@
               <v-flex xs3>
                 <v-text-field
                   v-model="Title"
-                  single-line
                   readonly
                 ></v-text-field>
               </v-flex>
@@ -38,7 +37,6 @@
               <v-flex xs3>
                 <v-text-field
                   v-model="Name"
-                  single-line
                   readonly
                 ></v-text-field>
               </v-flex>
@@ -48,7 +46,6 @@
               <v-flex xs3>
                 <v-text-field
                   v-model="Version"
-                  single-line
                   readonly
                 ></v-text-field>
               </v-flex>
@@ -60,7 +57,6 @@
               <v-flex xs3>
                 <v-text-field
                   v-model="Description"
-                  single-line
                   readonly
                 ></v-text-field>
               </v-flex>
@@ -106,7 +102,6 @@
                 <v-flex xs3>
                   <v-text-field
                     v-model="item.Title"
-                    single-line
                     readonly
                   ></v-text-field>
                 </v-flex>
@@ -118,7 +113,6 @@
                 <v-flex xs3>
                   <v-text-field
                     v-model="item.Name"
-                    single-line
                     readonly
                   ></v-text-field>
                 </v-flex>
@@ -128,7 +122,6 @@
                 <v-flex xs3>
                   <v-text-field
                     v-model="item.ImageName"
-                    single-line
                     readonly
                   ></v-text-field>
                 </v-flex>
@@ -140,7 +133,6 @@
                 <v-flex xs3>
                   <v-text-field
                     v-model="item.ImageTag"
-                    single-line
                     readonly
                   ></v-text-field>
                 </v-flex>
@@ -150,7 +142,6 @@
                 <v-flex xs1>
                   <v-text-field
                     v-model="item.CPU"
-                    single-line
                     readonly
                   ></v-text-field>
                 </v-flex>
@@ -165,7 +156,6 @@
                 <v-flex xs3>
                   <v-text-field
                     v-model="item.Memory"
-                    single-line
                     readonly
                   ></v-text-field>
                 </v-flex>
@@ -176,7 +166,6 @@
                   <v-text-field
                     :ref="'Service_ReplicaCount_' + item.Id"
                     v-model="item.ReplicaCount"
-                    single-line
                     required
                     :rules="rules.Services[item.Id].ReplicaCount"
                     @input="rules.Services[item.Id].ReplicaCount = rules0.Services.ReplicaCount"
@@ -195,7 +184,6 @@
                 <v-flex xs3>
                   <v-text-field
                     v-model="item.Description"
-                    single-line
                     readonly
                   ></v-text-field>
                 </v-flex>
@@ -205,14 +193,13 @@
                 <v-flex xs10>
                   <v-text-field
                     v-model="item.Command"
-                    single-line
                     readonly
                   ></v-text-field>
                 </v-flex>
                 <v-flex xs2>
                 </v-flex>
                 <v-flex xs3>
-                  <v-checkbox label="异常终止后自动重启" v-model="item.Restart" :true-value="'always'" :false-value="false" dark disabled></v-checkbox>
+                  <v-checkbox label="异常终止后自动重启" v-model="item.Restart" :true-value="'always'" :false-value="null" dark disabled></v-checkbox>
                 </v-flex>
                 <v-flex xs7>
                 </v-flex>
@@ -233,14 +220,12 @@
                       <td>
                         <v-text-field
                           v-model="props.item.Name"
-                          single-line
                           readonly
                         ></v-text-field>
                       </td>
                       <td>
                         <v-text-field
                           v-model="props.item.Value"
-                          single-line
                           readonly
                         ></v-text-field>
                       </td>
@@ -264,14 +249,12 @@
                       <td>
                         <v-text-field
                           v-model="props.item.Name"
-                          single-line
                           readonly
                         ></v-text-field>
                       </td>
                       <td>
                         <v-text-field
                           v-model="props.item.Mount"
-                          single-line
                           readonly
                         ></v-text-field>
                       </td>
@@ -299,7 +282,6 @@
                       <td>
                         <v-text-field
                           v-model="props.item.Value"
-                          single-line
                           readonly
                         ></v-text-field>
                       </td>
@@ -341,7 +323,6 @@
                   v-model="AuthorizeToTeam"
                   dark
                   max-height="auto"
-                  single-line
                   autocomplete
                 >
               </v-select>
@@ -381,7 +362,6 @@
                   v-model="AuthorizeToUser"
                   dark
                   max-height="auto"
-                  single-line
                   autocomplete
                 >
               </v-select>

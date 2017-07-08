@@ -17,7 +17,6 @@
                 <v-text-field
                   v-model="Name"
                   ref="Env_Name"
-                  single-line
                   required
                   :rules="rules.Env.Name"
                   @input="rules.Env.Name = rules0.Env.Name"
@@ -32,7 +31,6 @@
                 <v-text-field
                   v-model="Value"
                   ref="Env_Value"
-                  single-line
                   required
                   :rules="rules.Env.Value"
                   @input="rules.Env.Value = rules0.Env.Value"
@@ -45,7 +43,6 @@
                 <v-text-field
                   v-model="Description"
                   ref="Name"
-                  single-line
                 ></v-text-field>
               </v-flex>
               <v-flex xs12 mt-4 class="text-xs-center">
@@ -79,7 +76,6 @@
                 <v-text-field
                   v-model="props.item.Value"
                   :ref="'Pool_' + props.item.PoolId"
-                  single-line
                   required
                   :rules="rules.Pool.Values"
                   @input="rules.Pool.Values = rules0.Pool.Values"

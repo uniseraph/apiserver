@@ -12,7 +12,6 @@
         <v-text-field
             append-icon="search"
             label="模板名称"
-            single-line
             hide-details
             v-model="Keyword"
             @keydown.enter.native="getDataFromApi"
@@ -57,7 +56,6 @@
                 v-model="PoolId"
                 label="集群"
                 dark
-                single-line
               ></v-select>
             </v-flex>
             <v-flex xs2>
@@ -69,7 +67,6 @@
               <v-text-field
                 ref="Title"
                 v-model="Title"
-                single-line
                 required
                 :rules="rules.Title"
                 @input="rules.Title = rules0.Title"
@@ -81,7 +78,6 @@
             <v-flex xs10>
               <v-text-field
                 v-model="Description"
-                single-line
               ></v-text-field>
             </v-flex>
             <v-flex xs12 mt-4 class="text-md-center">

@@ -17,7 +17,6 @@
                 <v-text-field
                   v-model="Name"
                   ref="Name"
-                  single-line
                   required
                   :rules="rules.Name"
                   @input="rules.Name = rules0.Name"
@@ -31,7 +30,6 @@
               <v-flex xs3>
                 <v-text-field
                   v-model="Description"
-                  single-line
                 ></v-text-field>
               </v-flex>
               <v-flex xs12 mt-4 class="text-xs-center">
@@ -57,7 +55,6 @@
               v-model="UserToJoin"
               dark
               max-height="auto"
-              single-line
               autocomplete
             >
           </v-select>

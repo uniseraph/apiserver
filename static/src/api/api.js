@@ -249,11 +249,15 @@ export default {
     },
 
     Containers(params) {
-        return fetch('/applications/' + params.Id + '/containers', params);
+        return fetch('/applications/' + params.Id + '/containers/list', params);
     },
 
     RestartContainer(id) {
         return fetch('/applications/containers/' + id + '/restart');
+    },
+
+    ContainerSSHInfo(id) {
+        return fetch('/applications/containers/' + id + '/ssh-info');
     },
 
     ScaleService(params) {

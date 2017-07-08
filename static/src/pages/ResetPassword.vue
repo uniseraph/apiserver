@@ -16,7 +16,6 @@
               v-model="Password1"
               ref="Password1"
               type="password"
-              single-line
               required
               :rules="rules.Password1"
               @input="rules.Password1 = rules0.Password1"
@@ -32,7 +31,6 @@
               v-model="Password2"
               ref="Password2"
               type="password"
-              single-line
               required
               :rules="rules.Password2"
               @input="rules.Password2 = rules0.Password2"
