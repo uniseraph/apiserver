@@ -199,7 +199,7 @@
                 <v-flex xs2>
                 </v-flex>
                 <v-flex xs3>
-                  <v-checkbox label="异常终止后自动重启" v-model="item.Restart" :true-value="'always'" :false-value="null" dark disabled></v-checkbox>
+                  <v-checkbox label="异常终止后自动重启" v-model="item.Restart" true-value="'always'" false-value="no" dark disabled></v-checkbox>
                 </v-flex>
                 <v-flex xs7>
                 </v-flex>
@@ -340,8 +340,8 @@
                 <template slot="items" scope="props">
                   <td>{{ props.item.Name }}</td>
                   <td align="right">
-                    <v-btn class="orange darken-2 white--text" small @click.native="removeTeam(props.item)">
-                      <v-icon light left>close</v-icon>删除
+                    <v-btn outline small class="orange orange--text" @click.native="removeTeam(props.item)">
+                      <v-icon class="orange--text">close</v-icon>删除
                     </v-btn>
                   </td>
                 </template>
@@ -379,8 +379,8 @@
                 <template slot="items" scope="props">
                   <td>{{ props.item.Name }}</td>
                   <td align="right">
-                    <v-btn class="orange darken-2 white--text" small @click.native="removeUser(props.item)">
-                      <v-icon light left>close</v-icon>删除
+                    <v-btn outline small class="orange orange--text" @click.native="removeUser(props.item)">
+                      <v-icon class="orange--text">close</v-icon>删除
                     </v-btn>
                   </td>
                 </template>

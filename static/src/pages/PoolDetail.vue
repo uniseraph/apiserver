@@ -169,8 +169,8 @@
                 <template slot="items" scope="props">
                   <td>{{ props.item.Name }}</td>
                   <td align="right">
-                    <v-btn class="orange darken-2 white--text" small @click.native="removeTeam(props.item)">
-                      <v-icon light left>close</v-icon>删除
+                    <v-btn outline small class="orange orange--text"  @click.native="removeTeam(props.item)">
+                      <v-icon class="orange--text">close</v-icon>删除
                     </v-btn>
                   </td>
                 </template>
@@ -208,8 +208,8 @@
                 <template slot="items" scope="props">
                   <td>{{ props.item.Name }}</td>
                   <td align="right">
-                    <v-btn class="orange darken-2 white--text" small @click.native="removeUser(props.item)">
-                      <v-icon light left>close</v-icon>删除
+                    <v-btn outline small class="orange orange--text" @click.native="removeUser(props.item)">
+                      <v-icon class="orange--text">close</v-icon>删除
                     </v-btn>
                   </td>
                 </template>

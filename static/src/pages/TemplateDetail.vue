@@ -213,7 +213,7 @@
                 <v-flex xs2>
                 </v-flex>
                 <v-flex xs3>
-                  <v-checkbox label="异常终止后自动重启" v-model="item.Restart" :true-value="'always'" :false-value="null" dark></v-checkbox>
+                  <v-checkbox label="异常终止后自动重启" v-model="item.Restart" true-value="always" false-value="no" dark></v-checkbox>
                 </v-flex>
                 <v-flex xs7>
                 </v-flex>
