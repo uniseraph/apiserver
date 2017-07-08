@@ -231,5 +231,25 @@ type Template struct {
 	CreatorId   string `json:",omitempty"`
 	CreatedTime int64  `json:",omitempty"`
 	UpdaterId   string `json:",omitempty"`
+	UpdaterName string `json:",omitempty"`
+	UpdatedTime int64  `json:",omitempty"`
+}
+
+type Application struct {
+	Id          bson.ObjectId "_id"
+	TemplateId  string `json:",omitempty"`
+	PoolId      string `json:",omitempty"`
+	Title       string
+	//Name        string
+	Version     string
+	Description string
+
+
+	Services []Service
+
+	CreatorId   string `json:",omitempty"`
+	CreatedTime int64  `json:",omitempty"`
+	UpdaterId   string `json:",omitempty"`
+	UpdaterName string `json:",omitempty"`
 	UpdatedTime int64  `json:",omitempty"`
 }

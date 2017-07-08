@@ -168,6 +168,7 @@ func createTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	req.Template.Id = bson.NewObjectId()
 	req.CreatorId = user.Id.Hex()
 	req.UpdaterId = user.Id.Hex()
+	req.UpdaterName = user.Name
 	req.CreatedTime = time.Now().Unix()
 	req.UpdatedTime = req.CreatedTime
 
@@ -238,6 +239,7 @@ func copyTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	result.Title = req.Title
 	result.CreatorId = user.Id.Hex()
 	result.UpdaterId = user.Id.Hex()
+	result.UpdaterName = user.Name
 	result.CreatedTime = time.Now().Unix()
 	result.UpdatedTime = result.CreatedTime
 
@@ -305,10 +307,11 @@ func updateTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	}
 
 	result.Id = bson.NewObjectId()
-	result.CreatorId = user.Id.Hex()
+	//result.CreatorId = user.Id.Hex()
 	result.UpdaterId = user.Id.Hex()
-	result.CreatedTime = time.Now().Unix()
+	//result.CreatedTime = time.Now().Unix()
 	result.UpdatedTime = result.CreatedTime
+	result.UpdaterName = user.Name
 
 	if err := c.UpdateId(bson.ObjectIdHex(id), result); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)

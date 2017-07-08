@@ -391,7 +391,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	logrus.Debug("check image valid")
+	logrus.Debug("postContainersCreate::check image valid")
 
 	if err := validImage(config.Image); err != nil {
 		httpError(w, err.Error(), http.StatusInternalServerError)
@@ -403,7 +403,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	logrus.Debugf("before create a container , poolInfo is %#v  ", poolInfo)
+	logrus.Debugf("postContainersCreate::before create a container , poolInfo is %#v  ", poolInfo)
 
 	var client *http.Client
 	if poolInfo.DriverOpts.TlsConfig != nil {
@@ -422,12 +422,14 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		}
 	}
 
+
 	cli, err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint, poolInfo.DriverOpts.APIVersion, client, nil)
-	defer cli.Close()
 	if err != nil {
 		httpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	defer cli.Close()
+
 
 	resp, err := cli.ContainerCreate(ctx, &config.Config, &config.HostConfig, &config.NetworkingConfig, name)
 	if err != nil {
