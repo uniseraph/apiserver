@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// OsExiter is the function used when the app exits. If not set defaults to os.Exit.
+// OsExiter is the function used when the application exits. If not set defaults to os.Exit.
 var OsExiter = os.Exit
 
 // ErrWriter is used to write errors to the user. This can be anything

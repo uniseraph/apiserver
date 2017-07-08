@@ -295,7 +295,7 @@ func TestPool(t *testing.T) {
 		Driver: "swarm",
 		DriverOpts: types.DriverOpts{
 			Version:    "v1.0",
-			EndPoint:   "47.92.49.245:2375",
+			EndPoint:   "tcp://139.196.173.71:2375",
 			APIVersion: "v1.23",
 		},
 	})

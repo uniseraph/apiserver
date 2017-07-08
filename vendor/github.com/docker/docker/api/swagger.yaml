@@ -8207,7 +8207,7 @@ paths:
                 CreatedAt: "2016-11-05T01:20:17.327670065Z"
                 UpdatedAt: "2016-11-05T01:20:17.327670065Z"
                 Spec:
-                  Name: "app-dev.crt"
+                  Name: "application-dev.crt"
         500:
           description: "server error"
           schema:
@@ -8267,7 +8267,7 @@ paths:
               - $ref: "#/definitions/SecretSpec"
               - type: "object"
                 example:
-                  Name: "app-key.crt"
+                  Name: "application-key.crt"
                   Labels:
                     foo: "bar"
                   Data: "VEhJUyBJUyBOT1QgQSBSRUFMIENFUlRJRklDQVRFCg=="
@@ -8291,7 +8291,7 @@ paths:
               CreatedAt: "2016-11-05T01:20:17.327670065Z"
               UpdatedAt: "2016-11-05T01:20:17.327670065Z"
               Spec:
-                Name: "app-dev.crt"
+                Name: "application-dev.crt"
         404:
           description: "secret not found"
           schema:
