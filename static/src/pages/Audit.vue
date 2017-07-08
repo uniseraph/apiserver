@@ -173,7 +173,7 @@
           <td>{{ props.item.IP }}</td>
           <td>{{ props.item.Pool.Name }}</td>
           <td>{{ props.item.Application.Title }} ({{ props.item.Application.Name }} {{ props.item.Application.Version }})</td>
-          <td>{{ props.item.Container.Name }}</td>
+          <td style="overflow:hidden;">{{ props.item.Container.Id }}</td>
           <td>
             {{ sshOpName(props.item.Operation) }}
             <v-btn outline small class="green green--text" @click.native="displayDetail(props.item)">
@@ -202,7 +202,7 @@
           { text: 'IP', sortable: false, left: true },
           { text: '集群', sortable: false, left: true },
           { text: '应用', sortable: false, left: true },
-          { text: '容器', sortable: false, left: true },
+          { text: '容器ID', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
         items: [],
