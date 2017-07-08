@@ -128,7 +128,6 @@
               <v-text-field
                 append-icon="search"
                 label="参数名称"
-                single-line
                 hide-details
                 v-model="Keyword"
                 @keydown.enter.native="getDataFromApi"
@@ -188,14 +187,13 @@
               :items="items"
               :total-items="totalItems"
               :pagination.sync="pagination"
-              :search="Keyword"
               hide-actions
               class="values-table elevation-1"
               no-data-text=""
             >
               <template slot="items" scope="props">
                 <td>{{ props.item.Id }}</td>
-                <td><router-link :to="'/env/value/' + props.item.Id">{{ props.item.Name }}</router-link></td>
+                <td><router-link :to="'/env/trees/values/' + props.item.Id">{{ props.item.Name }}</router-link></td>
                 <td>{{ props.item.Value }}</td>
                 <td>{{ props.item.Description }}</td>
                 <td>
@@ -235,7 +233,13 @@
         ],
         items: [],
         totalItems: 0,
-        pagination: { rowsPerPage: 2, totalItems: 0, page: 1, sortBy: null, descending: false },
+        pagination: { 
+          rowsPerPage: this.$route.query ? (this.$route.query.PageSize ? parseInt(this.$route.query.PageSize) : 20) : 20, 
+          totalItems: 0, 
+          page: this.$route.query ? (this.$route.query.Page ? parseInt(this.$route.query.Page) : 1) : 1, 
+          sortBy: this.$route.query ? (this.$route.query.SortBy ? parseInt(this.$route.query.SortBy) : null) : null, 
+          descending: this.$route.query ? (this.$route.query.Desc ? parseInt(this.$route.query.Desc) : false) : false 
+        },
 
         TreeId: this.$route.params.id,
         TreeName: this.$route.params.name,
@@ -281,8 +285,10 @@
 
     watch: {
         pagination: {
-          handler() {
-            this.getDataFromApi();
+          handler(v, o) {
+            if (v.rowsPerPage != o.rowsPerPage || v.page != o.page || v.sortBy != o.sortBy || v.descending != o.descending) {
+              this.getDataFromApi();
+            }
           },
 
           deep: true
@@ -310,7 +316,7 @@
     },
 
     mounted() {
-      this.init();
+      this.init(this.$route.query ? this.$route.query.DirId : null);
     },
 
     methods: {
@@ -322,17 +328,22 @@
             label: '全部',
             open: true,
             visible: true,
-            checked: false,
-            children: conv2NodeData('id', data)
+            checked: false
           }];
+
+          nodeData[0].children = conv2NodeData(nodeData[0], data);
 
           this.treeData = this.$refs.tree.createTreeData(nodeData, state, selectedDirId);
 
           if (selectedDirId) {
             let node = this.$refs.tree.getNodeById(selectedDirId);
-            this.nodeClicked(node);
+            if (node) {
+              this.nodeClicked(node);
+            }
           }
-        })
+        });
+
+        this.getDataFromApi();
       },
 
       goback() {
@@ -368,6 +379,7 @@
             ParentId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : null,
             TreeId: this.TreeId
           };
+
           api.CreateEnvDir(params).then(data => {
             this.CreateDirDlg = false;
             this.init(data.Id);
@@ -395,18 +407,25 @@
 
       removeDir() {
         this.RemoveDirConfirmDlg = false;
-        api.RemoveEnvDir({ Id: this.SelectedDir.Id }).then(data => {
+        api.RemoveEnvDir(this.SelectedDir.Id).then(data => {
           this.init(this.SelectedDir.ParentId);
         })
       },
 
       getDataFromApi() {
         let params = {
-          DirId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : null, 
-          Name: this.Name,
+          TreeId: this.TreeId,
+          DirId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : '', // 这里用''不用null主要是因为router.replace会出错
+          Name: this.Keyword,
           PageSize: this.pagination.rowsPerPage, 
           Page: this.pagination.page
         };
+
+        this.$router.replace({
+          name: this.$route.name,
+          params: this.$route.params,
+          query: params
+        });
 
         api.EnvValues(params).then(data => {
           this.pagination.totalItems = data.Total;
@@ -430,6 +449,7 @@
             DirId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : null,
             TreeId: this.TreeId
           };
+
           api.CreateEnvValue(params).then(data => {
             this.CreateValueDlg = false;
             this.getDataFromApi();
@@ -444,7 +464,7 @@
 
       removeValue() {
         this.RemoveValueConfirmDlg = false;
-        api.RemoveEnvValue({ Id: this.SelectedValue.Id }).then(data => {
+        api.RemoveEnvValue(this.SelectedValue.Id).then(data => {
           this.getDataFromApi();
         })
       }
@@ -455,7 +475,7 @@
     }
   }
 
-  function conv2NodeData(pid, list) {
+  function conv2NodeData(pnode, list) {
     let arr = [];
     for (let e of list) {
       let a = {
@@ -464,11 +484,14 @@
         parentId: e.ParentId ? e.ParentId : '0',
         open: false,
         visible: true,
-        checked: false
+        checked: false,
+        parentNode: pnode
       };
+
       arr.push(a);
+
       if (e.Children) {
-        a.children = conv2NodeData(a.id, e.Children);
+        a.children = conv2NodeData(a, e.Children);
       }
     }
 

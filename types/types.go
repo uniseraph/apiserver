@@ -2,6 +2,7 @@ package types
 
 import (
 	"crypto/tls"
+	"github.com/docker/docker/api/types"
 	"github.com/docker/go-connections/tlsconfig"
 	"gopkg.in/mgo.v2/bson"
 	"math"
@@ -40,11 +41,20 @@ type PoolInfo struct {
 	Name   string
 	Status string
 
-	Driver         string
-	DriverOpts     DriverOpts
-	EnvTreeId      string
-	Labels         map[string]interface{} `json:",omitempty"`
-	ProxyEndpoints []string               `json:",omitempty"`
+	CPUs             int
+	Memory           int64
+	Disk             int64
+	ClusterStore     string
+	ClusterAdvertise string
+	Strategy         string
+	Filters          string
+	Driver           string
+	DriverOpts       DriverOpts
+	EnvTreeId        string
+	Labels           []string `json:",omitempty"`
+	ProxyEndpoint    string   `json:",omitempty"`
+	UpdatedTime      int64
+	CreatedTime      int64
 }
 
 type Roleset uint64
@@ -152,4 +162,74 @@ type EnvTreeNodeParamValue struct {
 	Pool        bson.ObjectId `bson:",omitempty"`
 	CreatedTime int64         `json:",omitempty"`
 	UpdatedTime int64         `json:",omitempty"`
+}
+
+//调用docker info，获取swarm集群的信息
+type ClusterInfo struct {
+	types.Info
+	SystemStatus [][]string
+}
+
+type Node struct {
+	//Id             bson.ObjectId "_id"
+	PoolId         string
+	PoolName       string
+	Hostname       string
+	Endpoint       string
+	NodeId         string
+	Status         string
+	Containers     string
+	ReservedCPUs   string
+	ReservedMemory string
+
+	//ContainersRunning int
+	//ContainersPaused  int
+	//ContainersStopped int
+	Labels        map[string]string
+	ServerVersion string
+}
+
+type Service struct {
+	Title        string
+	Name         string
+	ImageName    string
+	ImageTag     string
+	CPU          int
+	ExclusiveCPU bool
+	Memory       int
+	ReplicaCount int
+	Description  int
+	Command      string
+	Envs         []Env
+	Volumns      []Volumne
+	Labels       []Label
+}
+
+type Env struct {
+	Name  string
+	Value string
+}
+type Label struct {
+	Name  string
+	Value string
+}
+type Volumne struct {
+	Name          string
+	Driver        string
+	ContainerPath string
+	HostPath      string
+}
+
+type Template struct {
+	Id          bson.ObjectId "_id"
+	Title       string
+	Name        string
+	Version     string
+	Description string
+	Services    []Service
+
+	CreatorId   string `json:",omitempty"`
+	CreatedTime int64  `json:",omitempty"`
+	UpdaterId   string `json:",omitempty"`
+	UpdatedTime int64  `json:",omitempty"`
 }

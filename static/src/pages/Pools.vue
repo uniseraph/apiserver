@@ -32,10 +32,13 @@
                 <v-select
                   :items="EnvTreeList"
                   v-model="NewPool.EnvTreeId"
+                  ref="all_EnvTreeId" 
                   item-text="Name"
                   item-value="Id"
                   label="参数目录"
                   dark
+                  required
+                  :rules="rules.EnvTreeId"
                   class="mt-2"
                 ></v-select>
                 <v-select
@@ -116,18 +119,18 @@
       >
         <template slot="items" scope="props">
           <td>{{ props.item.Id }}</td>
-          <td><router-link :to="'/pool/' + props.item.Id">{{ props.item.Name }}</router-link></td>
+          <td><router-link :to="'/pools/' + props.item.Id">{{ props.item.Name }}</router-link></td>
           <td>{{ props.item.EnvTree ? props.item.EnvTree.Name : '' }}</td>
           <td>{{ props.item.Driver }}</td>
           <td class="text-xs-right">{{ props.item.Nodes }}</td>
           <td class="text-xs-right">
-            {{ props.item.Cpus }}
+            {{ props.item.CPUs }}
           </td>
           <td class="text-xs-right">
-            {{ props.item.Memories }}
+            {{ props.item.Memory }}
           </td>
           <td class="text-xs-right">
-            {{ props.item.Disks }}
+            {{ props.item.Disk }}
           </td>
           <td>
             <v-btn outline small icon class="orange orange--text" @click.native="confirmBeforeRemove(props.item)" title="删除集群">
@@ -179,6 +182,9 @@
         rules0: {
           Name: [
             v => (v && v.length > 0 ? true : '请输入集群名称')
+          ],
+          EnvTreeId: [
+            v => (v && v.length > 0 ? true : '请选择参数目录')
           ],
           Driver: [
             v => (v && v.length > 0 ? true : '请选择驱动类型')
@@ -236,8 +242,8 @@
             return;
           }
 
-          this.CreatePoolDlg = false;
           api.CreatePool(this.NewPool).then(data => {
+            this.CreatePoolDlg = false;
             this.init();
           });
         });
@@ -250,7 +256,7 @@
 
       removePool() {
         this.RemoveConfirmDlg = false;
-        api.RemovePool({ Id: this.SelectedPool.Id }).then(data => {
+        api.RemovePool(this.SelectedPool.Id).then(data => {
           this.init();
         })
       }

@@ -33,7 +33,7 @@
       >
         <template slot="items" scope="props">
           <td>{{ props.item.Id }}</td>
-          <td><router-link :to="'/user/' + props.item.Id">{{ props.item.Name }}</router-link></td>
+          <td><router-link :to="'/users/' + props.item.Id">{{ props.item.Name }}</router-link></td>
           <td>{{ props.item.Email }}</td>
           <td>{{ props.item.Tel }}</td>
           <td>
@@ -43,7 +43,7 @@
           </td>
           <td>{{ props.item.CreatedTime | formatDate }}</td>
           <td>
-            <router-link :to="'/user/password/' + props.item.Id">
+            <router-link :to="'/users/password/' + props.item.Id">
               <v-btn outline small icon class="green green--text" title="重置密码">
                 <v-icon>lock</v-icon>
               </v-btn>
@@ -99,7 +99,7 @@
 
       removeUser() {
         this.RemoveConfirmDlg = false;
-        api.RemoveUser({ Id: this.SelectedUser.Id }).then(data => {
+        api.RemoveUser(this.SelectedUser.Id).then(data => {
           this.init();
         })
       }

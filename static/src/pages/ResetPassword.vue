@@ -16,7 +16,6 @@
               v-model="Password1"
               ref="Password1"
               type="password"
-              single-line
               required
               :rules="rules.Password1"
               @input="rules.Password1 = rules0.Password1"
@@ -32,7 +31,6 @@
               v-model="Password2"
               ref="Password2"
               type="password"
-              single-line
               required
               :rules="rules.Password2"
               @input="rules.Password2 = rules0.Password2"
@@ -54,14 +52,13 @@
 </template>
 
 <script>
-  import router from '../router'
   import api from '../api/api'
   import * as ui from '../util/ui'
 
   export default {
     data() {
       return {
-        Id: '',
+        Id: this.$route.params.id,
         Name: '',
         Password1: '',
         Password2: '',
@@ -85,7 +82,7 @@
 
     methods: {
       init() {
-        api.User(this.$route.params.id).then(data => {
+        api.User(this.Id).then(data => {
           this.Id = data.Id;
           this.Name = data.Name;
         })

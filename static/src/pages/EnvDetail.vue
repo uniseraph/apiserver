@@ -17,7 +17,6 @@
                 <v-text-field
                   v-model="Name"
                   ref="Env_Name"
-                  single-line
                   required
                   :rules="rules.Env.Name"
                   @input="rules.Env.Name = rules0.Env.Name"
@@ -32,7 +31,6 @@
                 <v-text-field
                   v-model="Value"
                   ref="Env_Value"
-                  single-line
                   required
                   :rules="rules.Env.Value"
                   @input="rules.Env.Value = rules0.Env.Value"
@@ -45,7 +43,6 @@
                 <v-text-field
                   v-model="Description"
                   ref="Name"
-                  single-line
                 ></v-text-field>
               </v-flex>
               <v-flex xs12 mt-4 class="text-xs-center">
@@ -79,7 +76,6 @@
                 <v-text-field
                   v-model="props.item.Value"
                   :ref="'Pool_' + props.item.PoolId"
-                  single-line
                   required
                   :rules="rules.Pool.Values"
                   @input="rules.Pool.Values = rules0.Pool.Values"
@@ -99,7 +95,6 @@
 </template>
 
 <script>
-  import router from '../router'
   import api from '../api/api'
   import * as ui from '../util/ui'
 
@@ -113,7 +108,7 @@
           { text: '操作', sortable: false, left: true }
         ],
 
-        Id: '',
+        Id: this.$route.params.id,
         Name: '',
         Value: '',
         Description: '',
@@ -147,7 +142,7 @@
 
     methods: {
       init() {
-        api.EnvValue(this.$route.params.id).then(data => {
+        api.EnvValue(this.Id).then(data => {
           this.Id = data.Id;
           this.Name = data.Name;
           this.Value = data.Value;
@@ -186,11 +181,10 @@
             return;
           }
 
-          api.UpdateEnvValue({
-            Id: this.Id,
+          api.UpdateEnvValue(this.Id, [{
             PoolId: item.PoolId,
             Value: item.Value
-          }).then(data => {
+          }]).then(data => {
             ui.alert('集群参数值修改成功', 'success');
           });
         });

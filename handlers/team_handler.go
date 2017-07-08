@@ -28,7 +28,7 @@ func getTeamsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	c := mgoSession.DB(mgoDB).C("team")
 
-	results:=make( []types.Team ,30)
+	results := make([]types.Team, 0, 50)
 	if err := c.Find(bson.M{}).All(&results); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -219,6 +219,7 @@ type TeamsCreateRequest struct {
 type TeamsCreateResponse struct {
 	Id string
 }
+
 func postTeamsCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	if err := r.ParseForm(); err != nil {
@@ -287,8 +288,8 @@ func postTeamsCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	w.WriteHeader(http.StatusOK)
 
-	result := & TeamsCreateResponse{
-		Id : team.Id.Hex(),
+	result := &TeamsCreateResponse{
+		Id: team.Id.Hex(),
 	}
 	//fmt.Fprintf(w, "{%q:%q}", "Id", team.Id.Hex())
 	json.NewEncoder(w).Encode(result)
@@ -353,7 +354,6 @@ func postTeamUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 }
 
-
 type ActionsCheckRequest struct {
 	Actions []string
 }
@@ -361,4 +361,3 @@ type ActionsCheckRequest struct {
 type ActionCheckResponse struct {
 	Action2Result map[string]bool
 }
-

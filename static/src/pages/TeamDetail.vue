@@ -17,7 +17,6 @@
                 <v-text-field
                   v-model="Name"
                   ref="Name"
-                  single-line
                   required
                   :rules="rules.Name"
                   @input="rules.Name = rules0.Name"
@@ -31,7 +30,6 @@
               <v-flex xs3>
                 <v-text-field
                   v-model="Description"
-                  single-line
                 ></v-text-field>
               </v-flex>
               <v-flex xs12 mt-4 class="text-xs-center">
@@ -57,7 +55,6 @@
               v-model="UserToJoin"
               dark
               max-height="auto"
-              single-line
               autocomplete
             >
           </v-select>
@@ -87,8 +84,8 @@
                 <v-radio label="" v-model="LeaderId" :value="props.item.Id" dark></v-radio>
               </td>
               <td align="right">
-                <v-btn class="orange darken-2 white--text" small @click.native="removeUser(props.item)">
-                  <v-icon light left>close</v-icon>删除
+                <v-btn outline small class="orange orange--text" @click.native="removeUser(props.item)">
+                  <v-icon class="orange--text">close</v-icon>删除
                 </v-btn>
               </td>
             </template>
@@ -100,14 +97,13 @@
 </template>
 
 <script>
-  import router from '../router'
   import api from '../api/api'
   import * as ui from '../util/ui'
 
   export default {
     data() {
       return {
-        Id: '',
+        Id: this.$route.params.id,
         Name: '',
         Description: '',
         LeaderId: false,
@@ -156,7 +152,7 @@
 
     methods: {
       init() {
-        api.Team(this.$route.params.id).then(data => {
+        api.Team(this.Id).then(data => {
           this.Id = data.Id;
           this.Name = data.Name;
           this.Description = data.Description;

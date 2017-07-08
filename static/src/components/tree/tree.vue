@@ -86,7 +86,7 @@
       },
 
       createTreeData(nodeData, state, currNodeId) {
-        let parentNode = null;
+        let currNode = null;
         const traverseNodes = (root) => {
             for (let node of root) {
                 let s = state[node.id];
@@ -97,21 +97,25 @@
                 }
 
                 if (currNodeId && node.id == currNodeId) {
-                  if (parentNode) {
-                    parentNode.open = true;
-                  }
-
-                  node.checked = true;
+                  currNode = node;
                 }
 
                 if (node.children && node.children.length > 0) {
-                  parentNode = node;
                   traverseNodes(node.children)
                 }
             }
         };
 
         traverseNodes(nodeData);
+
+        if (currNode != null) {
+          currNode.checked = true;
+          let node = currNode.parentNode;
+          while (node) {
+            node.open = true;
+            node = node.parentNode;
+          }
+        }
 
         return { nodeData: nodeData, currentNodeId: currNodeId };
       },

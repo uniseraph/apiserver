@@ -2,7 +2,7 @@
   <v-card>
     <v-card-title>
       <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
-      &nbsp;&nbsp;用户列表&nbsp;&nbsp;/&nbsp;&nbsp;{{ Name }}
+      &nbsp;&nbsp;用户列表&nbsp;&nbsp;/&nbsp;&nbsp;{{ Id ? Name : '新增用户' }}
       <v-spacer></v-spacer>
     </v-card-title>
     <div>
@@ -15,7 +15,6 @@
             <v-text-field
               ref="Name"
               v-model="Name"
-              single-line
               required
               :rules="rules.Name"
               @input="rules.Name = rules0.Name"
@@ -30,7 +29,6 @@
             <v-text-field
               ref="Email"
               v-model="Email"
-              single-line
               required
               :rules="rules.Email"
               @input="rules.Email = rules0.Email"
@@ -43,7 +41,6 @@
             <v-text-field
               ref="Tel"
               v-model="Tel"
-              single-line
               required
               :rules="rules.Tel"
               @input="rules.Tel = rules0.Tel"
@@ -78,14 +75,13 @@
 </template>
 
 <script>
-  import router from '../router'
   import api from '../api/api'
   import * as ui from '../util/ui'
 
   export default {
     data() {
       return {
-        Id: '',
+        Id: this.$route.params ? this.$route.params.id : null,
         Name: '',
         Email: '',
         Tel: '',
@@ -115,15 +111,17 @@
 
     methods: {
       init() {
-        api.User(this.$route.params.id).then(data => {
-          this.Id = data.Id;
-          this.Name = data.Name;
-          this.Email = data.Email;
-          this.Tel = data.Tel;
-          this.CreatedTime = data.CreatedTime;
-          this.IsSysAdmin = (data.RoleSet & this.constants.ROLE_SYS_ADMIN) != 0;
-          this.IsAppAdmin = (data.RoleSet & this.constants.ROLE_APP_ADMIN) != 0;
-        })
+        if (this.Id) {
+          api.User(this.Id).then(data => {
+            this.Id = data.Id;
+            this.Name = data.Name;
+            this.Email = data.Email;
+            this.Tel = data.Tel;
+            this.CreatedTime = data.CreatedTime;
+            this.IsSysAdmin = (data.RoleSet & this.constants.ROLE_SYS_ADMIN) != 0;
+            this.IsAppAdmin = (data.RoleSet & this.constants.ROLE_APP_ADMIN) != 0;
+          })
+        }
       },
 
       goback() {
@@ -145,19 +143,28 @@
             roleSet |= this.constants.ROLE_APP_ADMIN;
           }
 
-          api.UpdateUser({
-            Id: this.Id,
-            Name: this.Name,
-            Email: this.Email,
-            Tel: this.Tel,
-            RoleSet: roleSet
-          }).then(data => {
-            ui.alert('用户资料修改成功', 'success');
-            let that = this;
-            setTimeout(() => {
-              that.goback();
-            }, 1500);
-          });
+          if (this.Id) {
+            api.UpdateUser({
+              Id: this.Id,
+              Name: this.Name,
+              Email: this.Email,
+              Tel: this.Tel,
+              RoleSet: roleSet
+            }).then(data => {
+              ui.alert('用户资料修改成功', 'success');
+              this.init();
+            });
+          } else {
+            api.CreateUser({
+              Name: this.Name,
+              Email: this.Email,
+              Tel: this.Tel,
+              RoleSet: roleSet
+            }).then(data => {
+              ui.alert('新增用户成功', 'success');
+              this.$router.replace('/users/' + data.Id);
+            });
+          }
         });
       }
     }
