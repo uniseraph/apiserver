@@ -16,6 +16,8 @@ import (
 func TestEnvTree(t *testing.T) {
 	var metaId string
 	var dirId string
+	var myCatDirId string
+	var kId string //某个参数的名称KEY的ID
 
 	t.Run("Meta=1", func(t *testing.T) {
 		if id, err := createEnvTreeMeta(); err != nil {
@@ -122,6 +124,7 @@ func TestEnvTree(t *testing.T) {
 					t.Error("Name is not correct")
 				} else {
 					t.Log(cat_dir)
+					myCatDirId = cat_dir.Id
 					if cat_dir, err := createEnvTreeNodeDirMySQLRootMycatproxy01Node(metaId, cat_dir.Id); err != nil {
 						t.Error(err)
 					} else if cat_dir.Name != "Proxy01" {
@@ -186,23 +189,116 @@ func TestEnvTree(t *testing.T) {
 	})
 
 	t.Run("Meta=9", func(t *testing.T) {
+		if s_dir, err := createEnvTreeNodeDirMySQLRootSlaveNode(metaId, dirId); err != nil {
+			t.Error(err)
+		} else if s_dir.Name != "Slave" {
+			t.Error("Name is not correct")
+		} else {
+			t.Log(s_dir)
+			dirId = s_dir.Id
+		}
+	})
+
+	//测试删除某个节点
+	//检查，从父节点上找该节点应该找不到了
+	t.Run("Meta=10", func(t *testing.T) {
 		if err := deleteEnvDirNode(dirId); err != nil {
 			t.Error(err)
 		} else {
 			t.Log(dirId)
 		}
 
-		//检查该树，是否还存在root->slave节点
-		//期望只存在root->master一个节点
+		//检查该树，是否还存在root->Slave-DirNodeModify->slave节点
 		if tree, err := getEnvTreeDirList(metaId); err != nil {
 			t.Error(err)
 		} else {
 			//得到一个这个样子的树
 			//mysql root->master->mycat->[proxy01, proxy02]
-			if len(tree.Children) != 1 {
-				t.Error(tree.Children)
+			if len(tree.Children[1].Children) != 0 {
+				t.Error(tree.Children[1])
 			}
 		}
+	})
+
+	//测试在my cat dir下面建立参数节点
+	t.Run("Meta=11", func(t *testing.T) {
+		if k, err := createParamsKey(metaId, myCatDirId); err != nil {
+			t.Error(k)
+		} else if k.Name != "balance" {
+			t.Error(k)
+		} else if k.Value != "round robin" {
+			t.Error(k)
+		} else {
+			t.Log(k)
+			kId = k.Id
+		}
+	})
+
+	//测试更新该参数节点属性
+	t.Run("Meta=12", func(t *testing.T) {
+		if k, err := updateParamsKey(kId); err != nil {
+			t.Error(err)
+		} else if k.Value != "round robin modify" {
+			t.Error(k)
+		} else {
+			t.Log(k)
+		}
+	})
+
+	t.Run("Meta=13", func(t *testing.T) {
+		if err := updateParamsKeyValues(kId); err != nil {
+			t.Error(err)
+		}
+	})
+
+	//测试删除一个参数节点
+	t.Run("Meta=14", func(t *testing.T) {
+		//先删除
+		if err := deleteParamsKey(kId); err != nil {
+			t.Error(err)
+		}
+		//再更新
+		if k, err := updateParamsKey(kId); err != nil {
+			t.Log(err)
+		} else {
+			t.Error(k)
+		}
+	})
+
+	//测试分页展示参数KEY
+	t.Run("Meta=15", func(t *testing.T) {
+		for i := 0; i < 100; i++ {
+			if k, err := createParamsKeyWithName(metaId, myCatDirId, fmt.Sprintf("TestKey-%d", i)); err != nil {
+				t.Error(k)
+			} else if k.Value != "round robin" {
+				t.Error("Value:", k.Value)
+			} else {
+				//t.Log(k)
+			}
+
+			if k, err := createParamsKeyWithName(metaId, myCatDirId, fmt.Sprintf("FakeKey-%d", i)); err != nil {
+				t.Error(k)
+			} else if k.Value != "round robin" {
+				t.Error("Value", k.Value)
+			} else {
+				//t.Log(k)
+			}
+		}
+
+		if rsp, err := getEnvValuesList(metaId, myCatDirId, "Test"); err != nil {
+			t.Error(err)
+		} else if len(rsp.Data) != 5 {
+			t.Error("rsp data size is not correct!\n", rsp.Data)
+		} else {
+			for _, kv := range rsp.Data {
+				if strings.Index(kv.Name, "Test") != 0 {
+					t.Error("Key name is not matched: ", kv.Name)
+				} else {
+					t.Log("Key name is : ", kv.Name)
+				}
+			}
+		}
+
 	})
 }
 
@@ -795,4 +891,286 @@ func deleteEnvDirNode(id string) error {
 	}
 
 	return nil
+}
+
+func createParamsKey(tree_id string, dir_id string) (*handlers.EnvTreeNodeParamKVResponse, error) {
+	tree := &handlers.EnvTreeNodeParamKVRequest{
+		Name:        "balance",
+		Value:       "round robin",
+		Description: "MyCat转发请求的负载均衡策略",
+		DirId:       dir_id,
+		TreeId:      tree_id,
+	}
+
+	buf, err := json.Marshal(tree)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "http://localhost:8080/api/envs/values/create", strings.NewReader(string(buf)))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body err:%s", err.Error())
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(string(body))
+	}
+
+	t := &handlers.EnvTreeNodeParamKVResponse{}
+	if err := json.Unmarshal(body, &t); err != nil {
+		return nil, err
+	}
+
+	return t, nil
+
+}
+
+func updateParamsKey(id string) (t *handlers.EnvTreeNodeParamKVResponse, err error) {
+	v := &handlers.EnvTreeNodeParamKVRequest{
+		Value: "round robin modify",
+	}
+
+	buf, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	url := fmt.Sprintf("http://localhost:8080/api/envs/values/%s/update", id)
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(buf)))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body err:%s", err.Error())
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(string(body))
+	}
+
+	t = &handlers.EnvTreeNodeParamKVResponse{}
+	if err := json.Unmarshal(body, t); err != nil {
+		return nil, err
+	}
+
+	return
+}
+
+func deleteParamsKey(id string) error {
+	url := fmt.Sprintf("http://localhost:8080/api/envs/values/%s/remove", id)
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(""))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body err:%s", err.Error())
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.New(string(body))
+	}
+
+	return nil
+}
+
+func updateParamsKeyValues(id string) error {
+	vs := []*handlers.EnvValuesUpdateValues{}
+	vs = append(vs, &handlers.EnvValuesUpdateValues{
+		PoolId: "FakePoolID1",
+		Value:  "VALUE1",
+	})
+	vs = append(vs, &handlers.EnvValuesUpdateValues{
+		PoolId: "FakePoolID2",
+		Value:  "VALUE2",
+	})
+	vs = append(vs, &handlers.EnvValuesUpdateValues{
+		PoolId: "FakePoolID3",
+		Value:  "VALUE3",
+	})
+
+	buf, err := json.Marshal(vs)
+	if err != nil {
+		return err
+	}
+	url := fmt.Sprintf("http://localhost:8080/api/envs/values/%s/update-values", id)
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(buf)))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body err:%s", err.Error())
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.New(string(body))
+	}
+
+	return nil
+}
+
+func createParamsKeyWithName(tree_id string, dir_id string, name string) (*handlers.EnvTreeNodeParamKVResponse, error) {
+	tree := &handlers.EnvTreeNodeParamKVRequest{
+		Name:        name,
+		Value:       "round robin",
+		Description: "MyCat转发请求的负载均衡策略",
+		DirId:       dir_id,
+		TreeId:      tree_id,
+	}
+
+	buf, err := json.Marshal(tree)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "http://localhost:8080/api/envs/values/create", strings.NewReader(string(buf)))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body err:%s", err.Error())
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(string(body))
+	}
+
+	t := &handlers.EnvTreeNodeParamKVResponse{}
+	if err := json.Unmarshal(body, &t); err != nil {
+		return nil, err
+	}
+
+	return t, nil
+
+}
+
+func getEnvValuesList(tree string, dir string, name string) (*handlers.EnvValuesListResponse, error) {
+	data := &handlers.EnvValuesListRequest{
+		Name:     name,
+		PageSize: 5,
+		Page:     3,
+		DirId:    dir,
+		TreeId:   tree,
+	}
+
+	buf, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "http://localhost:8080/api/envs/values/list", strings.NewReader(string(buf)))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body err:%s", err.Error())
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(string(body))
+	}
+
+	t := &handlers.EnvValuesListResponse{}
+	if err := json.Unmarshal(body, &t); err != nil {
+		return nil, err
+	}
+
+	return t, nil
 }

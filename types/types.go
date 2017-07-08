@@ -122,8 +122,9 @@ type EnvTreeNodeDir struct {
 //参数目录树节点的参数名称
 //EnvTreeNodeParamKey has many EnvTreeNodeParamValue
 type EnvTreeNodeParamKey struct {
-	Id   bson.ObjectId "_id"
-	Name string
+	Id          bson.ObjectId "_id"
+	Name        string
+	Description string
 	//默认值
 	Default string
 	//EnvTreeNodeDir
@@ -140,9 +141,8 @@ type EnvTreeNodeParamKey struct {
 //这其实是一个Key和Pool的关联关系表
 //用来查询一个Key被哪些Pool所用，并且每个值都是什么
 type EnvTreeNodeParamValue struct {
-	Id          bson.ObjectId "_id"
-	Value       string
-	Description string
+	Id    bson.ObjectId "_id"
+	Value string
 	//对应的参数名称
 	//EnvTreeNodeParamKey
 	Key bson.ObjectId
