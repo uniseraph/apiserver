@@ -40,7 +40,7 @@ Vue.filter('dividedBy1024', function(value) {
 });
 
 new Vue({
-  el: '#application',
+  el: '#app',
   store,
   router,
   render: h => h(App)

@@ -1,7 +1,7 @@
 <template>
   <v-card>
     <v-card-title>
-      操作审计
+      SSH操作审计
       <v-spacer></v-spacer>
     </v-card-title>
     <div>
