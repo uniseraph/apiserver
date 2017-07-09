@@ -365,8 +365,11 @@
 			"revisionTime": "2017-07-08T04:50:37Z"
 		},
 		{
+			"checksumSHA1": "in35phlKVTKugF0FNvpzs3cRUFU=",
+			"origin": "github.com/docker/libcompose/vendor/github.com/docker/docker/pkg/symlink",
 			"path": "github.com/docker/docker/pkg/symlink",
-			"revision": ""
+			"revision": "0ad950cbeb3d72107613dd220b5e9d7e001b890b",
+			"revisionTime": "2017-07-03T17:04:54Z"
 		},
 		{
 			"checksumSHA1": "nhKmQDaWa+qKP2VWEy05CrTyids=",
@@ -446,12 +449,6 @@
 			"path": "github.com/docker/go-units",
 			"revision": "0dadbb0345b35ec7ef35e228dabb8de89a65bf52",
 			"revisionTime": "2017-01-27T09:51:30Z"
-		},
-		{
-			"checksumSHA1": "BHEWx6AmrDuDXR2w+wM0h/WoWnU=",
-			"path": "github.com/docker/libcompose",
-			"revision": "0ad950cbeb3d72107613dd220b5e9d7e001b890b",
-			"revisionTime": "2017-07-03T17:04:54Z"
 		},
 		{
 			"checksumSHA1": "+pgwrsaF8smEURiSxfUY/6fqNWY=",
