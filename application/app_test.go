@@ -15,6 +15,7 @@ func TestCreateApplication(t *testing.T) {
 				ImageName: "docker.io/nginx",
 				ImageTag:  "1.8",
 				Restart:   "always",
+				Name:      "nginx",
 			},
 		},
 	}, &types.PoolInfo{
@@ -26,9 +27,11 @@ func TestCreateApplication(t *testing.T) {
 	})
 
 	if err != nil {
-		t.Log("create application success!")
-	} else {
 		t.Error(err)
+
+	} else {
+		t.Log("create application success!")
+
 	}
 
 }

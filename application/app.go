@@ -20,7 +20,6 @@ func CreateApplication(app *types.Application, pool *types.PoolInfo) error {
 	factory, err := client.NewDefaultFactory(client.Options{
 		TLS:        false,
 		TLSVerify:  false,
-		TLSOptions: nil,
 		Host:       pool.ProxyEndpoint,
 		APIVersion: pool.DriverOpts.APIVersion,
 	})
@@ -29,22 +28,24 @@ func CreateApplication(app *types.Application, pool *types.PoolInfo) error {
 		return err
 	}
 
-	config := &project.ExportedConfig{
+	ec := &project.ExportedConfig{
 		Version:  "2",
 		Services: map[string]*config.ServiceConfig{},
 	}
 
 	for _, s := range app.Services {
+
 		composeService := &config.ServiceConfig{
-			Image:   s.ImageName + ":" + s.ImageTag,
-			Restart: s.Restart,
+			Image:       s.ImageName + ":" + s.ImageTag,
+			Restart:     s.Restart,
+			NetworkMode: "bridge",
 		}
 
-		config.Services[s.Name] = composeService
+		ec.Services[s.Name] = composeService
 
 	}
 
-	buf, err := yaml.Marshal(config)
+	buf, err := yaml.Marshal(ec)
 
 	if err != nil {
 		return err
