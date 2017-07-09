@@ -229,6 +229,11 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	if req.DriverOpts.APIVersion == "" {
+		HttpError(w, "APIVersion 不能是空", http.StatusBadRequest)
+		return
+	}
+
 	poolInfo := &types.PoolInfo{
 		Id:          bson.NewObjectId(),
 		Driver:      req.Driver,

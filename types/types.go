@@ -199,6 +199,7 @@ type Service struct {
 	Memory       int
 	ReplicaCount int
 	Description  int
+	Restart      string
 	Command      string
 	Envs         []Env
 	Volumns      []Volumne
@@ -237,13 +238,12 @@ type Template struct {
 
 type Application struct {
 	Id          bson.ObjectId "_id"
-	TemplateId  string `json:",omitempty"`
-	PoolId      string `json:",omitempty"`
+	TemplateId  string        `json:",omitempty"`
+	PoolId      string        `json:",omitempty"`
 	Title       string
-	//Name        string
+	Name        string
 	Version     string
 	Description string
-
 
 	Services []Service
 
