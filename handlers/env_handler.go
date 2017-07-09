@@ -922,8 +922,8 @@ func updateValueAttributes(ctx context.Context, w http.ResponseWriter, r *http.R
 			//根据id以及pool找到VALUE实例
 			//其实只需要id即可
 			selector := bson.M{
-				"key":  id,
-				"pool": req.PoolId,
+				"key":  bson.ObjectIdHex(id),
+				"pool": bson.ObjectIdHex(req.PoolId),
 			}
 			//更新目标实例的value值
 			data := bson.M{
@@ -947,6 +947,70 @@ func updateValueAttributes(ctx context.Context, w http.ResponseWriter, r *http.R
 
 		HttpOK(w, nil)
 	})
+}
+
+//根据PoolId和KeyId获取Value
+func getValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var poolId string
+	var keyId string
+
+	//检查参数合法性
+	if poolId = r.FormValue("PoolId"); len(poolId) <= 0 {
+		HttpError(w, "PoolId is empty", http.StatusBadRequest)
+		return
+	}
+	if keyId = r.FormValue("KeyId"); len(keyId) <= 0 {
+		HttpError(w, "KeyId is empty", http.StatusBadRequest)
+		return
+	}
+
+	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_param_value", "env_tree_node_param_key"}, func(cs map[string]*mgo.Collection) {
+		rsp := EnvValuesDetailsValueResponse{}
+		value := types.EnvTreeNodeParamValue{}
+
+		selector := bson.M{
+			"pool": bson.ObjectIdHex(poolId),
+			"key":  bson.ObjectIdHex(keyId),
+		}
+
+		var err error
+		if err = cs["env_tree_node_param_value"].Find(selector).One(&value); err != nil {
+			//如果服务端发生错误则退出
+			//除非是找不到该VALUE
+			//说明要使用KEY的DEFAULT
+			if err != mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+		}
+
+		rsp.PoolId = value.Pool.Hex()
+		//如果找不到VALUE
+		//则需要使用KEY的默认值
+		if err == mgo.ErrNotFound {
+			key := types.EnvTreeNodeParamKey{}
+			if err = cs["env_tree_node_param_key"].FindId(bson.ObjectIdHex(keyId)).One(&key); err != nil {
+				if err == mgo.ErrNotFound {
+					HttpError(w, fmt.Sprintf("no such key for id: %s", keyId), http.StatusNotFound)
+					return
+				}
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			rsp.Value = key.Default
+		} else {
+			rsp.Value = value.Value
+		}
+
+		HttpOK(w, rsp)
+	})
+
 }
 
 /*

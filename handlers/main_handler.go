@@ -61,6 +61,7 @@ var routes = map[string]map[string]*MyHandler{
 		"/envs/values/{id:.*}/update":        &MyHandler{h: updateValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/envs/values/{id:.*}/remove":        &MyHandler{h: deleteValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/envs/values/{id:.*}/update-values": &MyHandler{h: updateValueAttributes, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/value/get":                    &MyHandler{h: getValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 	},
 	"POST": {
 		"/pools/{id:.*}/flush":   &MyHandler{h: postPoolsFlush},
@@ -114,20 +115,20 @@ var routes = map[string]map[string]*MyHandler{
 		"/envs/values/{id:.*}/update":        &MyHandler{h: updateValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/envs/values/{id:.*}/remove":        &MyHandler{h: deleteValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/envs/values/{id:.*}/update-values": &MyHandler{h: updateValueAttributes, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/value/get":                    &MyHandler{h: getValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 
-		"/applications/list":              &MyHandler{h: getApplicationList},
-		"/applications/{id:.*}/inspect":   &MyHandler{h: getApplication},
-		"/applications/{id:.*}/detail":    &MyHandler{h: getApplication},
-		"/applications/{id:.*}/start":     &MyHandler{h: startApplication},
-		"/applications/{id:.*}/restart":   &MyHandler{h: restartApplication},
-		"/applications/{id:.*}/stop":      &MyHandler{h: stopApplication},
-		"/applications/{id:.*}/rollback":  &MyHandler{h: rollbackApplication},
-		"/applications/{id:.*}/upgrade":   &MyHandler{h: upgradeApplication},
-		"/applications/{id:.*}/scale":     &MyHandler{h: scaleApplication},
+		"/applications/list":                    &MyHandler{h: getApplicationList},
+		"/applications/{id:.*}/inspect":         &MyHandler{h: getApplication},
+		"/applications/{id:.*}/detail":          &MyHandler{h: getApplication},
+		"/applications/{id:.*}/start":           &MyHandler{h: startApplication},
+		"/applications/{id:.*}/restart":         &MyHandler{h: restartApplication},
+		"/applications/{id:.*}/stop":            &MyHandler{h: stopApplication},
+		"/applications/{id:.*}/rollback":        &MyHandler{h: rollbackApplication},
+		"/applications/{id:.*}/upgrade":         &MyHandler{h: upgradeApplication},
+		"/applications/{id:.*}/scale":           &MyHandler{h: scaleApplication},
 		"/applications/containers/:id/ssh-info": &MyHandler{h: getContainerSSHInfo},
-		"/applications/create":          &MyHandler{h: createApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/:id/containers/list":    &MyHandler{h: copyTemplate, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-
+		"/applications/create":                  &MyHandler{h: createApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/:id/containers/list":     &MyHandler{h: copyTemplate, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 
 		"/templates/list":            &MyHandler{h: getTemplateList},
 		"/templates/{id:.*}/inspect": &MyHandler{h: getTemplate},
@@ -342,9 +343,8 @@ func HttpError(w http.ResponseWriter, err string, status int) {
 
 }
 
-
-func HttpErrorAndPanic(w http.ResponseWriter, err string , status int){
-	utils.HttpError(w,err,status)
+func HttpErrorAndPanic(w http.ResponseWriter, err string, status int) {
+	utils.HttpError(w, err, status)
 	panic(err)
 }
 

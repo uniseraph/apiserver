@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/handlers"
 	"github.com/zanecloud/apiserver/types"
+	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -299,6 +300,51 @@ func TestEnvTree(t *testing.T) {
 			}
 		}
 
+	})
+
+	//测试根据PoolID和KeyID查询Value
+	t.Run("Meta=16", func(t *testing.T) {
+		//建立Key
+		if k, err := createParamsKey(metaId, myCatDirId); err != nil {
+			t.Error(k)
+		} else if k.Name != "balance" {
+			t.Error(k)
+		} else if k.Value != "round robin" {
+			t.Error(k)
+		} else {
+			t.Log(k)
+			kId = k.Id
+		}
+
+		pId := bson.NewObjectId().Hex()
+
+		t.Log("Pid:", pId, "Kid:", kId)
+		//当pool和key没有关系的时候
+		//查询value其实是key的default值
+		if rsp, err := getEnvValue(pId, kId); err != nil {
+			t.Error(err)
+		} else if rsp.Value == "VALUE1" {
+			t.Error("EnvValue is not correct: ", rsp.Value)
+		} else if rsp.Value != "round robin" {
+			t.Error("EnvValue is not correct: ", rsp.Value)
+		} else {
+			t.Log(rsp)
+		}
+
+		//建立Key的Value和PoolId的对应关系
+		if err := updateParamsKeyValuesWithPoolId(kId, pId); err != nil {
+			t.Error(err)
+		}
+
+		//根据上面建立好的对应关系
+		//查询有具体值的KEY
+		if rsp, err := getEnvValue(pId, kId); err != nil {
+			t.Error(err)
+		} else if rsp.Value != "poolId-VALUE1" {
+			t.Error("EnvValue is not correct: ", rsp.Value)
+		} else {
+			t.Log(rsp)
+		}
 	})
 }
 
@@ -1026,15 +1072,15 @@ func deleteParamsKey(id string) error {
 func updateParamsKeyValues(id string) error {
 	vs := []*handlers.EnvValuesUpdateValues{}
 	vs = append(vs, &handlers.EnvValuesUpdateValues{
-		PoolId: "FakePoolID1",
+		PoolId: bson.NewObjectId().Hex(),
 		Value:  "VALUE1",
 	})
 	vs = append(vs, &handlers.EnvValuesUpdateValues{
-		PoolId: "FakePoolID2",
+		PoolId: bson.NewObjectId().Hex(),
 		Value:  "VALUE2",
 	})
 	vs = append(vs, &handlers.EnvValuesUpdateValues{
-		PoolId: "FakePoolID3",
+		PoolId: bson.NewObjectId().Hex(),
 		Value:  "VALUE3",
 	})
 
@@ -1173,4 +1219,87 @@ func getEnvValuesList(tree string, dir string, name string) (*handlers.EnvValues
 	}
 
 	return t, nil
+}
+
+//获取某个PoolId和KeyId的Value
+func getEnvValue(poolId string, keyId string) (*handlers.EnvValuesDetailsValueResponse, error) {
+	url := fmt.Sprintf("http://localhost:8080/api/envs/value/get?PoolId=%s&KeyId=%s", poolId, keyId)
+
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(""))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body err:%s", err.Error())
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(string(body))
+	}
+
+	t := &handlers.EnvValuesDetailsValueResponse{}
+	if err := json.Unmarshal(body, &t); err != nil {
+		return nil, err
+	}
+
+	return t, nil
+}
+
+func updateParamsKeyValuesWithPoolId(id string, poolId string) error {
+	vs := []*handlers.EnvValuesUpdateValues{}
+	vs = append(vs, &handlers.EnvValuesUpdateValues{
+		PoolId: poolId,
+		Value:  "poolId-VALUE1",
+	})
+
+	buf, err := json.Marshal(vs)
+	if err != nil {
+		return err
+	}
+	url := fmt.Sprintf("http://localhost:8080/api/envs/values/%s/update-values", id)
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(buf)))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body err:%s", err.Error())
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.New(string(body))
+	}
+
+	return nil
 }
