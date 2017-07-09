@@ -116,7 +116,7 @@ type EnvTreeNodeDir struct {
 	//一个父目录
 	//最顶级的父目录为空，用于结合EnvTreeMeta查询该树的起点
 	//EnvTreeNodeDir
-	Parent bson.ObjectId
+	Parent bson.ObjectId `bson:",omitempty"`
 	//多个子目录
 	//EnvTreeNodeDir
 	Children []bson.ObjectId
@@ -132,10 +132,13 @@ type EnvTreeNodeDir struct {
 //参数目录树节点的参数名称
 //EnvTreeNodeParamKey has many EnvTreeNodeParamValue
 type EnvTreeNodeParamKey struct {
-	Id   bson.ObjectId "_id"
-	Name string
+	Id          bson.ObjectId "_id"
+	Name        string
+	Description string
 	//默认值
 	Default string
+	//EnvTreeNodeDir
+	Dir bson.ObjectId
 	//EnvTreeMeta
 	Tree        bson.ObjectId
 	CreatedTime int64 `json:",omitempty"`
@@ -156,9 +159,9 @@ type EnvTreeNodeParamValue struct {
 	//EnvTreeMeta
 	Tree bson.ObjectId
 	//PoolInfo
-	Pool        bson.ObjectId
-	CreatedTime int64 `json:",omitempty"`
-	UpdatedTime int64 `json:",omitempty"`
+	Pool        bson.ObjectId `bson:",omitempty"`
+	CreatedTime int64         `json:",omitempty"`
+	UpdatedTime int64         `json:",omitempty"`
 }
 
 //调用docker info，获取swarm集群的信息
@@ -196,6 +199,7 @@ type Service struct {
 	Memory       int
 	ReplicaCount int
 	Description  int
+	Restart      string
 	Command      string
 	Envs         []Env
 	Volumns      []Volumne
@@ -234,13 +238,12 @@ type Template struct {
 
 type Application struct {
 	Id          bson.ObjectId "_id"
-	TemplateId  string `json:",omitempty"`
-	PoolId      string `json:",omitempty"`
+	TemplateId  string        `json:",omitempty"`
+	PoolId      string        `json:",omitempty"`
 	Title       string
-	//Name        string
+	Name        string
 	Version     string
 	Description string
-
 
 	Services []Service
 
