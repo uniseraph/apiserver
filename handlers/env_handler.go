@@ -970,47 +970,55 @@ func getValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_param_value", "env_tree_node_param_key"}, func(cs map[string]*mgo.Collection) {
-		rsp := EnvValuesDetailsValueResponse{}
-		value := types.EnvTreeNodeParamValue{}
+		rsp, err := GetValueHelpers(w, cs, poolId, keyId)
 
-		selector := bson.M{
-			"pool": bson.ObjectIdHex(poolId),
-			"key":  bson.ObjectIdHex(keyId),
-		}
-
-		var err error
-		if err = cs["env_tree_node_param_value"].Find(selector).One(&value); err != nil {
-			//如果服务端发生错误则退出
-			//除非是找不到该VALUE
-			//说明要使用KEY的DEFAULT
-			if err != mgo.ErrNotFound {
-				HttpError(w, err.Error(), http.StatusNotFound)
-				return
-			}
-		}
-
-		rsp.PoolId = value.Pool.Hex()
-		//如果找不到VALUE
-		//则需要使用KEY的默认值
-		if err == mgo.ErrNotFound {
-			key := types.EnvTreeNodeParamKey{}
-			if err = cs["env_tree_node_param_key"].FindId(bson.ObjectIdHex(keyId)).One(&key); err != nil {
-				if err == mgo.ErrNotFound {
-					HttpError(w, fmt.Sprintf("no such key for id: %s", keyId), http.StatusNotFound)
-					return
-				}
-				HttpError(w, err.Error(), http.StatusNotFound)
-				return
-			}
-
-			rsp.Value = key.Default
-		} else {
-			rsp.Value = value.Value
+		if err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		HttpOK(w, rsp)
 	})
 
+}
+
+func GetValueHelpers(w http.ResponseWriter, cs map[string]*mgo.Collection, poolId string, keyId string) (*EnvValuesDetailsValueResponse, error) {
+	rsp := &EnvValuesDetailsValueResponse{}
+	value := types.EnvTreeNodeParamValue{}
+
+	selector := bson.M{
+		"pool": bson.ObjectIdHex(poolId),
+		"key":  bson.ObjectIdHex(keyId),
+	}
+
+	var err error
+	if err = cs["env_tree_node_param_value"].Find(selector).One(&value); err != nil {
+		//如果服务端发生错误则退出
+		//除非是找不到该VALUE
+		//说明要使用KEY的DEFAULT
+		if err != mgo.ErrNotFound {
+			return nil, err
+		}
+	}
+
+	rsp.PoolId = value.Pool.Hex()
+	//如果找不到VALUE
+	//则需要使用KEY的默认值
+	if err == mgo.ErrNotFound {
+		key := types.EnvTreeNodeParamKey{}
+		if err = cs["env_tree_node_param_key"].FindId(bson.ObjectIdHex(keyId)).One(&key); err != nil {
+			if err == mgo.ErrNotFound {
+				return nil, errors.New("no such key for id: %s")
+			}
+			return nil, err
+		}
+
+		rsp.Value = key.Default
+	} else {
+		rsp.Value = value.Value
+	}
+
+	return rsp, nil
 }
 
 /*
