@@ -16,7 +16,7 @@ import (
 func TestTemplate(t *testing.T) {
 
 	for i := 0; i < 51; i++ {
-		t.Log("\ncreate a template... ")
+		//t.Log("\ncreate a template... ")
 		templateResponse, err := createTemplate(&handlers.TemplateCreateRequest{
 			Template: types.Template{
 				Title:       fmt.Sprintf("template%d", i),
@@ -29,28 +29,28 @@ func TestTemplate(t *testing.T) {
 			t.Error(err)
 			return
 		} else {
-			t.Log("create template success ")
-			t.Log(templateResponse)
+			//t.Log("create template success ")
+			//t.Log(templateResponse)
 		}
 
-		t.Log("insepect the   template... ")
+		//t.Log("insepect the   template... ")
 		template, err := inspectTemplate(templateResponse.Id)
 		if err != nil {
 			t.Error(err)
 		} else {
-			t.Log(template)
+			//t.Log(template)
 		}
 
-		t.Log("copy the template")
-		newT, err := copyTemplate(templateResponse.Id, &handlers.TemplateCopyRequest{
+		//t.Log("copy the template")
+		_, err = copyTemplate(templateResponse.Id, &handlers.TemplateCopyRequest{
 			Title: template.Title + "clone",
 		})
 
 		if err != nil {
 			t.Error(err)
 		} else {
-			t.Log("clone template success...")
-			t.Log(newT)
+			//t.Log("clone template success...")
+			//t.Log(newT)
 		}
 
 	}
