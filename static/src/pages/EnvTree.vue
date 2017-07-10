@@ -413,7 +413,7 @@
       getDataFromApi() {
         let params = {
           TreeId: this.TreeId,
-          DirId: this.SelectedDir.Id,
+          DirId: this.SelectedDir.ParentId ? this.SelectedDir.Id : '', 
           Name: this.Keyword,
           PageSize: this.pagination.rowsPerPage, 
           Page: this.pagination.page
