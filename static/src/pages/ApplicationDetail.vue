@@ -232,6 +232,35 @@
                     </template>
                   </v-data-table>
                 </v-flex>
+                <v-flex xs12 mt-5 v-if="item.Ports && item.Ports.length > 0">
+                  <v-divider></v-divider>
+                  <v-card-title>
+                    <v-subheader>端口映射</v-subheader>
+                    <v-spacer></v-spacer>
+                  </v-card-title>
+                  <v-data-table
+                    :headers="headers_ports"
+                    :items="item.Ports"
+                    hide-actions
+                    class="elevation-1"
+                    no-data-text=""
+                  >
+                    <template slot="items" scope="props">
+                      <td>
+                        <v-text-field
+                          v-model="props.item.SourcePort"
+                          readonly
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-text-field
+                          v-model="props.item.LoadBalancerId"
+                          readonly
+                        ></v-text-field>
+                      </td>
+                    </template>
+                  </v-data-table>
+                </v-flex>
                 <v-flex xs12 mt-4 v-if="item.Volumns && item.Volumns.length > 0">
                   <v-divider></v-divider>
                   <v-card-title>
@@ -404,6 +433,11 @@
         headers_envs: [
           { text: '变量名', sortable: false, left: true },
           { text: '变量值', sortable: false, left: true }
+        ],
+        headers_ports: [
+          { text: '容器端口', sortable: false, left: true },
+          { text: '负载均衡ID', sortable: false, left: true },
+          { text: '操作', sortable: false, left: true }
         ],
         headers_volumns: [
           { text: '数据卷名', sortable: false, left: true },

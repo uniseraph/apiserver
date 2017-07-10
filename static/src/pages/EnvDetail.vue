@@ -37,7 +37,7 @@
                 ></v-text-field>
               </v-flex>
               <v-flex xs2>
-                <v-subheader>描述</v-subheader>
+                <v-subheader>说明</v-subheader>
               </v-flex>
               <v-flex xs3>
                 <v-text-field
