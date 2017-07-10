@@ -48,7 +48,7 @@ export default {
     },
 
     Login(params) {
-        return fetch('/users/' + encodeURIComponent(params.Name) + '/login?Pass=' + encodeURIComponent(params.Password), params);
+        return fetch('/users/' + encodeURIComponent(params.Name) + '/login', params);
     },
 
     Pools(params) {
@@ -104,7 +104,7 @@ export default {
     },
 
     EnvDirs(params) {
-        return fetch('/envs/dirs/list', params);
+        return fetch('/envs/dirs/list?TreeId=' + params.TreeId, params);
     },
 
     CreateEnvDir(params) {

@@ -113,7 +113,7 @@
   export default {
     data() {
       return {
-        Id: this.$route.params ? this.$route.params.id : null,
+        Id: null,
         Name: '',
         Email: '',
         Tel: '',
@@ -145,12 +145,18 @@
       }
     },
 
+    // 如果用router.replace做跳转，则需watch route，并且重新获取params中的参数
+    watch: {
+      '$route': 'init'
+    },
+
     mounted() {
       this.init();
     },
 
     methods: {
       init() {
+        this.Id = this.$route.params ? this.$route.params.id : null;
         if (this.Id) {
           api.User(this.Id).then(data => {
             this.Id = data.Id;
@@ -183,7 +189,7 @@
             roleSet |= this.constants.ROLE_APP_ADMIN;
           }
 
-          if (this.Id) {
+          if (this.Id && this.Id.length > 0) {
             api.UpdateUser({
               Id: this.Id,
               Name: this.Name,
