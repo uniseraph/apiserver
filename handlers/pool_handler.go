@@ -14,6 +14,11 @@ import (
 	"time"
 )
 
+
+type PoolInspectResponse struct {
+	types.PoolInfo
+	EnvTreeName string
+}
 func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
@@ -43,6 +48,9 @@ func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//TODO
+
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(result)
 
@@ -51,6 +59,7 @@ func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 type PoolsRegisterRequest struct {
 	Name       string
 	Driver     string
+	EnvTreeId  string
 	DriverOpts types.DriverOpts
 	Labels     []string `json:",omitempty"`
 }
@@ -240,6 +249,7 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		DriverOpts:  req.DriverOpts,
 		Labels:      req.Labels,
 		Name:        req.Name,
+		EnvTreeId:   req.EnvTreeId,
 		CreatedTime: time.Now().Unix(),
 	}
 
@@ -296,9 +306,4 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	json.NewEncoder(w).Encode(result)
 	//fmt.Fprintf(w, "{%q:%q}", "Name", name)
 
-}
-func httpJsonResponse(w http.ResponseWriter, result interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(result)
 }

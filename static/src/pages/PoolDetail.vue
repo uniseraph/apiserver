@@ -29,7 +29,7 @@
               </v-flex>
               <v-flex xs3>
                 <v-text-field
-                  v-model="EnvTree.Name"
+                  v-model="EnvTreeName"
                   readonly
                 ></v-text-field>
                 <!--v-select

@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"gopkg.in/mgo.v2"
 )
 
 type Proxy struct {
@@ -37,8 +38,10 @@ func NewProxy(ctx context.Context, pool *store.PoolInfo) (proxy.Proxy, error) {
 
 func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 
-	ctx := setContext(p)
-
+	ctx , err := setContext(p)
+	if err !=nil{
+		return err
+	}
 	h, err := NewHandler(ctx)
 	if err != nil {
 		return err
@@ -80,14 +83,21 @@ func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 	}()
 	return nil
 }
-func setContext(p *Proxy) context.Context {
+func setContext(p *Proxy) (context.Context , error ) {
+
 	ctx := context.WithValue(context.Background(), utils.KEY_PROXY_SELF, p)
 	logrus.Debugf("proxy %s's context is %#v", p.Pool().Name, ctx)
 	//c1 := context.WithValue(ctx, utils.KEY_APISERVER_CONFIG, p.APIServerConfig)
 	c1 := utils.PutAPIServerConfig(ctx, p.APIServerConfig)
 	logrus.Debugf("proxy %s's context is %#v", p.Pool().Name, c1)
 
-	return c1
+	session, err := mgo.Dial(p.APIServerConfig.MgoURLs)
+	if err != nil {
+		return nil, err
+	}
+	session.SetMode(mgo.Monotonic, true)
+	return  utils.PutMgoSession(c1, session) , nil
+
 }
 
 func (p *Proxy) Stop() error {

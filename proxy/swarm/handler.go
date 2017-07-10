@@ -277,35 +277,24 @@ func setupPrimaryRouter(r *mux.Router, ctx context.Context, rs map[string]map[st
 
 func NewHandler(ctx context.Context) (http.Handler, error) {
 
-	config := utils.GetAPIServerConfig(ctx)
-
-	session, err := mgo.Dial(config.MgoURLs)
-	if err != nil {
-		return nil, err
-	}
-
-	session.SetMode(mgo.Monotonic, true)
-
-	c1 := utils.PutMgoSession(ctx, session)
 
 	r := mux.NewRouter()
 
-	setupPrimaryRouter(r, c1, routers)
+	setupPrimaryRouter(r, ctx, routers)
 
-	poolInfo, _ := getPoolInfo(c1)
+	poolInfo, _ := getPoolInfo(ctx)
 
 	// 作为swarm的代理，默认逻辑是所有请求都是转发给后端的swarm集群
-	rootwrap := func(w http.ResponseWriter, req *http.Request) {
+	rootfunc := func(w http.ResponseWriter, req *http.Request) {
 		logrus.WithFields(logrus.Fields{"method": req.Method,
 			"uri": req.RequestURI,
-			"pool backend endpoint": poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in rootwrap")
+			"pool backend endpoint": poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in proxy rootfunc")
 		if err := proxyAsync(ctx, w, req, nil); err != nil {
 			httpError(w, err.Error(), http.StatusInternalServerError)
 		}
 	}
-	r.Path("/v{version:[0-9.]+}" + "/").HandlerFunc(rootwrap)
-
-	r.PathPrefix("/").HandlerFunc(rootwrap)
+//	r.PathPrefix("/v{version:[0-9.]+}" + "/").HandlerFunc(rootfunc)
+	r.PathPrefix("/").HandlerFunc(rootfunc)
 
 	return r, nil
 }

@@ -120,7 +120,7 @@
         <template slot="items" scope="props">
           <td>{{ props.item.Id }}</td>
           <td><router-link :to="'/pools/' + props.item.Id">{{ props.item.Name }}</router-link></td>
-          <td>{{ props.item.EnvTree ? props.item.EnvTree.Name : '' }}</td>
+          <td>{{ props.item.EnvTreeName }}</td>
           <td>{{ props.item.Driver }}</td>
           <td class="text-xs-right">{{ props.item.Nodes }}</td>
           <td class="text-xs-right">
