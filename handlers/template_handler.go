@@ -15,13 +15,19 @@ import (
 )
 
 type TemplateListRequest struct {
+	//PageRequest
 	Keyword  string
 	PageSize int
 	Page     int
+	Name string
 }
 
 type TemplateListResponse struct {
-	TemplateListRequest
+	//PageResponse
+	//PageRequest
+	Keyword  string
+	PageSize int
+	Page     int
 	Total     int
 	PageCount int
 	Data      []types.Template
