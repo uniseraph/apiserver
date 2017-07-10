@@ -298,6 +298,8 @@
             Password: this.Login.Password
           }).then(data => {
             window.location.reload();
+          }, err => {
+            ui.alert('用户名或密码不正确');
           });
         });
       }

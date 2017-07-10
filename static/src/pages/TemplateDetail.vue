@@ -609,6 +609,7 @@
                 Memory: this.rules0.Services.Memory,
                 ReplicaCount: this.rules0.Services.ReplicaCount,
                 Envs: [],
+                Ports: [],
                 Volumns: [],
                 Labels: []
               };
@@ -687,11 +688,12 @@
           CPU: '',
           ExclusiveCPU: false,
           Memory: '',
-          ReplicaCount: 1,
+          ReplicaCount: '',
           Description: '',
           Command: '',
           Restart: 'always',
           Envs: [],
+          Ports: [],
           Volumns: [],
           Labels: [],
           hidden: false
