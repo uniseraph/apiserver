@@ -16,7 +16,7 @@ import (
 )
 
 type ApplicationCreateRequest struct {
-	ApplcaitonTemplateId, PoolId, Title, Description string
+	ApplicationTemplateId, PoolId, Title, Description string
 }
 
 type ApplicationCreateResponse struct {
@@ -50,7 +50,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	colTemplate := mgoSession.DB(config.MgoDB).C("template")
 	template := &types.Template{}
-	if err := colTemplate.FindId(bson.ObjectIdHex(req.ApplcaitonTemplateId)).One(template); err != nil {
+	if err := colTemplate.FindId(bson.ObjectIdHex(req.ApplicationTemplateId)).One(template); err != nil {
 		if err == mgo.ErrNotFound {
 			HttpError(w, err.Error(), http.StatusNotFound)
 			return
