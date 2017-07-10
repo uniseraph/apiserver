@@ -467,8 +467,8 @@
         volumnIdStart: 0,
         labelIdStart: 0,
 
-        Id: this.$route.params ? this.$route.params.id : null,
-        Title: this.$route.params ? this.$route.params.title : null,
+        Id: null,
+        Title: '',
         Name: '',
         Version: '',
         Description: '',
@@ -558,8 +558,12 @@
       ])
     },
 
+    // 如果用router.replace做跳转，则需watch route，并且重新获取params中的参数
+    watch: {
+      '$route': 'init'
+    },
+
     mounted() {
-      ui.showAlertAt('CreateTemplate');
       this.init();
     },
 
@@ -569,6 +573,10 @@
 
     methods: {
       init() {
+        ui.showAlertAt('CreateTemplate');
+
+        this.Id = this.$route.params ? this.$route.params.id : null;
+        this.Title = this.$route.params ? this.$route.params.title : '';
         if (!this.Id) {
           return;
         }
@@ -840,7 +848,7 @@
             Services: this.Services
           }
 
-          if (this.Id) {
+          if (this.Id && this.Id.length > 0) {
             api.UpdateTemplate(a).then(data => {
               ui.alert('应用模板修改成功', 'success');
               this.init();

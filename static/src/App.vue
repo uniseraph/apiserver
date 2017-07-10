@@ -295,7 +295,7 @@
 
           api.Login({
             Name: this.Login.Name,
-            Password: this.Login.Password
+            Pass: this.Login.Password
           }).then(data => {
             window.location.reload();
           }, err => {
