@@ -74,7 +74,7 @@
             <td v-if="props.item.OperationType == 'upgrade'">升级</td>
             <td v-if="props.item.OperationType == 'rollback'">回滚</td>
             <td>{{ props.item.CreatedTime | formatDateTime }}</td>
-            <td>{{ props.item.Creator.Name }}</td>
+            <td>{{ props.item.CreatorName }}</td>
           </template>
         </v-data-table>
         <div class="text-xs-center pt-2 pb-2">
