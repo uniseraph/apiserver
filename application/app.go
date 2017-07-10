@@ -38,7 +38,7 @@ func CreateApplication(app *types.Application, pool *types.PoolInfo) error {
 		composeService := &config.ServiceConfig{
 			Image:       s.ImageName + ":" + s.ImageTag,
 			Restart:     s.Restart,
-			NetworkMode: "bridge",
+			NetworkMode: "bridge",   //TODO 暂时只支持flannel bridge
 		}
 
 		ec.Services[s.Name] = composeService
