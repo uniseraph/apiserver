@@ -46,7 +46,9 @@ func HttpOK(w http.ResponseWriter, result interface{}) {
 	//}else{
 	//	json.NewEncoder(w).Encode(body)
 	//}
-	json.NewEncoder(w).Encode(result)
+	if result != nil {
+		json.NewEncoder(w).Encode(result)
+	}
 }
 
 //生成随机字符串，长度为n

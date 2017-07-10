@@ -641,13 +641,20 @@ func getTreeValueDetails(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		//TODO
 		//过滤器
-		selector = bson.M{}
+		//
 		//要根据当前用户有权限的pool查找该用户所有pool
 		//用户所有pool中查找跟该dir对应的tree建立关系的poll
 		//建立关系的pool中如果存在没有创建实际VALUE的情况
 		//则使用KEY中的default代替
+		user, err := utils.GetCurrentUser(ctx)
+		if err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		selector = bson.M{"_id": bson.M{
+			"$in": user.PoolIds,
+		}}
 
 		pools := make([]*types.PoolInfo, 0, 20)
 
