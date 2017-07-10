@@ -1,15 +1,26 @@
 package application_test
 
 import (
+	"flag"
 	"github.com/zanecloud/apiserver/application"
 	"github.com/zanecloud/apiserver/types"
+	"os"
 	"testing"
 )
 
+func TestMain(m *testing.M) {
+	flag.Set("alsologtostderr", "true")
+	flag.Set("log_dir", "/tmp")
+	flag.Set("v", "3")
+	flag.Parse()
+
+	ret := m.Run()
+	os.Exit(ret)
+}
 func TestCreateApplication(t *testing.T) {
 
 	app1 := &types.Application{
-		Name: "nginx",
+		Name: "nginxtest",
 		Services: []types.Service{
 			types.Service{
 				ImageName: "docker.io/nginx",
@@ -21,7 +32,7 @@ func TestCreateApplication(t *testing.T) {
 		},
 	}
 	pool1 := &types.PoolInfo{
-		ProxyEndpoint: "tcp://127.0.0.1:50369",
+		ProxyEndpoint: "tcp://127.0.0.1:57336",
 		DriverOpts: types.DriverOpts{
 			APIVersion: "v1.23",
 		},

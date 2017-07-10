@@ -40,12 +40,11 @@ func sessionCreate(client *http.Client) (resp *http.Response, err error) {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	resp, err = client.Do(req)
-	defer resp.Body.Close()
 	if err != nil {
 		log.Errorf("login post err:%s", err.Error())
 		return
 	}
+	resp, err = client.Do(req)
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -124,7 +123,7 @@ func sessionLogout() error {
 	defer resp.Body.Close()
 
 	//如果是未授权，则退出成功
-	if resp.StatusCode != http.StatusUnauthorized {
+	if resp.StatusCode != http.StatusForbidden {
 		return errors.New(string("After logout, current user api is not 401"))
 	} else {
 		return nil

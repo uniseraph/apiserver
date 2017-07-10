@@ -9,12 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"testing"
 )
-
-func TestApplication(t *testing.T) {
-
-}
 
 func createApplication(name string, request *handlers.ApplicationCreateRequest) (interface{}, error) {
 

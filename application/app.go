@@ -21,7 +21,9 @@ func CreateApplication(app *types.Application, pool *types.PoolInfo) error {
 	if err != nil {
 		return nil
 	}
-	err = p.Up(context.Background(), options.Up{})
+	err = p.Up(context.Background(), options.Up{
+		options.Create{ForceRecreate: true},
+	})
 
 	if err != nil {
 		return err
