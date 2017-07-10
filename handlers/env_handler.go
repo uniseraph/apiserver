@@ -591,7 +591,7 @@ func getTreeValueDetails(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		var values []*types.EnvTreeNodeParamValue
+		values := make([]*types.EnvTreeNodeParamValue, 0, 20)
 
 		selector := bson.M{
 			"key": bson.ObjectIdHex(id),
@@ -615,7 +615,7 @@ func getTreeValueDetails(ctx context.Context, w http.ResponseWriter, r *http.Req
 		//建立关系的pool中如果存在没有创建实际VALUE的情况
 		//则使用KEY中的default代替
 
-		var pools []*types.PoolInfo
+		pools := make([]*types.PoolInfo, 0, 20)
 
 		//批量查找出Pool数据
 		if err := cs["pool"].Find(selector).All(&pools); err != nil {
@@ -637,7 +637,7 @@ func getTreeValueDetails(ctx context.Context, w http.ResponseWriter, r *http.Req
 			m_pid[v.Pool.Hex()] = v
 		}
 
-		var results []*EnvValuesDetailsValueResponse
+		results := make([]*EnvValuesDetailsValueResponse, 0, 20)
 
 		//整理成每个KEY对应的每个集群信息
 		for _, pool := range pools {
