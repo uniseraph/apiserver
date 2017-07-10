@@ -586,3 +586,69 @@ func postUserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusOK)
 
 }
+
+type UserPoolsResponse struct {
+	Id   string
+	Name string
+}
+
+//获取当前用户有权限的Pool
+func getUserPools(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	user, err := utils.GetCurrentUser(ctx)
+
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	utils.GetMgoCollections(ctx, w, []string{"team", "pool"}, func(cs map[string]*mgo.Collection) {
+		//当前用户所拥有的pool，由如下两部分组成
+		//user.PoolIds
+		//user.TeamIds.PoolIds
+
+		teams := make([]*types.Team, 0, 10)
+		pids := make([]bson.ObjectId, 0, 10)
+		pools := make([]*types.PoolInfo, 0, 10)
+
+		if len(user.TeamIds) > 0 {
+			if err := cs["team"].Find(bson.M{"_id": bson.M{"$in": user.TeamIds}}).All(&teams); err != nil {
+				if err == mgo.ErrNotFound {
+					HttpError(w, err.Error(), http.StatusNotFound)
+					return
+				}
+
+				HttpError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			//合并team id到一个数组
+			for _, team := range teams {
+				pids = append(pids, team.PoolIds...)
+			}
+		}
+
+		allIds := append(pids, user.PoolIds...)
+
+		//找出所有的pool
+		if err := cs["pool"].Find(bson.M{"_id": bson.M{"$in": allIds}}).All(&pools); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		result := make([]UserPoolsResponse, 0, 10)
+
+		for _, pool := range pools {
+			result = append(result, UserPoolsResponse{
+				Id:   pool.Id.Hex(),
+				Name: pool.Name,
+			})
+		}
+
+		HttpOK(w, result)
+	})
+}

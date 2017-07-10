@@ -521,11 +521,6 @@ func deleteEnvTree(id string) error {
 		return errors.New(string(body))
 	}
 
-	t := []handlers.EnvTreeMetaResponse{}
-	if err := json.Unmarshal(body, &t); err != nil {
-		return err
-	}
-
 	return nil
 }
 

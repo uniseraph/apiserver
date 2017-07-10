@@ -14,11 +14,11 @@ import (
 	"time"
 )
 
-
 type PoolInspectResponse struct {
 	types.PoolInfo
 	EnvTreeName string
 }
+
 func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
@@ -49,7 +49,6 @@ func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	//TODO
-
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(result)
@@ -306,4 +305,209 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	json.NewEncoder(w).Encode(result)
 	//fmt.Fprintf(w, "{%q:%q}", "Name", name)
 
+}
+
+/*
+/pools/:id/add-team
+
+请求参数：
+	TeamId
+返回：无
+权限控制：系统管理员。
+*/
+func addPoolTeam(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var poolId string
+	var teamId string
+
+	//检查参数合法性
+	if poolId = mux.Vars(r)["id"]; len(poolId) <= 0 {
+		HttpError(w, "PoolId is empty", http.StatusBadRequest)
+		return
+	}
+	if teamId = r.FormValue("TeamId"); len(teamId) <= 0 {
+		HttpError(w, "KeyId is empty", http.StatusBadRequest)
+		return
+	}
+
+	utils.GetMgoCollections(ctx, w, []string{"team", "pool"}, func(cs map[string]*mgo.Collection) {
+		//检查PoolId合法性
+		if c, err := cs["pool"].FindId(bson.ObjectIdHex(poolId)).Count(); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else if c <= 0 {
+			HttpError(w, "", http.StatusNotFound)
+			return
+		}
+
+		if err := cs["team"].Update(bson.M{"_id": bson.ObjectIdHex(teamId)}, bson.M{"$addToSet": bson.M{"poolids": bson.ObjectIdHex(poolId)}}); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, nil)
+	})
+
+}
+
+/*
+/pools/:id/remove-team
+
+请求参数：
+	TeamId
+返回：无
+权限控制：系统管理员。
+*/
+func removePoolTeam(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var poolId string
+	var teamId string
+
+	//检查参数合法性
+	if poolId = mux.Vars(r)["id"]; len(poolId) <= 0 {
+		HttpError(w, "PoolId is empty", http.StatusBadRequest)
+		return
+	}
+	if teamId = r.FormValue("TeamId"); len(teamId) <= 0 {
+		HttpError(w, "Team is empty", http.StatusBadRequest)
+		return
+	}
+
+	utils.GetMgoCollections(ctx, w, []string{"team", "pool"}, func(cs map[string]*mgo.Collection) {
+		//检查PoolId合法性
+		if c, err := cs["pool"].FindId(bson.ObjectIdHex(poolId)).Count(); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else if c <= 0 {
+			HttpError(w, "", http.StatusNotFound)
+			return
+		}
+
+		if err := cs["team"].Update(bson.M{"_id": bson.ObjectIdHex(teamId)}, bson.M{"$pull": bson.M{"poolids": bson.ObjectIdHex(poolId)}}); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, nil)
+	})
+}
+
+/*
+
+请求参数：
+	UserId
+返回：无
+权限控制：系统管理员。
+/pools/:id/add-user
+*/
+func addPoolMember(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var poolId string
+	var userId string
+
+	//检查参数合法性
+	if poolId = mux.Vars(r)["id"]; len(poolId) <= 0 {
+		HttpError(w, "PoolId is empty", http.StatusBadRequest)
+		return
+	}
+	if userId = r.FormValue("UserId"); len(userId) <= 0 {
+		HttpError(w, "User is empty", http.StatusBadRequest)
+		return
+	}
+
+	utils.GetMgoCollections(ctx, w, []string{"user", "pool"}, func(cs map[string]*mgo.Collection) {
+		//检查PoolId合法性
+		if c, err := cs["pool"].FindId(bson.ObjectIdHex(poolId)).Count(); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else if c <= 0 {
+			HttpError(w, "", http.StatusNotFound)
+			return
+		}
+
+		if err := cs["user"].Update(bson.M{"_id": bson.ObjectIdHex(userId)}, bson.M{"$addToSet": bson.M{"poolids": bson.ObjectIdHex(poolId)}}); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, nil)
+	})
+}
+
+/*
+
+请求参数：
+	UserId
+返回：无
+权限控制：系统管理员。
+/pools/:id/remove-user
+*/
+func removePoolMember(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var poolId string
+	var userId string
+
+	//检查参数合法性
+	if poolId = mux.Vars(r)["id"]; len(poolId) <= 0 {
+		HttpError(w, "PoolId is empty", http.StatusBadRequest)
+		return
+	}
+	if userId = r.FormValue("UserId"); len(userId) <= 0 {
+		HttpError(w, "User is empty", http.StatusBadRequest)
+		return
+	}
+
+	utils.GetMgoCollections(ctx, w, []string{"user", "pool"}, func(cs map[string]*mgo.Collection) {
+		//检查PoolId合法性
+		if c, err := cs["pool"].FindId(bson.ObjectIdHex(poolId)).Count(); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else if c <= 0 {
+			HttpError(w, "", http.StatusNotFound)
+			return
+		}
+
+		if err := cs["user"].Update(bson.M{"_id": bson.ObjectIdHex(userId)}, bson.M{"$pull": bson.M{"poolids": bson.ObjectIdHex(poolId)}}); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, nil)
+	})
 }

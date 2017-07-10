@@ -6,6 +6,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/handlers"
+	"github.com/zanecloud/apiserver/utils"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -17,6 +18,9 @@ import (
 var cookies []*http.Cookie
 var client *http.Client
 
+//当前用户
+var user *handlers.SessionCreateResp
+
 func TestMain(m *testing.M) {
 	//清理数据库
 	cleanUpDatabase()
@@ -24,7 +28,9 @@ func TestMain(m *testing.M) {
 	client = &http.Client{}
 	//登录root用户
 	//获得测试使用的登录态cookie
-	resp, _ := sessionCreate(client)
+	u := &handlers.SessionCreateResp{}
+	resp, _ := sessionCreate(client, u)
+	user = u
 	cookies = resp.Cookies()
 
 	//执行测试用例
@@ -132,6 +138,7 @@ func checkActions(actions []string) (*handlers.ActionCheckResponse, error) {
 //避免遗留的测试数据对测试结果造成干扰
 func cleanUpDatabase() {
 	cmds := [...][2]string{
+		{"mongo", "zanecloud --eval \"db.user.remove({'name':'root'})\""},
 		{"mongo", "zanecloud --eval \"db.user.remove({'name':'sadan'})\""},
 		{"mongo", "zanecloud --eval \"db.team.remove({'name':'team1'})\""},
 		{"mongo", "zanecloud --eval \"db.pool.remove({'name':'pool1'})\""},
@@ -148,4 +155,24 @@ func cleanUpDatabase() {
 			log.Fatal(err)
 		}
 	}
+	createRootUser()
+}
+
+//创建Root用户
+func createRootUser() {
+	//#准备加盐计算
+	name := "root"
+	salt := "1234567891234567"
+	pass := "hell05a"
+	content := fmt.Sprintf("%s:%s", pass, salt) //"$pass:$salt"
+	//#生成加盐后的密码
+	encryptedPassword := utils.Md5(content)
+
+	cmd := "mongo"
+	args := fmt.Sprintf("zanecloud --eval \"db.user.insertOne({name:'%s',pass:'%s',salt: '%s',roleset:4})\"", name, encryptedPassword, salt)
+	_, err := exec.Command("sh", "-c", fmt.Sprintf("%s %s", cmd, args)).Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 }

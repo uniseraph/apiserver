@@ -13,6 +13,11 @@ import (
 	"time"
 )
 
+type SessionCreateResp struct {
+	Id   string
+	Role uint64
+}
+
 //当前用户登录接口
 func postSessionCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
@@ -41,15 +46,15 @@ func postSessionCreate(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
 
 	logrus.Debugf("getUserLogoin::name is %s ", name)
-	result := types.User{}
-	if err := mgoSession.DB(mgoDB).C("user").Find(bson.M{"name": name}).One(&result); err != nil {
+	user := types.User{}
+	if err := mgoSession.DB(mgoDB).C("user").Find(bson.M{"name": name}).One(&user); err != nil {
 		HttpError(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	logrus.Debugf("getUserLogin::get the user %#v", result)
+	logrus.Debugf("getUserLogin::get the user %#v", user)
 	//校验用户输入的密码，与该ID的用户模型中Pass是否匹配
-	if ok, err := utils.ValidatePassword(result, pass); ok != true || err != nil {
+	if ok, err := utils.ValidatePassword(user, pass); ok != true || err != nil {
 		HttpError(w, "pass is error", http.StatusForbidden)
 		return
 	}
@@ -70,8 +75,8 @@ func postSessionCreate(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	sessionKey := sessionUUID.String()
 	//准备session的内容
 	sessionContents := map[string]interface{}{
-		"uid":     result.Id.Hex(),
-		"roleSet": strconv.FormatUint(uint64(result.RoleSet), 10), //fmt.Sprintf("%d", result.RoleSet),
+		"uid":     user.Id.Hex(),
+		"roleSet": strconv.FormatUint(uint64(user.RoleSet), 10), //fmt.Sprintf("%d", result.RoleSet),
 	}
 	err = client.HMSet(utils.RedisSessionKey(sessionKey), sessionContents).Err()
 	if err != nil {
@@ -94,6 +99,11 @@ func postSessionCreate(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	logrus.Debugf("getUserLogin::get the cookie %#v", sessionIDCookie)
 
 	http.SetCookie(w, sessionIDCookie)
+
+	result := SessionCreateResp{
+		Id:   user.Id.Hex(),
+		Role: uint64(user.RoleSet),
+	}
 	HttpOK(w, result)
 }
 

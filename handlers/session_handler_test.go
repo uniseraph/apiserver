@@ -5,13 +5,17 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
-	"github.com/zanecloud/apiserver/types"
+	"github.com/zanecloud/apiserver/handlers"
 	"io/ioutil"
 	"net/http"
 	"testing"
 )
 
 func TestSession(t *testing.T) {
+	for _, ck := range cookies {
+		log.Infof("cookie: %s => %s", ck.Name, ck.Value)
+	}
+
 	err := sessionLogout()
 	if err != nil {
 		t.Error(err)
@@ -21,7 +25,7 @@ func TestSession(t *testing.T) {
 
 	//登录root用户
 	//获得测试使用的登录态cookie
-	resp, err := sessionCreate(client)
+	resp, err := sessionCreate(client, nil)
 	if err != nil {
 		t.Error(err)
 	} else {
@@ -32,7 +36,7 @@ func TestSession(t *testing.T) {
 
 //root用户登录
 //获取登陆后的cookie
-func sessionCreate(client *http.Client) (resp *http.Response, err error) {
+func sessionCreate(client *http.Client, user *handlers.SessionCreateResp) (resp *http.Response, err error) {
 	req, err := http.NewRequest("POST", "http://localhost:8080/api/users/root/login?Pass=hell05a", nil)
 	if err != nil {
 		log.Errorf(err.Error())
@@ -40,11 +44,12 @@ func sessionCreate(client *http.Client) (resp *http.Response, err error) {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	resp, err = client.Do(req)
 	if err != nil {
 		log.Errorf("login post err:%s", err.Error())
 		return
 	}
-	resp, err = client.Do(req)
+	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -52,19 +57,14 @@ func sessionCreate(client *http.Client) (resp *http.Response, err error) {
 		return
 	}
 	if resp.StatusCode != http.StatusOK {
-		return resp, errors.Errorf("login statuscode:%d err:%s", resp.StatusCode, string(body))
+		return nil, errors.Errorf("login statuscode:%d err:%s", resp.StatusCode, string(body))
 	}
 
 	//fmt.Println(string(body))
-	rootUser := &types.User{}
-	json.Unmarshal(body, rootUser)
-	//fmt.Printf("\nlogin success , the root  user is %#v....",rootUser)
+	json.Unmarshal(body, user)
+	log.Infof("Resp body: %s", string(body))
 
-	//for _ , cookie := range resp.Cookies(){
-	//	fmt.Println("cookie:", cookie)
-	//}
-
-	return
+	return resp, nil
 }
 
 func sessionLogout() error {
