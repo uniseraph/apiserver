@@ -61,6 +61,7 @@ type EnvTreeMetaResponse struct {
 	Id          string
 	Name        string
 	Description string
+	Root        string
 	CreatedTime int64
 }
 
@@ -126,7 +127,8 @@ func createTree(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.GetMgoCollections(ctx, w, []string{"env_tree_meta"}, func(cs map[string]*mgo.Collection) {
+	utils.GetMgoCollections(ctx, w, []string{"env_tree_meta", "env_tree_node_dir"}, func(cs map[string]*mgo.Collection) {
+		//创建树的元数据
 		tree := &types.EnvTreeMeta{
 			Id:          bson.NewObjectId(),
 			Name:        req.Name,
@@ -139,9 +141,25 @@ func createTree(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		//创建一个节点目录
+		dir := &types.EnvTreeNodeDir{
+			Id:          bson.NewObjectId(),
+			Name:        "全部",
+			Tree:        tree.Id,
+			CreatedTime: time.Now().Unix(),
+			UpdatedTime: time.Now().Unix(),
+		}
+
+		//创建根节点
+		if err := cs["env_tree_node_dir"].Insert(dir); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		resp := &EnvTreeMetaResponse{
 			Id:          tree.Id.Hex(),
 			Name:        tree.Name,
+			Root:        dir.Id.Hex(),
 			Description: tree.Description,
 			CreatedTime: tree.CreatedTime,
 		}
@@ -243,7 +261,7 @@ func getTreeDirs(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		var id = r.Form.Get("TreeId")
 		var idObject = bson.ObjectIdHex(id)
 
-		var results []types.EnvTreeNodeDir
+		results := make([]types.EnvTreeNodeDir, 0, 20)
 
 		data := bson.M{
 			"tree": idObject,
