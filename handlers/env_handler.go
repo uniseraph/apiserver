@@ -488,7 +488,9 @@ func getTreeValues(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 
 	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_param_key", "env_tree_node_param_value"}, func(cs map[string]*mgo.Collection) {
 		var keys []types.EnvTreeNodeParamKey
-		var results []EnvTreeNodeParamKVResponse
+		//避免没有结果的时候返回nil
+		//需要没有结果的时候返回空数组
+		results := make([]EnvTreeNodeParamKVResponse, 0, 20)
 
 		data := bson.M{}
 
