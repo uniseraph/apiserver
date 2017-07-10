@@ -97,7 +97,7 @@ func getTemplateList(ctx context.Context, w http.ResponseWriter, r *http.Request
 	result.PageSize = req.PageSize
 	result.PageCount = result.Total / result.PageSize
 
-	httpJsonResponse(w, &result)
+	HttpOK(w, &result)
 }
 
 //		"/templates/{id:.*}/inspect":&MyHandler{h: getTemplate} ,
@@ -127,7 +127,7 @@ func getTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpJsonResponse(w, &result)
+	HttpOK(w, &result)
 }
 
 type TemplateCreateRequest struct {
@@ -159,15 +159,15 @@ func createTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	c := mgoSession.DB(config.MgoDB).C("template")
 
-	n, err := c.Find(bson.M{"name": req.Name}).Count()
-	if err != nil {
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if n >= 1 {
-		HttpError(w, "模版已经存在", http.StatusBadRequest)
-		return
-	}
+	//n, err := c.Find(bson.M{"name": req.Name}).Count()
+	//if err != nil {
+	//	HttpError(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+	//if n >= 1 {
+	//	HttpError(w, "模版已经存在", http.StatusBadRequest)
+	//	return
+	//}
 
 	user, err := utils.GetCurrentUser(ctx)
 	if err != nil {
@@ -194,7 +194,7 @@ func createTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	rsp.Description = req.Description
 	rsp.Title = req.Title
 
-	httpJsonResponse(w, rsp)
+	HttpOK(w, rsp)
 
 }
 
@@ -265,7 +265,7 @@ func copyTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	rsp.Description = result.Description
 	rsp.Version = result.Version
 
-	httpJsonResponse(w, rsp)
+	HttpOK(w, rsp)
 
 }
 
@@ -335,7 +335,7 @@ func updateTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	rsp.Description = result.Description
 	rsp.Version = result.Version
 
-	httpJsonResponse(w, rsp)
+	HttpOK(w, rsp)
 
 }
 

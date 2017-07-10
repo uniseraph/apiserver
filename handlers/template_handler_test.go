@@ -63,7 +63,7 @@ func TestTemplate(t *testing.T) {
 	})
 	if err != nil {
 		t.Error(err)
-		return 
+		return
 	} else {
 		t.Log(list)
 	}

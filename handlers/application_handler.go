@@ -12,6 +12,7 @@ import (
 	"time"
 	"fmt"
 	"github.com/Sirupsen/logrus"
+	"github.com/gorilla/mux"
 )
 
 type ApplicationCreateRequest struct {
@@ -87,7 +88,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	httpJsonResponse(w, app)
+	HttpOK(w, app)
 }
 
 func mergeServices(services []types.Service, info *types.PoolInfo) []types.Service {
@@ -187,7 +188,7 @@ func getApplicationList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	result.PageSize = req.PageSize
 	result.PageCount = result.Total / result.PageSize
 
-	httpJsonResponse(w, &result)
+	HttpOK(w, &result)
 
 
 }
@@ -208,5 +209,29 @@ var restartApplication = func(ctx context.Context, w http.ResponseWriter, r *htt
 
 var startApplication = func(ctx context.Context, w http.ResponseWriter, r *http.Request) {}
 
-var getApplication = func(ctx context.Context, w http.ResponseWriter, r *http.Request) {}
+var getApplication = func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+	id := mux.Vars(r)["id"]
+
+
+
+	utils.GetMgoCollections(ctx, w, []string{"application"}, func(cs map[string]*mgo.Collection) {
+
+
+
+		resp := &types.Application{}
+
+
+		if err := cs["application"].FindId(bson.ObjectIdHex(id)).One(resp) ; err !=nil {
+			if err==mgo.ErrNotFound {
+				HttpError(w,"没有这样的应用",http.StatusNotFound)
+				return
+			}
+			HttpError(w,err.Error(),http.StatusInternalServerError)
+			return
+		}
+		HttpOK(w,resp)
+	})
+
+}
 var rollbackApplication = func(ctx context.Context, w http.ResponseWriter, r *http.Request) {}
