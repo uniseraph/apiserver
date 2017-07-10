@@ -175,20 +175,20 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 		//如果没有找到或者redis出错
 		//则认证失败
 		if err != nil {
-			HttpError(w, err.Error(), http.StatusUnauthorized)
+			HttpError(w, err.Error(), http.StatusForbidden)
 			return
 		}
 		//如果session在redis中内容为空
 		//则认证失败
 		if len(sessionContent) == 0 {
-			HttpError(w, "sessionContent is empty", http.StatusUnauthorized)
+			HttpError(w, "sessionContent is empty", http.StatusForbidden)
 			return
 		}
 		//如果session中uid字段为空
 		//则认证失败
 		var uid = string(sessionContent["uid"])
 		if len(uid) == 0 {
-			HttpError(w, err.Error(), http.StatusUnauthorized)
+			HttpError(w, err.Error(), http.StatusForbidden)
 			return
 		}
 		//校验权限是否满足要求
@@ -208,7 +208,7 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 
 		if rs&roleSet == 0 {
 			logrus.Infof("current roleset  is %d ,current user id is %s , so it no permission", roleSet, uid)
-			HttpError(w, "no permission", http.StatusMethodNotAllowed)
+			HttpError(w, "no permission", http.StatusForbidden)
 			return
 		}
 
@@ -337,10 +337,10 @@ func HttpError(w http.ResponseWriter, err string, status int) {
 
 }
 
-func HttpErrorAndPanic(w http.ResponseWriter, err string, status int) {
-	utils.HttpError(w, err, status)
-	panic(err)
-}
+//func HttpErrorAndPanic(w http.ResponseWriter, err string, status int) {
+//	utils.HttpError(w, err, status)
+//	panic(err)
+//}
 
 func HttpOK(w http.ResponseWriter, result interface{}) {
 	utils.HttpOK(w, result)
@@ -390,7 +390,8 @@ func postActionsCheck(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(result)
+	HttpOK(w,result)
+	//w.Header().Set("Content-Type", "application/json")
+	//w.WriteHeader(http.StatusOK)
+	//json.NewEncoder(w).Encode(result)
 }
