@@ -63,10 +63,10 @@
             <v-checkbox label="系统管理员" v-model="IsSysAdmin" dark></v-checkbox>
             <v-checkbox label="应用管理员" v-model="IsAppAdmin" dark></v-checkbox>
           </v-flex>
-          <v-flex xs2>
+          <v-flex xs2 v-if="!Id || Id.length == 0">
             <v-subheader>初始密码<span class="required-star">*</span></v-subheader>
           </v-flex>
-          <v-flex xs3>
+          <v-flex xs3 v-if="!Id || Id.length == 0">
             <v-text-field
               v-model="Password1"
               ref="Password1"
@@ -77,12 +77,12 @@
               @input="rules.Password1 = rules0.Password1"
             ></v-text-field>
           </v-flex>
-          <v-flex xs7>
+          <v-flex xs7 v-if="!Id || Id.length == 0">
           </v-flex>
-          <v-flex xs2>
+          <v-flex xs2 v-if="!Id || Id.length == 0">
             <v-subheader>再输一次<span class="required-star">*</span></v-subheader>
           </v-flex>
-          <v-flex xs3>
+          <v-flex xs3 v-if="!Id || Id.length == 0">
             <v-text-field
               v-model="Password2"
               ref="Password2"
@@ -93,7 +93,7 @@
               @input="rules.Password2 = rules0.Password2"
             ></v-text-field>
           </v-flex>
-          <v-flex xs7>
+          <v-flex xs7 v-if="!Id || Id.length == 0">
           </v-flex>
           <v-flex xs12 mt-4 class="text-xs-center">
             <v-btn class="orange darken-2 white--text" @click.native="save">
