@@ -17,6 +17,27 @@ import (
 //需要根据pool的驱动不同，调用不同的接口创建容器／应用，暂时只管swarm/compose
 func CreateApplication(app *types.Application, pool *types.PoolInfo) error {
 
+	p, err := buildProject(app, pool)
+	if err != nil {
+		return nil
+	}
+	err = p.Up(context.Background(), options.Up{
+		options.Create{ForceRecreate: true},
+	})
+
+	if err != nil {
+		return err
+	}
+	return nil
+
+}
+
+func buildProject(app *types.Application, pool *types.PoolInfo) (p project.APIProject, err error) {
+	buf, err := buildComposeFileBinary(app, pool)
+	if err != nil {
+		return nil, err
+	}
+
 	factory, err := client.NewDefaultFactory(client.Options{
 		TLS:        false,
 		TLSVerify:  false,
@@ -25,8 +46,26 @@ func CreateApplication(app *types.Application, pool *types.PoolInfo) error {
 	})
 
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	p, err = docker.NewProject(&ctx.Context{
+		Context: project.Context{
+			//ComposeFiles: []string{"docker-compose.yml"},
+			ComposeBytes: [][]byte{buf},
+			ProjectName:  app.Name,
+		},
+		ClientFactory: factory,
+	}, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return p, nil
+}
+
+func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf []byte, err error) {
 
 	ec := &project.ExportedConfig{
 		Version:  "2",
@@ -38,39 +77,58 @@ func CreateApplication(app *types.Application, pool *types.PoolInfo) error {
 		composeService := &config.ServiceConfig{
 			Image:       s.ImageName + ":" + s.ImageTag,
 			Restart:     s.Restart,
-			NetworkMode: "bridge",   //TODO 暂时只支持flannel bridge
+			NetworkMode: "bridge",
+			Ports:       s.Ports,
 		}
 
 		ec.Services[s.Name] = composeService
 
 	}
 
-	buf, err := yaml.Marshal(ec)
+	buf, err = yaml.Marshal(ec)
 
 	if err != nil {
-		return err
+		return
 	}
 
 	logrus.Debugf("application %#v encode to bytes is %s", app, string(buf))
 
-	project, err := docker.NewProject(&ctx.Context{
-		Context: project.Context{
-			//ComposeFiles: []string{"docker-compose.yml"},
-			ComposeBytes: [][]byte{buf},
-			ProjectName:  app.Name,
-		},
-		ClientFactory: factory,
-	}, nil)
+	return
+}
 
+func StartApplication(app *types.Application, pool *types.PoolInfo, services []string) error {
+	p, err := buildProject(app, pool)
 	if err != nil {
-		return err
+		return nil
 	}
 
-	err = project.Up(context.Background(), options.Up{})
-
-	if err != nil {
+	if err := p.Start(context.Background(), services...); err != nil {
 		return err
 	}
 	return nil
+}
 
+func ScaleApplication(app *types.Application, pool *types.PoolInfo, services map[string]int) error {
+	p, err := buildProject(app, pool)
+	if err != nil {
+		return nil
+	}
+
+	if err := p.Scale(context.Background(), 30, services); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ListContainers(app *types.Application, pool *types.PoolInfo, services []string) ([]string, error) {
+	p, err := buildProject(app, pool)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := p.Containers(context.Background(), project.Filter{project.AnyState}, services...)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }

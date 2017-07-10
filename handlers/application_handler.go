@@ -16,7 +16,7 @@ import (
 )
 
 type ApplicationCreateRequest struct {
-	ApplcaitonTemplateId, PoolId, Title, Description string
+	ApplicationTemplateId, PoolId, Title, Description string
 }
 
 type ApplicationCreateResponse struct {
@@ -50,7 +50,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	colTemplate := mgoSession.DB(config.MgoDB).C("template")
 	template := &types.Template{}
-	if err := colTemplate.FindId(bson.ObjectIdHex(req.ApplcaitonTemplateId)).One(template); err != nil {
+	if err := colTemplate.FindId(bson.ObjectIdHex(req.ApplicationTemplateId)).One(template); err != nil {
 		if err == mgo.ErrNotFound {
 			HttpError(w, err.Error(), http.StatusNotFound)
 			return
@@ -64,7 +64,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	app := &types.Application{}
 	app.Id = bson.NewObjectId()
 	app.PoolId = req.PoolId
-	app.TemplateId = req.ApplcaitonTemplateId
+	app.TemplateId = req.ApplicationTemplateId
 	app.Title = req.Title
 	app.Description = req.Description
 	app.PoolId = req.PoolId
@@ -91,10 +91,12 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	HttpOK(w, app)
 }
 
+//用参数目录填充service定义中的环境变量
 func mergeServices(services []types.Service, info *types.PoolInfo) []types.Service {
 
 	//TODO
-	return []types.Service{}
+	return services
+
 }
 
 //PoolId -- 集群ID

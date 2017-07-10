@@ -661,10 +661,11 @@
 			"revisionTime": "2017-05-25T20:40:40Z"
 		},
 		{
-			"checksumSHA1": "Ddu+kcQalqQgJj4C65LeMsL2a9g=",
+			"checksumSHA1": "Ssz9STAL5P2+1poiM63klFjhqhE=",
+			"origin": "github.com/docker/libcompose/vendor/github.com/opencontainers/runc/libcontainer/system",
 			"path": "github.com/opencontainers/runc/libcontainer/system",
-			"revision": "5c73abbe75d73352bf966c9c27abdd6daeeaad69",
-			"revisionTime": "2017-07-07T16:43:30Z"
+			"revision": "0ad950cbeb3d72107613dd220b5e9d7e001b890b",
+			"revisionTime": "2017-07-03T17:04:54Z"
 		},
 		{
 			"checksumSHA1": "dMjcIEiu85sOnEWrGgnM5mL6BAs=",

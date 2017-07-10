@@ -316,20 +316,20 @@ func updateTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	result.Id = bson.NewObjectId()
+	//result.Id = bson.NewObjectI
 	//result.CreatorId = user.Id.Hex()
-	result.UpdaterId = user.Id.Hex()
-	//result.CreatedTime = time.Now().Unix()
-	result.UpdatedTime = result.CreatedTime
-	result.UpdaterName = user.Name
+	req.Id = bson.ObjectIdHex(id)
+	req.UpdaterId = user.Id.Hex()
+	req.UpdatedTime = result.CreatedTime
+	req.UpdaterName = user.Name
 
-	if err := c.UpdateId(bson.ObjectIdHex(id), result); err != nil {
+	if err := c.UpdateId(bson.ObjectIdHex(id), req.Template); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	rsp := TemplateUpdateResponse{}
-	rsp.Id = result.Id.Hex()
+	rsp.Id = bson.ObjectIdHex(id).Hex()
 	rsp.Name = result.Name
 	rsp.Title = result.Title
 	rsp.Description = result.Description
