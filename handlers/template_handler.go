@@ -66,15 +66,19 @@ func getTemplateList(ctx context.Context, w http.ResponseWriter, r *http.Request
 		Data: make([]types.Template, 0, 100),
 	}
 
-	pattern := fmt.Sprintf("^%s", req.Keyword)
+	selector := bson.M{}
 
-	regex1 := bson.M{"name": bson.M{"$regex": bson.RegEx{Pattern: pattern, Options: "i"}}}
+	if req.Name != "" {
+		selector["name"]=req.Name
+	}
 
-	regex2 := bson.M{"title": bson.M{"$regex": bson.RegEx{pattern, "i"}}}
-
-	selector := bson.M{"$or": []bson.M{regex1, regex2}}
-
-	logrus.Debugf("getTemplateList::过滤条件为%#v", regex1)
+	if req.Keyword != "" {
+		pattern := fmt.Sprintf("^%s", req.Keyword)
+		regex1 := bson.M{"name": bson.M{"$regex": bson.RegEx{Pattern: pattern, Options: "i"}}}
+		regex2 := bson.M{"title": bson.M{"$regex": bson.RegEx{pattern, "i"}}}
+		selector =bson.M{"$and":[]bson.M {  {"$or": []bson.M{regex1, regex2}} , selector }  }
+	}
+	logrus.Debugf("getTemplateList::过滤条件为%#v", selector)
 
 	if result.Total, err = c.Find(selector).Count(); err != nil {
 		HttpError(w, fmt.Sprintf("查询记录数出错，%s", err.Error()), http.StatusInternalServerError)

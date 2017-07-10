@@ -104,6 +104,7 @@ func mergeServices(services []types.Service, info *types.PoolInfo) []types.Servi
 type ApplicationListRequest struct {
 	PageRequest
 	PoolId   string
+	Name     string
 
 }
 
@@ -118,6 +119,11 @@ func getApplicationList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.PoolId == "" {
+		HttpError(w, "PoolId 不能为空", http.StatusBadRequest)
 		return
 	}
 
@@ -147,13 +153,22 @@ func getApplicationList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	pattern := fmt.Sprintf("^%s", req.Keyword)
 
-	regex1 := bson.M{"name": bson.M{"$regex": bson.RegEx{Pattern: pattern, Options: "i"}}}
+	selector := bson.M{"poolid":req.PoolId}
 
-	regex2 := bson.M{"title": bson.M{"$regex": bson.RegEx{Pattern:pattern, Options:"i"}}}
+	if req.Name !="" {
+		selector["name"]=req.Name
+	}
 
-	selector := bson.M{"$or": []bson.M{regex1, regex2}}
+	if req.Keyword !=""  {
+		regex1 := bson.M{"name": bson.M{"$regex": bson.RegEx{Pattern: pattern, Options: "i"}}}
+		regex2 := bson.M{"title": bson.M{"$regex": bson.RegEx{Pattern: pattern, Options: "i"}}}
+		selector  = bson.M{ "$and" : []bson.M {     bson.M{"$or": []bson.M{regex1, regex2}} , selector}}
+	}
 
-	logrus.Debugf("getApplication::过滤条件为%#v", regex1)
+
+
+
+	logrus.Debugf("getApplication::过滤条件为%#v", selector)
 
 	if result.Total, err = c.Find(selector).Count(); err != nil {
 		HttpError(w, fmt.Sprintf("查询记录数出错，%s", err.Error()), http.StatusInternalServerError)

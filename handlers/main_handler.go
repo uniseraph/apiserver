@@ -253,11 +253,11 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 func NewMainHandler(ctx context.Context) (http.Handler, error) {
 
 	config := utils.GetAPIServerConfig(ctx)
+
 	session, err := mgo.Dial(config.MgoURLs)
 	if err != nil {
 		return nil, err
 	}
-
 	session.SetMode(mgo.Monotonic, true)
 	c := utils.PutMgoSession(ctx, session)
 
@@ -270,28 +270,22 @@ func NewMainHandler(ctx context.Context) (http.Handler, error) {
 	if _, err := client.Ping().Result(); err != nil {
 		return nil, err
 	}
-
 	c1 := utils.PutRedisClient(c, client)
 
 	r := mux.NewRouter()
 
+	//TODO using request context
 	SetupPrimaryRouter(r, c1, routes)
 
 	r.Path("/api/actions/check").Methods(http.MethodPost).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		//	logrus.WithFields(logrus.Fields{"ctx":c1}).Debugf("call /api/actions/check")
-
 		checkUserPermission(postActionsCheck, types.ROLESET_NORMAL|types.ROLESET_SYSADMIN)(c1, w, r)
 	})
 
 	fsh := http.StripPrefix("/", http.FileServer(http.Dir(config.RootDir)))
-
 	//r.Path("/").Methods(http.MethodGet).Handler(http.StripPrefix("/",fsh))
 
 	r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI}).Debug("HTTP request received")
-
 		fsh.ServeHTTP(w, r)
 	})
 
