@@ -83,20 +83,25 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if err := application.CreateApplication(app, pool); err != nil {
-		//TODO 需要删除所有已创建成功的容器？？？
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	//if err := application.CreateApplication(app, pool); err != nil {
+	//	HttpError(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+
+	//TODO 马上start ？
+	//if err := application.StartApplication(app, pool); err != nil {
+	//	//TODO 需要删除所有已创建成功的容器？？？
+	//	HttpError(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 
 	m := map[string]int{}
 	for _, service := range app.Services {
-
 		m[service.Name] = service.ReplicaCount
-
 	}
 
 	if err := application.ScaleApplication(app, pool, m); err != nil {
+		//	//TODO 需要删除所有已创建成功的容器？？？
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -211,11 +216,18 @@ func scaleApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 }
 
-func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {}
+func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
-var stopApplication = func(ctx context.Context, w http.ResponseWriter, r *http.Request) {}
+}
 
-var restartApplication = func(ctx context.Context, w http.ResponseWriter, r *http.Request) {}
+func stopApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+}
+
+//TODO 这个接口非常危险
+func restartApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+}
 
 func startApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
@@ -241,4 +253,4 @@ func getApplication(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 }
 
-var rollbackApplication = func(ctx context.Context, w http.ResponseWriter, r *http.Request) {}
+func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {}
