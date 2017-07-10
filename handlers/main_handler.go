@@ -117,18 +117,18 @@ var routes = map[string]map[string]*MyHandler{
 		"/envs/values/{id:.*}/update-values": &MyHandler{h: updateValueAttributes, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/envs/value/get":                    &MyHandler{h: getValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 
-		"/applications/list":                    &MyHandler{h: getApplicationList},
-		"/applications/{id:.*}/inspect":         &MyHandler{h: getApplication},
-		"/applications/{id:.*}/detail":          &MyHandler{h: getApplication},
-		"/applications/{id:.*}/start":           &MyHandler{h: startApplication},
-		"/applications/{id:.*}/restart":         &MyHandler{h: restartApplication},
-		"/applications/{id:.*}/stop":            &MyHandler{h: stopApplication},
-		"/applications/{id:.*}/rollback":        &MyHandler{h: rollbackApplication},
-		"/applications/{id:.*}/upgrade":         &MyHandler{h: upgradeApplication},
-		"/applications/{id:.*}/scale":           &MyHandler{h: scaleApplication},
-		"/applications/containers/:id/ssh-info": &MyHandler{h: getContainerSSHInfo},
+		"/applications/list":                    &MyHandler{h: getApplicationList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/inspect":         &MyHandler{h: getApplication, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/detail":          &MyHandler{h: getApplication, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/start":           &MyHandler{h: startApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/restart":         &MyHandler{h: restartApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/stop":            &MyHandler{h: stopApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/rollback":        &MyHandler{h: rollbackApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/upgrade":         &MyHandler{h: upgradeApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/scale":           &MyHandler{h: scaleApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/containers/:id/ssh-info": &MyHandler{h: getContainerSSHInfo, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 		"/applications/create":                  &MyHandler{h: createApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/:id/containers/list":     &MyHandler{h: copyTemplate, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		//	"/applications/:id/containers/list":     &MyHandler{h: copyTemplate, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 
 		"/templates/list":            &MyHandler{h: getTemplateList},
 		"/templates/{id:.*}/inspect": &MyHandler{h: getTemplate},
@@ -390,7 +390,7 @@ func postActionsCheck(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 	}
 
-	HttpOK(w,result)
+	HttpOK(w, result)
 	//w.Header().Set("Content-Type", "application/json")
 	//w.WriteHeader(http.StatusOK)
 	//json.NewEncoder(w).Encode(result)

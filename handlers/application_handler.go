@@ -3,6 +3,9 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"github.com/Sirupsen/logrus"
+	"github.com/gorilla/mux"
 	"github.com/zanecloud/apiserver/application"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
@@ -10,9 +13,6 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
 	"time"
-	"fmt"
-	"github.com/Sirupsen/logrus"
-	"github.com/gorilla/mux"
 )
 
 type ApplicationCreateRequest struct {
@@ -104,14 +104,13 @@ func mergeServices(services []types.Service, info *types.PoolInfo) []types.Servi
 
 type ApplicationListRequest struct {
 	PageRequest
-	PoolId   string
-	Name     string
-
+	PoolId string
+	Name   string
 }
 
 type ApplicationListResponse struct {
 	PageResponse
-	Data      []*types.Application
+	Data []*types.Application
 }
 
 func getApplicationList(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -154,20 +153,17 @@ func getApplicationList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	pattern := fmt.Sprintf("^%s", req.Keyword)
 
-	selector := bson.M{"poolid":req.PoolId}
+	selector := bson.M{"poolid": req.PoolId}
 
-	if req.Name !="" {
-		selector["name"]=req.Name
+	if req.Name != "" {
+		selector["name"] = req.Name
 	}
 
-	if req.Keyword !=""  {
+	if req.Keyword != "" {
 		regex1 := bson.M{"name": bson.M{"$regex": bson.RegEx{Pattern: pattern, Options: "i"}}}
 		regex2 := bson.M{"title": bson.M{"$regex": bson.RegEx{Pattern: pattern, Options: "i"}}}
-		selector  = bson.M{ "$and" : []bson.M {     bson.M{"$or": []bson.M{regex1, regex2}} , selector}}
+		selector = bson.M{"$and": []bson.M{bson.M{"$or": []bson.M{regex1, regex2}}, selector}}
 	}
-
-
-
 
 	logrus.Debugf("getApplication::过滤条件为%#v", selector)
 
@@ -190,7 +186,6 @@ func getApplicationList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	HttpOK(w, &result)
 
-
 }
 
 func getContainerSSHInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -207,31 +202,28 @@ var stopApplication = func(ctx context.Context, w http.ResponseWriter, r *http.R
 
 var restartApplication = func(ctx context.Context, w http.ResponseWriter, r *http.Request) {}
 
-var startApplication = func(ctx context.Context, w http.ResponseWriter, r *http.Request) {}
+func startApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	
+}
 
-var getApplication = func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func getApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	id := mux.Vars(r)["id"]
-
-
-
 	utils.GetMgoCollections(ctx, w, []string{"application"}, func(cs map[string]*mgo.Collection) {
-
-
 
 		resp := &types.Application{}
 
-
-		if err := cs["application"].FindId(bson.ObjectIdHex(id)).One(resp) ; err !=nil {
-			if err==mgo.ErrNotFound {
-				HttpError(w,"没有这样的应用",http.StatusNotFound)
+		if err := cs["application"].FindId(bson.ObjectIdHex(id)).One(resp); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, "没有这样的应用", http.StatusNotFound)
 				return
 			}
-			HttpError(w,err.Error(),http.StatusInternalServerError)
+			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		HttpOK(w,resp)
+		HttpOK(w, resp)
 	})
 
 }
+
 var rollbackApplication = func(ctx context.Context, w http.ResponseWriter, r *http.Request) {}
