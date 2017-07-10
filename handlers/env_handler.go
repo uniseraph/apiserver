@@ -336,21 +336,10 @@ func createDir(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		//创建子节点如果成功
 		//则父节点的子节点列表增加该节点
 		if len(req.ParentId) > 0 {
-			//p_dir := &types.EnvTreeNodeDir{}
-			//if err := cs["env_tree_node_dir"].FindId(bson.ObjectIdHex(req.ParentId)).One(&p_dir); err != nil {
-			//	HttpError(w, "ParentId is invalide", http.StatusNotFound)
-			//	return
-			//}
-			//p_dir.Children = append(p_dir.Children, dir.Id)
-			////更新父节点
-			//if err := cs["env_tree_node_dir"].Insert(dir); err != nil {
-			//	HttpError(w, err.Error(), http.StatusInternalServerError)
-			//	return
-			//}
 			data := bson.M{"children": dir.Id}
 			selector := bson.M{"_id": bson.ObjectIdHex(req.ParentId)}
 
-			if err := cs["env_tree_node_dir"].Update(selector, bson.M{"$push": data}); err != nil {
+			if err := cs["env_tree_node_dir"].Update(selector, bson.M{"$addToSet": data}); err != nil {
 				if err == mgo.ErrNotFound {
 					HttpError(w, err.Error(), http.StatusNotFound)
 					return
@@ -557,8 +546,15 @@ func getTreeValues(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		if req.PageSize == 0 {
 			req.PageSize = 20
 		}
+
+		//页面上分页的page要从1开始
+		//数据库中查询要从0开始
+		page := req.Page - 1
+		if page < 0 {
+			page = 0
+		}
 		//找到参数目录树中的全部匹配的KEY
-		if err := cs["env_tree_node_param_key"].Find(data).Skip(req.Page * req.PageSize).Limit(req.PageSize).All(&keys); err != nil {
+		if err := cs["env_tree_node_param_key"].Find(data).Skip(page * req.PageSize).Limit(req.PageSize).All(&keys); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -793,7 +789,9 @@ func createValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 			selector := bson.M{"_id": dir.Id}
 
 			//将此KEY插入dir目录节点的参数数组中
-			if err := cs["env_tree_node_dir"].Update(selector, bson.M{"$push": data}); err != nil {
+			//$addToSet会将array当做set使用
+			//去重keys，避免重复插入相同数据
+			if err := cs["env_tree_node_dir"].Update(selector, bson.M{"$addToSet": data}); err != nil {
 				if err == mgo.ErrNotFound {
 					HttpError(w, err.Error(), http.StatusNotFound)
 					return

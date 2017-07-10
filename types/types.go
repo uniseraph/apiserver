@@ -67,9 +67,10 @@ type User struct {
 	RoleSet     Roleset
 	Email       string
 	TeamIds     []bson.ObjectId
-	Tel         string `json:tel",omitempty"`
-	CreatedTime int64  `json:",omitempty"`
-	Comments    string `json:",omitempty"`
+	Tel         string          `json:tel",omitempty"`
+	CreatedTime int64           `json:",omitempty"`
+	Comments    string          `json:",omitempty"`
+	PoolIds     []bson.ObjectId //一个用户has many pool
 }
 
 type Leader struct {
@@ -84,7 +85,8 @@ type Team struct {
 	Leader      Leader
 	//UserIds     []bson.ObjectId
 	Users       []User
-	CreatedTime int64 `json:",omitempty"`
+	CreatedTime int64           `json:",omitempty"`
+	PoolIds     []bson.ObjectId //一个Team has many pool
 }
 
 //type TeamUser struct {
@@ -194,10 +196,10 @@ type Service struct {
 	Name         string
 	ImageName    string
 	ImageTag     string
-	CPU          int       `json:",string"`
+	CPU          int `json:",string"`
 	ExclusiveCPU bool
-	Memory       int       `json:",string"`
-	ReplicaCount int       `json:",string"`
+	Memory       int `json:",string"`
+	ReplicaCount int `json:",string"`
 	Description  string
 	Restart      string
 	Command      string
