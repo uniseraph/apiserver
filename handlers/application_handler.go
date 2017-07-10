@@ -84,6 +84,19 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	if err := application.CreateApplication(app, pool); err != nil {
+		//TODO 需要删除所有已创建成功的容器？？？
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	m := map[string]int{}
+	for _, service := range app.Services {
+
+		m[service.Name] = service.ReplicaCount
+
+	}
+
+	if err := application.ScaleApplication(app, pool, m); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

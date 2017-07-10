@@ -67,7 +67,7 @@ type User struct {
 	RoleSet     Roleset
 	Email       string
 	TeamIds     []bson.ObjectId
-	Tel         string          `json:tel",omitempty"`
+	Tel         string          `json:",omitempty"`
 	CreatedTime int64           `json:",omitempty"`
 	Comments    string          `json:",omitempty"`
 	PoolIds     []bson.ObjectId //一个用户has many pool
