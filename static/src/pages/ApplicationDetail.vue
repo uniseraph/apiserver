@@ -199,7 +199,7 @@
                 <v-flex xs2>
                 </v-flex>
                 <v-flex xs3>
-                  <v-checkbox label="异常终止后自动重启" v-model="item.Restart" true-value="'always'" false-value="no" dark disabled></v-checkbox>
+                  <v-checkbox label="异常终止后自动重启" v-model="item.Restart" true-value="always" false-value="no" dark disabled></v-checkbox>
                 </v-flex>
                 <v-flex xs7>
                 </v-flex>
@@ -226,6 +226,35 @@
                       <td>
                         <v-text-field
                           v-model="props.item.Value"
+                          readonly
+                        ></v-text-field>
+                      </td>
+                    </template>
+                  </v-data-table>
+                </v-flex>
+                <v-flex xs12 mt-5 v-if="item.Ports && item.Ports.length > 0">
+                  <v-divider></v-divider>
+                  <v-card-title>
+                    <v-subheader>端口映射</v-subheader>
+                    <v-spacer></v-spacer>
+                  </v-card-title>
+                  <v-data-table
+                    :headers="headers_ports"
+                    :items="item.Ports"
+                    hide-actions
+                    class="elevation-1"
+                    no-data-text=""
+                  >
+                    <template slot="items" scope="props">
+                      <td>
+                        <v-text-field
+                          v-model="props.item.SourcePort"
+                          readonly
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-text-field
+                          v-model="props.item.LoadBalancerId"
                           readonly
                         ></v-text-field>
                       </td>
@@ -404,6 +433,11 @@
         headers_envs: [
           { text: '变量名', sortable: false, left: true },
           { text: '变量值', sortable: false, left: true }
+        ],
+        headers_ports: [
+          { text: '容器端口', sortable: false, left: true },
+          { text: '负载均衡ID', sortable: false, left: true },
+          { text: '操作', sortable: false, left: true }
         ],
         headers_volumns: [
           { text: '数据卷名', sortable: false, left: true },

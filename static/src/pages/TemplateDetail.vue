@@ -263,6 +263,52 @@
                     </template>
                   </v-data-table>
                 </v-flex>
+                <v-flex xs12 mt-5>
+                  <v-divider></v-divider>
+                  <v-card-title>
+                    <v-subheader>端口映射</v-subheader>
+                    <v-spacer></v-spacer>
+                    <v-btn icon class="blue--text text--lighten-2" @click.native="addPort(item)">
+                      <v-icon light>add</v-icon>
+                    </v-btn>
+                  </v-card-title>
+                  <v-data-table
+                    :headers="headers_ports"
+                    :items="item.Ports"
+                    hide-actions
+                    class="elevation-1"
+                    no-data-text=""
+                  >
+                    <template slot="items" scope="props">
+                      <td>
+                        <v-text-field
+                          v-model="props.item.SourcePort"
+                          :ref="'Port_SourcePort_' + props.item.index"
+                          required
+                          :rules="rules.Services[item.Id].Ports[props.item.Id].SourcePort"
+                          @input="rules.Services[item.Id].Ports[props.item.Id].SourcePort = rules0.Services.Ports.SourcePort"
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-text-field
+                          v-model="props.item.LoadBalancerId"
+                          placeholder="若无需负载均衡则留空"
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-btn icon class="red--text text--lighten-2" @click.native="removei(item.Ports, props.item.index)" title="删除">
+                          <v-icon>close</v-icon>
+                        </v-btn>
+                        <v-btn v-if="props.item.index < item.Ports.length - 1" icon class="blue--text blue--lighten-2 ml-2" @click.native="downward(item.Ports, props.item.index)" title="下移">
+                          <v-icon>arrow_downward</v-icon>
+                        </v-btn>
+                        <v-btn v-if="props.item.index > 0" icon class="green--text green--lighten-2 ml-2" @click.native="upward(item.Ports, props.item.index)" title="上移">
+                          <v-icon>arrow_upward</v-icon>
+                        </v-btn>
+                      </td>
+                    </template>
+                  </v-data-table>
+                </v-flex>
                 <v-flex xs12 mt-4>
                   <v-divider></v-divider>
                   <v-card-title>
@@ -343,8 +389,6 @@
                           v-model="props.item.Value"
                           :ref="'Label_Value_' + props.item.index"
                           required
-                          :rules="rules.Services[item.Id].Labels[props.item.Id].Value"
-                          @input="rules.Services[item.Id].Labels[props.item.Id].Value = rules0.Services.Labels.Value"
                         ></v-text-field>
                       </td>
                       <td>
@@ -366,7 +410,7 @@
           </div>
         </v-card>
         <div style="text-decoration:italic;color:#9F9F9F;">
-          提示：环境变量、数据卷以及标签中的值可以引用参数目录中的参数名，例如：一个表示域名的环境变量可以定义为“eureka1.${DOMAIN_SUFFIX}”。
+          提示：环境变量、端口映射、数据卷以及标签中的值可以引用参数目录中的参数名，例如：一个表示域名的环境变量可以定义为“eureka1.${DOMAIN_SUFFIX}”。
         </div>
       </div>
     </v-flex>
@@ -401,6 +445,11 @@
           { text: '变量值', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
+        headers_ports: [
+          { text: '容器端口', sortable: false, left: true },
+          { text: '负载均衡ID', sortable: false, left: true },
+          { text: '操作', sortable: false, left: true }
+        ],
         headers_volumns: [
           { text: '数据卷名', sortable: false, left: true },
           { text: '容器挂载路径', sortable: false, left: true },
@@ -414,11 +463,12 @@
 
         svcIdStart: 0,
         envIdStart: 0,
+        portIdStart: 0,
         volumnIdStart: 0,
         labelIdStart: 0,
 
-        Id: this.$route.params ? this.$route.params.id : null,
-        Title: this.$route.params ? this.$route.params.title : null,
+        Id: null,
+        Title: '',
         Name: '',
         Version: '',
         Description: '',
@@ -466,12 +516,20 @@
             ReplicaCount: [
               function(o) {
                 let v = o ? o.toString() : '';
-                return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) >= 0 && parseInt(v) <= 1000 ? true : '容器个数必须为0-1000的整数') : '请输入容器个数')
+                return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) > 0 && parseInt(v) <= 1000 ? true : '容器个数必须为1-1000的整数') : '请输入容器个数')
               }
             ],
             Envs: { 
               Name: [
                 v => (v && v.length > 0 ? (v.match(/\s/) ? '环境变量名称不允许包含空格' : true) : '请输入环境变量名称')
+              ]
+            },
+            Ports: { 
+              SourcePort: [
+                function(o) {
+                  let v = o ? o.toString() : '';
+                  return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) > 0 && parseInt(v) <= 65535 ? true : '容器端口号必须为1-65535的整数') : '请输入容器端口号')
+                }
               ]
             },
             Volumns: {
@@ -500,8 +558,12 @@
       ])
     },
 
+    // 如果用router.replace做跳转，则需watch route，并且重新获取params中的参数
+    watch: {
+      '$route': 'init'
+    },
+
     mounted() {
-      ui.showAlertAt('CreateTemplate');
       this.init();
     },
 
@@ -511,6 +573,10 @@
 
     methods: {
       init() {
+        ui.showAlertAt('CreateTemplate');
+
+        this.Id = this.$route.params ? this.$route.params.id : null;
+        this.Title = this.$route.params ? this.$route.params.title : '';
         if (!this.Id) {
           return;
         }
@@ -518,6 +584,7 @@
         api.Template(this.Id).then(data => {
           this.svcIdStart = 0;
           this.envIdStart = 0;
+          this.portIdStart = 0;
           this.volumnIdStart = 0;
           this.labelIdStart = 0;
 
@@ -550,6 +617,7 @@
                 Memory: this.rules0.Services.Memory,
                 ReplicaCount: this.rules0.Services.ReplicaCount,
                 Envs: [],
+                Ports: [],
                 Volumns: [],
                 Labels: []
               };
@@ -562,6 +630,17 @@
                   e.index = i++;
                   e.Id = this.envIdStart++;
                   r.Envs[e.Id] = this.rules0.Services.Envs;
+                }
+              }
+
+              if (!st.Ports) {
+                st.Ports = [];
+              } else {
+                let i = 0;
+                for (let e of st.Ports) {
+                  e.index = i++;
+                  e.Id = this.portIdStart++;
+                  r.Ports[e.Id] = this.rules0.Services.Ports;
                 }
               }
 
@@ -617,11 +696,12 @@
           CPU: '',
           ExclusiveCPU: false,
           Memory: '',
-          ReplicaCount: 1,
+          ReplicaCount: '',
           Description: '',
           Command: '',
           Restart: 'always',
           Envs: [],
+          Ports: [],
           Volumns: [],
           Labels: [],
           hidden: false
@@ -638,6 +718,18 @@
         
         s.Envs.push({ index: s.Envs.length, Id: id, Name: '', Value: '' });
         this.patch(s.Envs);
+      },
+
+      addPort(s) {
+        let id = this.portIdStart++;
+        if (!this.rules.Services[s.Id].Ports) {
+          this.rules.Services[s.Id].Ports = [];
+        }
+
+        this.$set(this.rules.Services[s.Id].Ports, id, {});
+        
+        s.Ports.push({ index: s.Ports.length, Id: id, SourcePort: '', LoadBalancerId: '' });
+        this.patch(s.Ports);
       },
 
       addVolumn(s) {
@@ -715,12 +807,17 @@
             Memory: this.rules0.Services.Memory,
             ReplicaCount: this.rules0.Services.ReplicaCount,
             Envs: [],
+            Ports: [],
             Volumns: [],
             Labels: []
           };
 
           for (let e of t.Envs) {
             r.Envs[e.Id] = this.rules0.Services.Envs;
+          }
+
+          for (let e of t.Ports) {
+            r.Ports[e.Id] = this.rules0.Services.Ports;
           }
           
           for (let e of t.Volumns) {
@@ -751,7 +848,7 @@
             Services: this.Services
           }
 
-          if (this.Id) {
+          if (this.Id && this.Id.length > 0) {
             api.UpdateTemplate(a).then(data => {
               ui.alert('应用模板修改成功', 'success');
               this.init();

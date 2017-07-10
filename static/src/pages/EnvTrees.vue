@@ -30,7 +30,7 @@
                 ></v-text-field>
                 <v-text-field 
                   v-model="NewTree.Description" 
-                  label="描述" 
+                  label="说明" 
                   class="mt-4"
                 ></v-text-field>
               </v-card-text>
@@ -70,7 +70,7 @@
                 ></v-text-field>
                 <v-text-field 
                   v-model="UpdateTree.Description" 
-                  label="描述" 
+                  label="说明" 
                   class="mt-4"
                 ></v-text-field>
               </v-card-text>

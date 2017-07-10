@@ -194,11 +194,11 @@ type Service struct {
 	Name         string
 	ImageName    string
 	ImageTag     string
-	CPU          int
+	CPU          int       `json:",string"`
 	ExclusiveCPU bool
-	Memory       int
-	ReplicaCount int
-	Description  int
+	Memory       int       `json:",string"`
+	ReplicaCount int       `json:",string"`
+	Description  string
 	Restart      string
 	Command      string
 	Envs         []Env

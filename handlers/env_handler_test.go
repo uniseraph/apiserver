@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/handlers"
 	"github.com/zanecloud/apiserver/types"
+	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -20,11 +21,11 @@ func TestEnvTree(t *testing.T) {
 	var kId string //某个参数的名称KEY的ID
 
 	t.Run("Meta=1", func(t *testing.T) {
-		if id, err := createEnvTreeMeta(); err != nil {
+		if meta, err := createEnvTreeMeta(); err != nil {
 			t.Error(err)
 		} else {
-			t.Log(id)
-			metaId = id
+			t.Log(meta)
+			metaId = meta.Id
 		}
 	})
 
@@ -96,17 +97,18 @@ func TestEnvTree(t *testing.T) {
 	})
 
 	//创建一棵树的全部节点
-	//mysql root->[master->mycat->[proxy01, proxy02], slave]
+	//全部->mysql root->[master->mycat->[proxy01, proxy02], slave]
 	//树的形状很奇怪，是为了测试，真实系统不会这么奇怪
 	t.Run("Meta=6", func(t *testing.T) {
-		id, err := createEnvTreeMeta()
+		meta, err := createEnvTreeMeta()
+		id := meta.Id
 		if err != nil {
 			t.Error(err)
 		} else {
-			t.Log(id)
+			t.Log(meta)
 			metaId = id
 		}
-		if dir, err := createEnvTreeNodeDirMySQLRoot(id); err != nil {
+		if dir, err := createEnvTreeNodeDirMySQLRoot(id, meta.Root); err != nil {
 			t.Error(err)
 		} else if dir.Name != "MySQL" {
 			t.Error("Name is not correct")
@@ -159,20 +161,23 @@ func TestEnvTree(t *testing.T) {
 			t.Error(err)
 		} else {
 			//得到一个这个样子的树
-			//mysql root->[master->mycat->[proxy01, proxy02], slave]
+			//全部->mysql root->[master->mycat->[proxy01, proxy02], slave]
 			t.Log(tree)
 
-			if tree.Name != "MySQL" {
-				t.Error(tree)
+			if tree.Name != "全部" {
+				t.Error("Name Error", tree)
 			}
 			if tree.ParentId != "" {
-				t.Error(tree.ParentId)
+				t.Error("ParentId Error", tree.ParentId)
 			}
-			if len(tree.Children) != 2 {
-				t.Error(tree.Children)
+			if len(tree.Children) != 1 {
+				t.Error("tree.Children size Error", tree.Children)
 			}
-			if tree.Children[0].Children[0].Name != "MyCAT Proxy" {
-				t.Error(tree.Children[0].Children[0])
+			if len(tree.Children[0].Children) != 2 {
+				t.Error("tree.Children[0].Children Error", tree.Children[0].Children)
+			}
+			if tree.Children[0].Children[0].Children[0].Name != "MyCAT Proxy" {
+				t.Error("tree.Children[0].Children[0].Name Error", tree.Children[0].Children[0])
 			}
 		}
 	})
@@ -213,8 +218,8 @@ func TestEnvTree(t *testing.T) {
 			t.Error(err)
 		} else {
 			//得到一个这个样子的树
-			//mysql root->master->mycat->[proxy01, proxy02]
-			if len(tree.Children[1].Children) != 0 {
+			//全部->mysql root->master->mycat->[proxy01, proxy02]
+			if len(tree.Children[0].Children[1].Children) != 0 {
 				t.Error(tree.Children[1])
 			}
 		}
@@ -300,13 +305,58 @@ func TestEnvTree(t *testing.T) {
 		}
 
 	})
+
+	//测试根据PoolID和KeyID查询Value
+	t.Run("Meta=16", func(t *testing.T) {
+		//建立Key
+		if k, err := createParamsKey(metaId, myCatDirId); err != nil {
+			t.Error(k)
+		} else if k.Name != "balance" {
+			t.Error(k)
+		} else if k.Value != "round robin" {
+			t.Error(k)
+		} else {
+			t.Log(k)
+			kId = k.Id
+		}
+
+		pId := bson.NewObjectId().Hex()
+
+		t.Log("Pid:", pId, "Kid:", kId)
+		//当pool和key没有关系的时候
+		//查询value其实是key的default值
+		if rsp, err := getEnvValue(pId, kId); err != nil {
+			t.Error(err)
+		} else if rsp.Value == "VALUE1" {
+			t.Error("EnvValue is not correct: ", rsp.Value)
+		} else if rsp.Value != "round robin" {
+			t.Error("EnvValue is not correct: ", rsp.Value)
+		} else {
+			t.Log(rsp)
+		}
+
+		//建立Key的Value和PoolId的对应关系
+		if err := updateParamsKeyValuesWithPoolId(kId, pId); err != nil {
+			t.Error(err)
+		}
+
+		//根据上面建立好的对应关系
+		//查询有具体值的KEY
+		if rsp, err := getEnvValue(pId, kId); err != nil {
+			t.Error(err)
+		} else if rsp.Value != "poolId-VALUE1" {
+			t.Error("EnvValue is not correct: ", rsp.Value)
+		} else {
+			t.Log(rsp)
+		}
+	})
 }
 
 /*
 	EnvTree测试
 */
 
-func createEnvTreeMeta() (string, error) {
+func createEnvTreeMeta() (*handlers.EnvTreeMetaResponse, error) {
 	tree := &types.EnvTreeMeta{
 		Name:        "TestTreeMeta",
 		Description: "TestDescriptionXXXXXXXXXXXX",
@@ -314,12 +364,12 @@ func createEnvTreeMeta() (string, error) {
 
 	buf, err := json.Marshal(tree)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	req, err := http.NewRequest(http.MethodPost, "http://localhost:8080/api/envs/trees/create", strings.NewReader(string(buf)))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -330,7 +380,7 @@ func createEnvTreeMeta() (string, error) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	defer resp.Body.Close()
@@ -338,19 +388,19 @@ func createEnvTreeMeta() (string, error) {
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Debugf("login read body err:%s", err.Error())
-		return "", err
+		return nil, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", errors.New(string(body))
+		return nil, errors.New(string(body))
 	}
 
-	t := handlers.EnvTreeMetaResponse{}
+	t := &handlers.EnvTreeMetaResponse{}
 	if err := json.Unmarshal(body, &t); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return t.Id, nil
+	return t, nil
 
 }
 
@@ -501,6 +551,9 @@ func getEnvTreeDirList(id string) (*handlers.EnvTreeNodeDirsResponse, error) {
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
+	//=============
+	log.Infoln("========================")
+	log.Infoln(string(body))
 	if err != nil {
 		log.Debugf("login read body err:%s", err.Error())
 		return nil, err
@@ -518,10 +571,11 @@ func getEnvTreeDirList(id string) (*handlers.EnvTreeNodeDirsResponse, error) {
 	return t, nil
 }
 
-func createEnvTreeNodeDirMySQLRoot(tree_id string) (*handlers.EnvTreeNodeDirResponse, error) {
+func createEnvTreeNodeDirMySQLRoot(tree_id string, parent_id string) (*handlers.EnvTreeNodeDirResponse, error) {
 	tree := &handlers.EnvTreeNodeDirRequest{
-		Name:   "MySQL",
-		TreeId: tree_id,
+		Name:     "MySQL",
+		ParentId: parent_id,
+		TreeId:   tree_id,
 	}
 
 	buf, err := json.Marshal(tree)
@@ -1026,15 +1080,15 @@ func deleteParamsKey(id string) error {
 func updateParamsKeyValues(id string) error {
 	vs := []*handlers.EnvValuesUpdateValues{}
 	vs = append(vs, &handlers.EnvValuesUpdateValues{
-		PoolId: "FakePoolID1",
+		PoolId: bson.NewObjectId().Hex(),
 		Value:  "VALUE1",
 	})
 	vs = append(vs, &handlers.EnvValuesUpdateValues{
-		PoolId: "FakePoolID2",
+		PoolId: bson.NewObjectId().Hex(),
 		Value:  "VALUE2",
 	})
 	vs = append(vs, &handlers.EnvValuesUpdateValues{
-		PoolId: "FakePoolID3",
+		PoolId: bson.NewObjectId().Hex(),
 		Value:  "VALUE3",
 	})
 
@@ -1173,4 +1227,87 @@ func getEnvValuesList(tree string, dir string, name string) (*handlers.EnvValues
 	}
 
 	return t, nil
+}
+
+//获取某个PoolId和KeyId的Value
+func getEnvValue(poolId string, keyId string) (*handlers.EnvValuesDetailsValueResponse, error) {
+	url := fmt.Sprintf("http://localhost:8080/api/envs/value/get?PoolId=%s&KeyId=%s", poolId, keyId)
+
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(""))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body err:%s", err.Error())
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(string(body))
+	}
+
+	t := &handlers.EnvValuesDetailsValueResponse{}
+	if err := json.Unmarshal(body, &t); err != nil {
+		return nil, err
+	}
+
+	return t, nil
+}
+
+func updateParamsKeyValuesWithPoolId(id string, poolId string) error {
+	vs := []*handlers.EnvValuesUpdateValues{}
+	vs = append(vs, &handlers.EnvValuesUpdateValues{
+		PoolId: poolId,
+		Value:  "poolId-VALUE1",
+	})
+
+	buf, err := json.Marshal(vs)
+	if err != nil {
+		return err
+	}
+	url := fmt.Sprintf("http://localhost:8080/api/envs/values/%s/update-values", id)
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(buf)))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body err:%s", err.Error())
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.New(string(body))
+	}
+
+	return nil
 }

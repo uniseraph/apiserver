@@ -34,7 +34,7 @@
             <td>{{ props.item.Version }}</td>
             <td>{{ props.item.Description }}</td>
             <td>{{ props.item.UpdatedTime | formatDate }}</td>
-            <td>{{ props.item.Updater.Name }}</td>
+            <td>{{ props.item.UpdaterName }}</td>
           </template>
         </v-data-table>
         <div class="text-xs-center pt-2 pb-2">
@@ -211,7 +211,7 @@
             Description: this.Description
           };
 
-          api.Applications(params).then(data => {
+          api.CreateApplication(params).then(data => {
             ui.alert('发布应用成功', 'success');
             let that = this;
             setTimeout(() => {

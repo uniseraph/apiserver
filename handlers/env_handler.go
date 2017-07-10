@@ -12,6 +12,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
+	"sort"
 	"time"
 )
 
@@ -60,6 +61,7 @@ type EnvTreeMetaResponse struct {
 	Id          string
 	Name        string
 	Description string
+	Root        string
 	CreatedTime int64
 }
 
@@ -80,7 +82,8 @@ type EnvTreeNodeDirsResponse struct {
 	ParentId string
 	//多个子目录
 	//EnvTreeNodeDir
-	Children    []*EnvTreeNodeDirsResponse
+	//Children    []*EnvTreeNodeDirsResponse
+	Children    EnvTreeNodeDirsResponseSlice
 	CreatedTime int64 `json:",omitempty"`
 	UpdatedTime int64 `json:",omitempty"`
 }
@@ -124,7 +127,8 @@ func createTree(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.GetMgoCollections(ctx, w, []string{"env_tree_meta"}, func(cs map[string]*mgo.Collection) {
+	utils.GetMgoCollections(ctx, w, []string{"env_tree_meta", "env_tree_node_dir"}, func(cs map[string]*mgo.Collection) {
+		//创建树的元数据
 		tree := &types.EnvTreeMeta{
 			Id:          bson.NewObjectId(),
 			Name:        req.Name,
@@ -137,9 +141,25 @@ func createTree(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		//创建一个节点目录
+		dir := &types.EnvTreeNodeDir{
+			Id:          bson.NewObjectId(),
+			Name:        "全部",
+			Tree:        tree.Id,
+			CreatedTime: time.Now().Unix(),
+			UpdatedTime: time.Now().Unix(),
+		}
+
+		//创建根节点
+		if err := cs["env_tree_node_dir"].Insert(dir); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		resp := &EnvTreeMetaResponse{
 			Id:          tree.Id.Hex(),
 			Name:        tree.Name,
+			Root:        dir.Id.Hex(),
 			Description: tree.Description,
 			CreatedTime: tree.CreatedTime,
 		}
@@ -241,7 +261,7 @@ func getTreeDirs(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		var id = r.Form.Get("TreeId")
 		var idObject = bson.ObjectIdHex(id)
 
-		var results []types.EnvTreeNodeDir
+		results := make([]types.EnvTreeNodeDir, 0, 20)
 
 		data := bson.M{
 			"tree": idObject,
@@ -475,7 +495,20 @@ type EnvValuesListResponse struct {
 	PageCount int
 	PageSize  int
 	Page      int
-	Data      []EnvTreeNodeParamKVResponse
+	Data      EnvTreeNodeParamKVResponseSlice
+}
+
+//用于/envs/values/list结果中Data数组，按照Name排序
+type EnvTreeNodeParamKVResponseSlice []*EnvTreeNodeParamKVResponse
+
+func (c EnvTreeNodeParamKVResponseSlice) Len() int {
+	return len(c)
+}
+func (c EnvTreeNodeParamKVResponseSlice) Swap(i, j int) {
+	c[i], c[j] = c[j], c[i]
+}
+func (c EnvTreeNodeParamKVResponseSlice) Less(i, j int) bool {
+	return c[i].Name < c[j].Name
 }
 
 func getTreeValues(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -488,7 +521,9 @@ func getTreeValues(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 
 	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_param_key", "env_tree_node_param_value"}, func(cs map[string]*mgo.Collection) {
 		var keys []types.EnvTreeNodeParamKey
-		var results []EnvTreeNodeParamKVResponse
+		//避免没有结果的时候返回nil
+		//需要没有结果的时候返回空数组
+		results := make(EnvTreeNodeParamKVResponseSlice, 0, 20)
 
 		data := bson.M{}
 
@@ -530,13 +565,18 @@ func getTreeValues(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 
 		//整理成客户端需要的数据结构
 		for _, k := range keys {
-			kv_rlt := EnvTreeNodeParamKVResponse{}
+			kv_rlt := &EnvTreeNodeParamKVResponse{}
 			kv_rlt.Id = k.Id.Hex()
 			kv_rlt.Value = k.Default
 			kv_rlt.Name = k.Name
 			kv_rlt.Description = k.Description
 
 			results = append(results, kv_rlt)
+		}
+
+		//按照名字给results排序
+		if results.Len() > 0 {
+			sort.Sort(results)
 		}
 
 		//计算一共有多少页
@@ -589,7 +629,7 @@ func getTreeValueDetails(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		var values []*types.EnvTreeNodeParamValue
+		values := make([]*types.EnvTreeNodeParamValue, 0, 20)
 
 		selector := bson.M{
 			"key": bson.ObjectIdHex(id),
@@ -613,7 +653,7 @@ func getTreeValueDetails(ctx context.Context, w http.ResponseWriter, r *http.Req
 		//建立关系的pool中如果存在没有创建实际VALUE的情况
 		//则使用KEY中的default代替
 
-		var pools []*types.PoolInfo
+		pools := make([]*types.PoolInfo, 0, 20)
 
 		//批量查找出Pool数据
 		if err := cs["pool"].Find(selector).All(&pools); err != nil {
@@ -635,7 +675,7 @@ func getTreeValueDetails(ctx context.Context, w http.ResponseWriter, r *http.Req
 			m_pid[v.Pool.Hex()] = v
 		}
 
-		var results []*EnvValuesDetailsValueResponse
+		results := make([]*EnvValuesDetailsValueResponse, 0, 20)
 
 		//整理成每个KEY对应的每个集群信息
 		for _, pool := range pools {
@@ -922,8 +962,8 @@ func updateValueAttributes(ctx context.Context, w http.ResponseWriter, r *http.R
 			//根据id以及pool找到VALUE实例
 			//其实只需要id即可
 			selector := bson.M{
-				"key":  id,
-				"pool": req.PoolId,
+				"key":  bson.ObjectIdHex(id),
+				"pool": bson.ObjectIdHex(req.PoolId),
 			}
 			//更新目标实例的value值
 			data := bson.M{
@@ -949,9 +989,94 @@ func updateValueAttributes(ctx context.Context, w http.ResponseWriter, r *http.R
 	})
 }
 
+//根据PoolId和KeyId获取Value
+func getValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var poolId string
+	var keyId string
+
+	//检查参数合法性
+	if poolId = r.FormValue("PoolId"); len(poolId) <= 0 {
+		HttpError(w, "PoolId is empty", http.StatusBadRequest)
+		return
+	}
+	if keyId = r.FormValue("KeyId"); len(keyId) <= 0 {
+		HttpError(w, "KeyId is empty", http.StatusBadRequest)
+		return
+	}
+
+	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_param_value", "env_tree_node_param_key"}, func(cs map[string]*mgo.Collection) {
+		rsp, err := GetValueHelpers(w, cs, poolId, keyId)
+
+		if err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, rsp)
+	})
+
+}
+
+func GetValueHelpers(w http.ResponseWriter, cs map[string]*mgo.Collection, poolId string, keyId string) (*EnvValuesDetailsValueResponse, error) {
+	rsp := &EnvValuesDetailsValueResponse{}
+	value := types.EnvTreeNodeParamValue{}
+
+	selector := bson.M{
+		"pool": bson.ObjectIdHex(poolId),
+		"key":  bson.ObjectIdHex(keyId),
+	}
+
+	var err error
+	if err = cs["env_tree_node_param_value"].Find(selector).One(&value); err != nil {
+		//如果服务端发生错误则退出
+		//除非是找不到该VALUE
+		//说明要使用KEY的DEFAULT
+		if err != mgo.ErrNotFound {
+			return nil, err
+		}
+	}
+
+	rsp.PoolId = value.Pool.Hex()
+	//如果找不到VALUE
+	//则需要使用KEY的默认值
+	if err == mgo.ErrNotFound {
+		key := types.EnvTreeNodeParamKey{}
+		if err = cs["env_tree_node_param_key"].FindId(bson.ObjectIdHex(keyId)).One(&key); err != nil {
+			if err == mgo.ErrNotFound {
+				return nil, errors.New("no such key for id: %s")
+			}
+			return nil, err
+		}
+
+		rsp.Value = key.Default
+	} else {
+		rsp.Value = value.Value
+	}
+
+	return rsp, nil
+}
+
 /*
 	辅助方法
 */
+
+//用于/envs/values/list结果中Data数组，按照Name排序
+type EnvTreeNodeDirsResponseSlice []*EnvTreeNodeDirsResponse
+
+func (c EnvTreeNodeDirsResponseSlice) Len() int {
+	return len(c)
+}
+func (c EnvTreeNodeDirsResponseSlice) Swap(i, j int) {
+	c[i], c[j] = c[j], c[i]
+}
+func (c EnvTreeNodeDirsResponseSlice) Less(i, j int) bool {
+	return c[i].Name < c[j].Name
+}
 
 //构建树结构
 func TreeBuild(rsp *EnvTreeNodeDirsResponse, results []types.EnvTreeNodeDir) error {
@@ -983,6 +1108,9 @@ func TreeBuild(rsp *EnvTreeNodeDirsResponse, results []types.EnvTreeNodeDir) err
 //构建树结构所需的节点
 //根据root节点构建余下的子节点
 func TreeNodeBuild(node *types.EnvTreeNodeDir, node_rsp *EnvTreeNodeDirsResponse, results []types.EnvTreeNodeDir) {
+	//使其初始化为数组
+	node_rsp.Children = make([]*EnvTreeNodeDirsResponse, 0, 20)
+
 	for _, child := range node.Children {
 		for _, sub_node := range results {
 			if child == sub_node.Id {
@@ -997,6 +1125,10 @@ func TreeNodeBuild(node *types.EnvTreeNodeDir, node_rsp *EnvTreeNodeDirsResponse
 				node_rsp.Children = append(node_rsp.Children, sub_node_rsp)
 				TreeNodeBuild(&sub_node, sub_node_rsp, results)
 			}
+		}
+		//给子节点按照Name排序
+		if node_rsp.Children.Len() > 0 {
+			sort.Sort(node_rsp.Children)
 		}
 	}
 }

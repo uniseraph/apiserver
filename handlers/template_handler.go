@@ -15,13 +15,19 @@ import (
 )
 
 type TemplateListRequest struct {
+	//PageRequest
 	Keyword  string
 	PageSize int
 	Page     int
+	Name string
 }
 
 type TemplateListResponse struct {
-	TemplateListRequest
+	//PageResponse
+	//PageRequest
+	Keyword  string
+	PageSize int
+	Page     int
 	Total     int
 	PageCount int
 	Data      []types.Template
@@ -60,15 +66,19 @@ func getTemplateList(ctx context.Context, w http.ResponseWriter, r *http.Request
 		Data: make([]types.Template, 0, 100),
 	}
 
-	pattern := fmt.Sprintf("^%s", req.Keyword)
+	selector := bson.M{}
 
-	regex1 := bson.M{"name": bson.M{"$regex": bson.RegEx{Pattern: pattern, Options: "i"}}}
+	if req.Name != "" {
+		selector["name"]=req.Name
+	}
 
-	regex2 := bson.M{"title": bson.M{"$regex": bson.RegEx{pattern, "i"}}}
-
-	selector := bson.M{"$or": []bson.M{regex1, regex2}}
-
-	logrus.Debugf("getTemplateList::过滤条件为%#v", regex1)
+	if req.Keyword != "" {
+		pattern := fmt.Sprintf("^%s", req.Keyword)
+		regex1 := bson.M{"name": bson.M{"$regex": bson.RegEx{Pattern: pattern, Options: "i"}}}
+		regex2 := bson.M{"title": bson.M{"$regex": bson.RegEx{pattern, "i"}}}
+		selector =bson.M{"$and":[]bson.M {  {"$or": []bson.M{regex1, regex2}} , selector }  }
+	}
+	logrus.Debugf("getTemplateList::过滤条件为%#v", selector)
 
 	if result.Total, err = c.Find(selector).Count(); err != nil {
 		HttpError(w, fmt.Sprintf("查询记录数出错，%s", err.Error()), http.StatusInternalServerError)
@@ -87,7 +97,7 @@ func getTemplateList(ctx context.Context, w http.ResponseWriter, r *http.Request
 	result.PageSize = req.PageSize
 	result.PageCount = result.Total / result.PageSize
 
-	httpJsonResponse(w, &result)
+	HttpOK(w, &result)
 }
 
 //		"/templates/{id:.*}/inspect":&MyHandler{h: getTemplate} ,
@@ -117,7 +127,7 @@ func getTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpJsonResponse(w, &result)
+	HttpOK(w, &result)
 }
 
 type TemplateCreateRequest struct {
@@ -149,15 +159,15 @@ func createTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	c := mgoSession.DB(config.MgoDB).C("template")
 
-	n, err := c.Find(bson.M{"name": req.Name}).Count()
-	if err != nil {
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if n >= 1 {
-		HttpError(w, "模版已经存在", http.StatusBadRequest)
-		return
-	}
+	//n, err := c.Find(bson.M{"name": req.Name}).Count()
+	//if err != nil {
+	//	HttpError(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+	//if n >= 1 {
+	//	HttpError(w, "模版已经存在", http.StatusBadRequest)
+	//	return
+	//}
 
 	user, err := utils.GetCurrentUser(ctx)
 	if err != nil {
@@ -184,7 +194,7 @@ func createTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	rsp.Description = req.Description
 	rsp.Title = req.Title
 
-	httpJsonResponse(w, rsp)
+	HttpOK(w, rsp)
 
 }
 
@@ -255,7 +265,7 @@ func copyTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	rsp.Description = result.Description
 	rsp.Version = result.Version
 
-	httpJsonResponse(w, rsp)
+	HttpOK(w, rsp)
 
 }
 
@@ -306,26 +316,26 @@ func updateTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	result.Id = bson.NewObjectId()
+	//result.Id = bson.NewObjectI
 	//result.CreatorId = user.Id.Hex()
-	result.UpdaterId = user.Id.Hex()
-	//result.CreatedTime = time.Now().Unix()
-	result.UpdatedTime = result.CreatedTime
-	result.UpdaterName = user.Name
+	req.Id = bson.ObjectIdHex(id)
+	req.UpdaterId = user.Id.Hex()
+	req.UpdatedTime = result.CreatedTime
+	req.UpdaterName = user.Name
 
-	if err := c.UpdateId(bson.ObjectIdHex(id), result); err != nil {
+	if err := c.UpdateId(bson.ObjectIdHex(id), req.Template); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	rsp := TemplateUpdateResponse{}
-	rsp.Id = result.Id.Hex()
+	rsp.Id = bson.ObjectIdHex(id).Hex()
 	rsp.Name = result.Name
 	rsp.Title = result.Title
 	rsp.Description = result.Description
 	rsp.Version = result.Version
 
-	httpJsonResponse(w, rsp)
+	HttpOK(w, rsp)
 
 }
 

@@ -61,9 +61,10 @@ var routes = map[string]map[string]*MyHandler{
 		"/envs/values/{id:.*}/update":        &MyHandler{h: updateValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/envs/values/{id:.*}/remove":        &MyHandler{h: deleteValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/envs/values/{id:.*}/update-values": &MyHandler{h: updateValueAttributes, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/value/get":                    &MyHandler{h: getValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 	},
 	"POST": {
-		"/pools/{id:.*}/flush":   &MyHandler{h: postPoolsFlush},
+		"/pools/{id:.*}/flush":   &MyHandler{h: postPoolsFlush, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/pools/{id:.*}/inspect": &MyHandler{h: getPoolJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/pools/register":        &MyHandler{h: postPoolsRegister, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/pools/ps":              &MyHandler{h: getPoolsJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
@@ -114,20 +115,20 @@ var routes = map[string]map[string]*MyHandler{
 		"/envs/values/{id:.*}/update":        &MyHandler{h: updateValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/envs/values/{id:.*}/remove":        &MyHandler{h: deleteValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/envs/values/{id:.*}/update-values": &MyHandler{h: updateValueAttributes, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/value/get":                    &MyHandler{h: getValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 
-		"/applications/list":              &MyHandler{h: getApplicationList},
-		"/applications/{id:.*}/inspect":   &MyHandler{h: getApplication},
-		"/applications/{id:.*}/detail":    &MyHandler{h: getApplication},
-		"/applications/{id:.*}/start":     &MyHandler{h: startApplication},
-		"/applications/{id:.*}/restart":   &MyHandler{h: restartApplication},
-		"/applications/{id:.*}/stop":      &MyHandler{h: stopApplication},
-		"/applications/{id:.*}/rollback":  &MyHandler{h: rollbackApplication},
-		"/applications/{id:.*}/upgrade":   &MyHandler{h: upgradeApplication},
-		"/applications/{id:.*}/scale":     &MyHandler{h: scaleApplication},
-		"/applications/containers/:id/ssh-info": &MyHandler{h: getContainerSSHInfo},
-		"/applications/create":          &MyHandler{h: createApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/:id/containers/list":    &MyHandler{h: copyTemplate, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-
+		"/applications/list":                    &MyHandler{h: getApplicationList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/inspect":         &MyHandler{h: getApplication, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/detail":          &MyHandler{h: getApplication, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/start":           &MyHandler{h: startApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/restart":         &MyHandler{h: restartApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/stop":            &MyHandler{h: stopApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/rollback":        &MyHandler{h: rollbackApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/upgrade":         &MyHandler{h: upgradeApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/scale":           &MyHandler{h: scaleApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/containers/:id/ssh-info": &MyHandler{h: getContainerSSHInfo, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/create":                  &MyHandler{h: createApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		//	"/applications/:id/containers/list":     &MyHandler{h: copyTemplate, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 
 		"/templates/list":            &MyHandler{h: getTemplateList},
 		"/templates/{id:.*}/inspect": &MyHandler{h: getTemplate},
@@ -174,20 +175,20 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 		//如果没有找到或者redis出错
 		//则认证失败
 		if err != nil {
-			HttpError(w, err.Error(), http.StatusUnauthorized)
+			HttpError(w, err.Error(), http.StatusForbidden)
 			return
 		}
 		//如果session在redis中内容为空
 		//则认证失败
 		if len(sessionContent) == 0 {
-			HttpError(w, "sessionContent is empty", http.StatusUnauthorized)
+			HttpError(w, "sessionContent is empty", http.StatusForbidden)
 			return
 		}
 		//如果session中uid字段为空
 		//则认证失败
 		var uid = string(sessionContent["uid"])
 		if len(uid) == 0 {
-			HttpError(w, err.Error(), http.StatusUnauthorized)
+			HttpError(w, err.Error(), http.StatusForbidden)
 			return
 		}
 		//校验权限是否满足要求
@@ -207,7 +208,7 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 
 		if rs&roleSet == 0 {
 			logrus.Infof("current roleset  is %d ,current user id is %s , so it no permission", roleSet, uid)
-			HttpError(w, "no permission", http.StatusMethodNotAllowed)
+			HttpError(w, "no permission", http.StatusForbidden)
 			return
 		}
 
@@ -232,7 +233,7 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 		if err := c.Find(bson.M{"$or": []bson.M{bson.M{"_id": bson.ObjectIdHex(uid)}}}).One(&result); err != nil {
 
 			if err == mgo.ErrNotFound {
-				HttpError(w, fmt.Sprintf("no such a user id is %s", uid), http.StatusNotFound)
+				HttpError(w, fmt.Sprintf("no such a user id is %s", uid), http.StatusForbidden)
 				return
 			}
 
@@ -252,11 +253,11 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 func NewMainHandler(ctx context.Context) (http.Handler, error) {
 
 	config := utils.GetAPIServerConfig(ctx)
+
 	session, err := mgo.Dial(config.MgoURLs)
 	if err != nil {
 		return nil, err
 	}
-
 	session.SetMode(mgo.Monotonic, true)
 	c := utils.PutMgoSession(ctx, session)
 
@@ -269,28 +270,22 @@ func NewMainHandler(ctx context.Context) (http.Handler, error) {
 	if _, err := client.Ping().Result(); err != nil {
 		return nil, err
 	}
-
 	c1 := utils.PutRedisClient(c, client)
 
 	r := mux.NewRouter()
 
+	//TODO using request context
 	SetupPrimaryRouter(r, c1, routes)
 
 	r.Path("/api/actions/check").Methods(http.MethodPost).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		//	logrus.WithFields(logrus.Fields{"ctx":c1}).Debugf("call /api/actions/check")
-
 		checkUserPermission(postActionsCheck, types.ROLESET_NORMAL|types.ROLESET_SYSADMIN)(c1, w, r)
 	})
 
 	fsh := http.StripPrefix("/", http.FileServer(http.Dir(config.RootDir)))
-
 	//r.Path("/").Methods(http.MethodGet).Handler(http.StripPrefix("/",fsh))
 
 	r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI}).Debug("HTTP request received")
-
 		fsh.ServeHTTP(w, r)
 	})
 
@@ -342,11 +337,10 @@ func HttpError(w http.ResponseWriter, err string, status int) {
 
 }
 
-
-func HttpErrorAndPanic(w http.ResponseWriter, err string , status int){
-	utils.HttpError(w,err,status)
-	panic(err)
-}
+//func HttpErrorAndPanic(w http.ResponseWriter, err string, status int) {
+//	utils.HttpError(w, err, status)
+//	panic(err)
+//}
 
 func HttpOK(w http.ResponseWriter, result interface{}) {
 	utils.HttpOK(w, result)
@@ -396,7 +390,8 @@ func postActionsCheck(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(result)
+	HttpOK(w, result)
+	//w.Header().Set("Content-Type", "application/json")
+	//w.WriteHeader(http.StatusOK)
+	//json.NewEncoder(w).Encode(result)
 }

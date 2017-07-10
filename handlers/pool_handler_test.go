@@ -28,6 +28,7 @@ func TestPool(t *testing.T) {
 
 	if err != nil {
 		t.Error(err)
+		return
 	} else {
 		t.Log(result)
 	}
@@ -41,8 +42,19 @@ func TestPool(t *testing.T) {
 	info, err := dockerclient.Info(context.Background())
 	if err != nil {
 		t.Error(err)
+		return
 	} else {
 		t.Log(info)
+	}
+
+
+	poolFlushResponse , err := flushPool(r.Id)
+	if err != nil{
+		t.Error(err)
+		return
+	}else {
+		t.Log("flush the pool success !")
+		t.Log(poolFlushResponse)
 	}
 }
 
@@ -78,6 +90,43 @@ func registerPool(name string, request *handlers.PoolsRegisterRequest) (interfac
 	//fmt.Println(string(body))
 	result := handlers.PoolsRegisterResponse{}
 	json.Unmarshal(body, &result)
+
+	return result, nil
+}
+
+
+func flushPool(id string) (*handlers.PoolsFlushResponse, error) {
+
+	url := fmt.Sprintf("http://localhost:8080/api/pools/%s/flush",id)
+
+	//buf, _ := json.Marshal(request)
+
+	req, _ := http.NewRequest(http.MethodPost, url, nil)
+
+	req.Header.Set("Content-Type", "application/json")
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Debugf("login read body statuscode:%d err:%s", resp.StatusCode, err.Error())
+		return  nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return  nil, errors.New(string(body))
+	}
+
+	//fmt.Println(string(body))
+	result := &handlers.PoolsFlushResponse{}
+	json.Unmarshal(body, result)
 
 	return result, nil
 }

@@ -30,7 +30,7 @@
                 ></v-text-field>
                 <v-text-field 
                   v-model="NewTeam.Description" 
-                  label="描述" 
+                  label="说明" 
                   class="mt-4"
                 ></v-text-field>
               </v-card-text>

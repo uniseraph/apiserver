@@ -1,6 +1,6 @@
 <template>
   <ul>
-    <li v-for='item in nodeData' v-show="item.visible" :class="{ 'root': item.parentId === undefined, 'leaf': item.parentId && (!item.children || item.children.length == 0) }">
+    <li v-for='item in nodeData' v-show="item.visible" :class="{ 'root': !item.parentId, 'leaf': item.parentId && (!item.children || item.children.length == 0) }">
       <i v-if="item.children && item.children.length > 0"  @click.stop='handleNodeExpand(item)' :class="[item.open? 'tree-open':'tree-close','icon']">
         </i>
      
