@@ -94,7 +94,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 func mergeServices(services []types.Service, info *types.PoolInfo) []types.Service {
 
 	//TODO
-	return []types.Service{}
+	return services
 }
 
 //PoolId -- 集群ID
