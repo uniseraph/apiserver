@@ -48,7 +48,7 @@ export default {
     },
 
     Login(params) {
-        return fetch('/users/' + encodeURIComponent(params.Name) + '/login', params);
+        return fetch('/users/' + encodeURIComponent(params.Name) + '/login?Pass=' + encodeURIComponent(params.Pass), params);
     },
 
     Pools(params) {

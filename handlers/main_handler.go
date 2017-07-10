@@ -233,7 +233,7 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 		if err := c.Find(bson.M{"$or": []bson.M{bson.M{"_id": bson.ObjectIdHex(uid)}}}).One(&result); err != nil {
 
 			if err == mgo.ErrNotFound {
-				HttpError(w, fmt.Sprintf("no such a user id is %s", uid), http.StatusNotFound)
+				HttpError(w, fmt.Sprintf("no such a user id is %s", uid), http.StatusForbidden)
 				return
 			}
 
