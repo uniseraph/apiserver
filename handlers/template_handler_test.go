@@ -55,7 +55,7 @@ func TestTemplate(t *testing.T) {
 
 	}
 
-	t.Log("\nlist the first page")
+	t.Log("list the first page")
 	list, err := listTemplate(&handlers.TemplateListRequest{
 		PageSize: 10,
 		Page:     1,
@@ -67,7 +67,7 @@ func TestTemplate(t *testing.T) {
 		t.Log(list)
 	}
 
-	t.Log("\nlist the 2nd page")
+	t.Log("list the 2nd page")
 	list1, err := listTemplate(&handlers.TemplateListRequest{
 		PageSize: 10,
 		Page:     2,

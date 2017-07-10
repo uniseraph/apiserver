@@ -88,10 +88,11 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	httpJsonResponse(w, app)
 }
 
+//用参数目录填充service定义中的环境变量
 func mergeServices(services []types.Service, info *types.PoolInfo) []types.Service {
 
 	//TODO
-	return []types.Service{}
+	return services
 }
 
 func getApplicationList(ctx context.Context, w http.ResponseWriter, r *http.Request) {

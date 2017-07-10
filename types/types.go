@@ -204,6 +204,10 @@ type Service struct {
 	Envs         []Env
 	Volumns      []Volumne
 	Labels       []Label
+	Ports        []string
+	Privileged   bool
+	CapAdd       []string
+	CapDrop      []string
 }
 
 type Env struct {
