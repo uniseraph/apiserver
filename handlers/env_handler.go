@@ -12,6 +12,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
+	"sort"
 	"time"
 )
 
@@ -80,7 +81,8 @@ type EnvTreeNodeDirsResponse struct {
 	ParentId string
 	//多个子目录
 	//EnvTreeNodeDir
-	Children    []*EnvTreeNodeDirsResponse
+	//Children    []*EnvTreeNodeDirsResponse
+	Children    EnvTreeNodeDirsResponseSlice
 	CreatedTime int64 `json:",omitempty"`
 	UpdatedTime int64 `json:",omitempty"`
 }
@@ -475,7 +477,20 @@ type EnvValuesListResponse struct {
 	PageCount int
 	PageSize  int
 	Page      int
-	Data      []EnvTreeNodeParamKVResponse
+	Data      EnvTreeNodeParamKVResponseSlice
+}
+
+//用于/envs/values/list结果中Data数组，按照Name排序
+type EnvTreeNodeParamKVResponseSlice []*EnvTreeNodeParamKVResponse
+
+func (c EnvTreeNodeParamKVResponseSlice) Len() int {
+	return len(c)
+}
+func (c EnvTreeNodeParamKVResponseSlice) Swap(i, j int) {
+	c[i], c[j] = c[j], c[i]
+}
+func (c EnvTreeNodeParamKVResponseSlice) Less(i, j int) bool {
+	return c[i].Name < c[j].Name
 }
 
 func getTreeValues(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -490,7 +505,7 @@ func getTreeValues(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		var keys []types.EnvTreeNodeParamKey
 		//避免没有结果的时候返回nil
 		//需要没有结果的时候返回空数组
-		results := make([]EnvTreeNodeParamKVResponse, 0, 20)
+		results := make(EnvTreeNodeParamKVResponseSlice, 0, 20)
 
 		data := bson.M{}
 
@@ -532,13 +547,18 @@ func getTreeValues(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 
 		//整理成客户端需要的数据结构
 		for _, k := range keys {
-			kv_rlt := EnvTreeNodeParamKVResponse{}
+			kv_rlt := &EnvTreeNodeParamKVResponse{}
 			kv_rlt.Id = k.Id.Hex()
 			kv_rlt.Value = k.Default
 			kv_rlt.Name = k.Name
 			kv_rlt.Description = k.Description
 
 			results = append(results, kv_rlt)
+		}
+
+		//按照名字给results排序
+		if results.Len() > 0 {
+			sort.Sort(results)
 		}
 
 		//计算一共有多少页
@@ -1027,6 +1047,19 @@ func GetValueHelpers(w http.ResponseWriter, cs map[string]*mgo.Collection, poolI
 	辅助方法
 */
 
+//用于/envs/values/list结果中Data数组，按照Name排序
+type EnvTreeNodeDirsResponseSlice []*EnvTreeNodeDirsResponse
+
+func (c EnvTreeNodeDirsResponseSlice) Len() int {
+	return len(c)
+}
+func (c EnvTreeNodeDirsResponseSlice) Swap(i, j int) {
+	c[i], c[j] = c[j], c[i]
+}
+func (c EnvTreeNodeDirsResponseSlice) Less(i, j int) bool {
+	return c[i].Name < c[j].Name
+}
+
 //构建树结构
 func TreeBuild(rsp *EnvTreeNodeDirsResponse, results []types.EnvTreeNodeDir) error {
 	//根节点指针
@@ -1057,6 +1090,9 @@ func TreeBuild(rsp *EnvTreeNodeDirsResponse, results []types.EnvTreeNodeDir) err
 //构建树结构所需的节点
 //根据root节点构建余下的子节点
 func TreeNodeBuild(node *types.EnvTreeNodeDir, node_rsp *EnvTreeNodeDirsResponse, results []types.EnvTreeNodeDir) {
+	//使其初始化为数组
+	node_rsp.Children = make([]*EnvTreeNodeDirsResponse, 0, 20)
+
 	for _, child := range node.Children {
 		for _, sub_node := range results {
 			if child == sub_node.Id {
@@ -1071,6 +1107,10 @@ func TreeNodeBuild(node *types.EnvTreeNodeDir, node_rsp *EnvTreeNodeDirsResponse
 				node_rsp.Children = append(node_rsp.Children, sub_node_rsp)
 				TreeNodeBuild(&sub_node, sub_node_rsp, results)
 			}
+		}
+		//给子节点按照Name排序
+		if node_rsp.Children.Len() > 0 {
+			sort.Sort(node_rsp.Children)
 		}
 	}
 }
