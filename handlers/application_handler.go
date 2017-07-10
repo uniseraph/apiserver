@@ -64,7 +64,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	app := &types.Application{}
 	app.Id = bson.NewObjectId()
 	app.PoolId = req.PoolId
-	app.TemplateId = req.ApplcaitonTemplateId
+	app.TemplateId = req.ApplicationTemplateId
 	app.Title = req.Title
 	app.Description = req.Description
 	app.PoolId = req.PoolId
