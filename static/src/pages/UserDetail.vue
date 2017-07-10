@@ -63,6 +63,38 @@
             <v-checkbox label="系统管理员" v-model="IsSysAdmin" dark></v-checkbox>
             <v-checkbox label="应用管理员" v-model="IsAppAdmin" dark></v-checkbox>
           </v-flex>
+          <v-flex xs2>
+            <v-subheader>初始密码<span class="required-star">*</span></v-subheader>
+          </v-flex>
+          <v-flex xs3>
+            <v-text-field
+              v-model="Password1"
+              ref="Password1"
+              type="password"
+              single-line
+              required
+              :rules="rules.Password1"
+              @input="rules.Password1 = rules0.Password1"
+            ></v-text-field>
+          </v-flex>
+          <v-flex xs7>
+          </v-flex>
+          <v-flex xs2>
+            <v-subheader>再输一次<span class="required-star">*</span></v-subheader>
+          </v-flex>
+          <v-flex xs3>
+            <v-text-field
+              v-model="Password2"
+              ref="Password2"
+              type="password"
+              single-line
+              required
+              :rules="rules.Password2"
+              @input="rules.Password2 = rules0.Password2"
+            ></v-text-field>
+          </v-flex>
+          <v-flex xs7>
+          </v-flex>
           <v-flex xs12 mt-4 class="text-xs-center">
             <v-btn class="orange darken-2 white--text" @click.native="save">
               <v-icon light left>save</v-icon>保存
@@ -88,6 +120,8 @@
         CreatedTime: 0,
         IsSysAdmin: false,
         IsAppAdmin: false,
+        Password1: '',
+        Password2: '',
 
         rules: {},
 
@@ -100,6 +134,12 @@
           ],
           Tel: [
             v => (v && v.length > 0 ? true : '请输入电话')
+          ],
+          Password1: [
+            () => (this.Password1.length < 8 ? '密码至少需8位字符' : true)
+          ],
+          Password2: [
+            () => (this.Password1 != this.Password2 ? '两次输入的密码不相同' : true)
           ]
         }
       }
@@ -159,7 +199,8 @@
               Name: this.Name,
               Email: this.Email,
               Tel: this.Tel,
-              RoleSet: roleSet
+              RoleSet: roleSet,
+              Pass: this.Password1
             }).then(data => {
               ui.alert('新增用户成功', 'success');
               this.$router.replace('/users/' + data.Id);

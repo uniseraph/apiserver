@@ -168,7 +168,7 @@
                           class="mt-4"
                         ></v-text-field>
                         <v-text-field 
-                          label="描述" 
+                          label="说明" 
                           v-model="NewValue.Description" 
                           class="mt-4"
                         ></v-text-field>
@@ -228,7 +228,7 @@
           { text: '参数ID', sortable: false, left: true },
           { text: '参数名', sortable: false , left: true},
           { text: '默认值', sortable: false, left: true },
-          { text: '描述', sortable: false, left: true },
+          { text: '说明', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
         items: [],
