@@ -203,7 +203,7 @@ var stopApplication = func(ctx context.Context, w http.ResponseWriter, r *http.R
 var restartApplication = func(ctx context.Context, w http.ResponseWriter, r *http.Request) {}
 
 func startApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	
+
 }
 
 func getApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
