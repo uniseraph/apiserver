@@ -244,7 +244,7 @@
         TreeId: this.$route.params.id,
         TreeName: this.$route.params.name,
 
-        SelectedDir: { Id: '0', Name: '全部' },
+        SelectedDir: {},
         Keyword: '',
 
         UpdateDirDlg: false,
@@ -323,27 +323,25 @@
       init(selectedDirId) {
         let state = this.$refs.tree.getState();
         api.EnvDirs({ TreeId: this.TreeId }).then(data => {
-          let nodeData = [{
-            id: '0',
-            label: '全部',
-            open: true,
-            visible: true,
-            checked: false
-          }];
+          let nodeData = conv2NodeData(null, [ data ]);
 
-          nodeData[0].children = conv2NodeData(nodeData[0], data);
+          if (nodeData.length > 0) {
+            nodeData[0].open = true;
+
+            if (!selectedDirId) {
+              selectedDirId = nodeData[0].id;
+            }
+          }
 
           this.treeData = this.$refs.tree.createTreeData(nodeData, state, selectedDirId);
 
-          if (selectedDirId) {
+          this.$nextTick(_ => {
             let node = this.$refs.tree.getNodeById(selectedDirId);
             if (node) {
               this.nodeClicked(node);
             }
-          }
+          });
         });
-
-        this.getDataFromApi();
       },
 
       goback() {
@@ -353,14 +351,14 @@
       nodeClicked(node) {
         this.Keyword = '';
 
-        if (this.SelectedDir.Id == node.id && node.id != '0') {
+        if (this.SelectedDir.Id == node.id && this.SelectedDir.ParentId) {
           this.UpdateDirDlg = true;
         } else {
           this.SelectedDir = { Id: node.id, Name: node.label, ParentId: node.parentId };
           this.getDataFromApi();
         }
 
-        if (this.SelectedDir.Id == '0') {
+        if (!this.SelectedDir.ParentId) {
           this.RemoveDirDisabled = true;
         } else {
           this.RemoveDirDisabled = false;
@@ -376,7 +374,7 @@
 
           let params = {
             Name: this.NewDir.Name,
-            ParentId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : null,
+            ParentId: this.SelectedDir.Id,
             TreeId: this.TreeId
           };
 
@@ -415,7 +413,7 @@
       getDataFromApi() {
         let params = {
           TreeId: this.TreeId,
-          DirId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : '', // 这里用''不用null主要是因为router.replace会出错
+          DirId: this.SelectedDir.Id,
           Name: this.Keyword,
           PageSize: this.pagination.rowsPerPage, 
           Page: this.pagination.page
@@ -446,7 +444,7 @@
             Name: this.NewValue.Name,
             Value: this.NewValue.Value,
             Description: this.NewValue.Description,
-            DirId: this.SelectedDir.Id != '0' ? this.SelectedDir.Id : null,
+            DirId: this.SelectedDir.Id,
             TreeId: this.TreeId
           };
 
@@ -481,10 +479,10 @@
       let a = {
         id: e.Id,
         label: e.Name,
-        parentId: e.ParentId ? e.ParentId : '0',
         open: false,
         visible: true,
         checked: false,
+        parentId: pnode ? pnode.id : null,
         parentNode: pnode
       };
 
