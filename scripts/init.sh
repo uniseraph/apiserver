@@ -8,6 +8,7 @@ mongo zanecloud --eval "db.user.createIndex({name:1}, {unique:true})"
 mongo zanecloud --eval "db.team.createIndex({name:1}, {unique:true})"
 mongo zanecloud --eval "db.pool.createIndex({name:1}, {unique:true})"
 #TODO name + poolid做唯一性约束
+mongo zanecloud --eval "db.application.createIndex({name:1,poolid:1}, {unique:true})"
 mongo zanecloud --eval "db.container.createIndex({name:1,poolid:1}, {unique:true})"
 mongo zanecloud --eval "db.container.createIndex({id:1}, {unique:true})"
 
