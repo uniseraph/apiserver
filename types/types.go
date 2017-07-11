@@ -213,8 +213,7 @@ type Service struct {
 }
 
 type Env struct {
-	Name  string
-	Value string
+	Label
 }
 type Label struct {
 	Name  string

@@ -1027,6 +1027,24 @@ func getValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 }
 
+func GetEnvValue(ctx context.Context, poolId string, keyId string) (*EnvValuesDetailsValueResponse, error) {
+
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	config := utils.GetAPIServerConfig(ctx)
+
+	collectionMap := map[string]*mgo.Collection{
+		"env_tree_node_param_value": mgoSession.DB(config.MgoDB).C("env_tree_node_param_value"),
+		"env_tree_node_param_key":   mgoSession.DB(config.MgoDB).C("env_tree_node_param_key"),
+	}
+
+	return GetValueHelpers(collectionMap, poolId, keyId)
+
+}
+
 func GetValueHelpers(cs map[string]*mgo.Collection, poolId string, keyId string) (*EnvValuesDetailsValueResponse, error) {
 	rsp := &EnvValuesDetailsValueResponse{}
 	value := types.EnvTreeNodeParamValue{}

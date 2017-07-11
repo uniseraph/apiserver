@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
@@ -12,6 +13,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
+	"regexp"
 	"time"
 )
 
@@ -90,7 +92,11 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	app.UpdatedTime = time.Now().Unix()
 	app.Status = "running"
 
-	app.Services = mergeServices(template.Services, pool)
+	app.Services, err = mergeServices(ctx, template.Services, pool)
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	if err := colApplication.Insert(app); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
@@ -123,11 +129,59 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	HttpOK(w, app)
 }
 
+func replaceEnv(ctx context.Context, l *types.Label, pool *types.PoolInfo) error {
+
+	re := regexp.MustCompile(`\$\{(.+)\}`)
+
+	loc := re.FindStringIndex(l.Value)
+
+	if loc == nil {
+		return nil
+	}
+
+	key := l.Value[loc[0]+2 : loc[1]-1]
+
+	//TODO 	到底是id还是key
+	value, err := GetEnvValue(ctx, pool.Id.Hex(), key)
+
+	if err != nil {
+		return err
+	}
+
+	l.Value = re.ReplaceAllString(l.Value, value.Value)
+
+	return nil
+}
+
 //用参数目录填充service定义中的环境变量
-func mergeServices(services []types.Service, info *types.PoolInfo) []types.Service {
+func mergeServices(ctx context.Context, services []types.Service, pool *types.PoolInfo) ([]types.Service, error) {
 
 	//TODO
-	return services
+
+	for _, service := range services {
+
+		logrus.Debugf("before merge:: service is %#v", service)
+
+		for i, _ := range service.Labels {
+
+			if err := replaceEnv(ctx, &service.Labels[i], pool); err != nil {
+				return nil, errors.New("替换Label的环境变量失败." + err.Error())
+			}
+
+		}
+
+		for i, _ := range service.Envs {
+
+			if err := replaceEnv(ctx, &service.Envs[i].Label, pool); err != nil {
+
+				return nil, errors.New("替换Label的环境变量失败." + err.Error())
+			}
+		}
+		logrus.Debugf("after merge:: service is %#v", service)
+
+	}
+
+	return services, nil
 
 }
 
