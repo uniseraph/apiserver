@@ -99,7 +99,7 @@ var routes = map[string]map[string]*MyHandler{
 		"/teams/{id:.*}/remove":  &MyHandler{h: postTeamRemove, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 
 		"/session/{name:.*}/login": &MyHandler{h: postSessionCreate},
-		"/session/logout":          &MyHandler{h: postSessionDestroy},
+		"/session/logout":          &MyHandler{h: postSessionDestroy, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 
 		//"/actions/check" : &MyHandler{h: postActionsCheck } ,
 
