@@ -16,7 +16,8 @@ import (
 )
 
 type ApplicationCreateRequest struct {
-	ApplicationTemplateId, PoolId, Title, Description string
+	TemplateId                 string `json:ApplicationTemplateId",omitempty"`
+	PoolId, Title, Description string
 }
 
 type ApplicationCreateResponse struct {
@@ -50,7 +51,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	colTemplate := mgoSession.DB(config.MgoDB).C("template")
 	template := &types.Template{}
-	if err := colTemplate.FindId(bson.ObjectIdHex(req.ApplicationTemplateId)).One(template); err != nil {
+	if err := colTemplate.FindId(bson.ObjectIdHex(req.TemplateId)).One(template); err != nil {
 		if err == mgo.ErrNotFound {
 			HttpError(w, err.Error(), http.StatusNotFound)
 			return
@@ -59,26 +60,39 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	c := mgoSession.DB(config.MgoDB).C("application")
+	colApplication := mgoSession.DB(config.MgoDB).C("application")
+
+	n, err := colApplication.Find(bson.M{"poolid": req.PoolId, "name": template.Name}).Count()
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	if n >= 1 {
+		HttpError(w, "该集群中存在同名应用", http.StatusInternalServerError)
+		return
+	}
 
 	app := &types.Application{}
 	app.Id = bson.NewObjectId()
 	app.PoolId = req.PoolId
-	app.TemplateId = req.ApplicationTemplateId
+	app.TemplateId = req.TemplateId
 	app.Title = req.Title
 	app.Description = req.Description
 	app.PoolId = req.PoolId
 	app.Name = template.Name
+	app.Version = template.Version
 
 	app.CreatorId = currentuser.Id.Hex()
 	app.UpdaterId = currentuser.Id.Hex()
 	app.UpdaterName = currentuser.Name
 	app.CreatedTime = time.Now().Unix()
 	app.UpdatedTime = time.Now().Unix()
+	app.Status = "running"
 
 	app.Services = mergeServices(template.Services, pool)
 
-	if err := c.Insert(app); err != nil {
+	if err := colApplication.Insert(app); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -95,7 +109,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	//	return
 	//}
 
-	m := map[string]int{}
+	m := make(map[string]int)
 	for _, service := range app.Services {
 		m[service.Name] = service.ReplicaCount
 	}
@@ -168,7 +182,7 @@ func getApplicationList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	c := mgoSession.DB(config.MgoDB).C("application")
 
 	result := ApplicationListResponse{
-		Data: make([]*types.Application, 0, 100),
+		Data: make([]*types.Application, 100),
 	}
 
 	pattern := fmt.Sprintf("^%s", req.Keyword)

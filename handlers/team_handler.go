@@ -28,7 +28,7 @@ func getTeamsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	c := mgoSession.DB(mgoDB).C("team")
 
-	results := make([]types.Team, 0, 50)
+	results := make([]types.Team, 50)
 	if err := c.Find(bson.M{}).All(&results); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return

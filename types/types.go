@@ -244,12 +244,13 @@ type Template struct {
 
 type Application struct {
 	Id          bson.ObjectId "_id"
-	TemplateId  string        `json:",omitempty"`
+	TemplateId  string        `json:ApplicationTemplateId",omitempty"`
 	PoolId      string        `json:",omitempty"`
 	Title       string
 	Name        string
 	Version     string
 	Description string
+	Status      string
 
 	Services []Service
 

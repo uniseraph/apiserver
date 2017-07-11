@@ -316,7 +316,7 @@ func getUsersJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	c := mgoSession.DB(mgoDB).C("user")
 
-	results := make([]types.User, 0, 200)
+	results := make([]types.User, 100)
 	if err := c.Find(bson.M{}).All(&results); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
