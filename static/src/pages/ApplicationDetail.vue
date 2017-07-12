@@ -394,7 +394,7 @@
                   autocomplete
                 >
               </v-select>
-              <v-btn floating small primary @click.native="addTeam">
+              <v-btn floating small primary @click.native="addUser">
                 <v-icon light>add</v-icon>
               </v-btn>
             </v-card-title>
