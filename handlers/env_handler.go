@@ -721,6 +721,10 @@ func getTreeValueDetails(ctx context.Context, w http.ResponseWriter, r *http.Req
 }
 
 //创建一个参数名称
+//TODO
+//参数名称在一个树中唯一
+//要对Mongo建唯一性索引
+//要处理唯一性索引的错误，提示用户不该输入冲突的Name
 func createValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	req := EnvTreeNodeParamKVRequest{}
 
@@ -1015,7 +1019,7 @@ func getValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_param_value", "env_tree_node_param_key"}, func(cs map[string]*mgo.Collection) {
-		rsp, err := GetValueHelpers(cs, poolId, keyId)
+		rsp, err := GetValueHelper(cs, poolId, keyId)
 
 		if err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
@@ -1027,25 +1031,61 @@ func getValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 }
 
-func GetEnvValue(ctx context.Context, poolId string, keyId string) (*EnvValuesDetailsValueResponse, error) {
+//根据TreeId以及参数名称keyName
+//查找参数值Value
+//找不到则提供Key的默认值
+func GetEnvValueByNameHelper(cs map[string]*mgo.Collection, treeId string, poolId string, keyName string) (*EnvValuesDetailsValueResponse, error) {
+	rsp := &EnvValuesDetailsValueResponse{}
+	value := types.EnvTreeNodeParamValue{}
+	key := types.EnvTreeNodeParamKey{}
 
-	mgoSession, err := utils.GetMgoSessionClone(ctx)
-	if err != nil {
+	var selector bson.M
+
+	//根据树ID和名字查找KEY
+	//一个数下面，名字是唯一的
+	selector = bson.M{
+		"name": keyName,
+		"tree": bson.ObjectIdHex(treeId),
+	}
+	//先查找是否有该Name的参数名称
+	if err := cs["env_tree_node_param_key"].Find(selector).One(&key); err != nil {
+		//如果找不到肯定业务出错了
+		if err == mgo.ErrNotFound {
+			return nil, errors.New(fmt.Sprintf("no such key for name: %s", keyName))
+		}
 		return nil, err
 	}
 
-	config := utils.GetAPIServerConfig(ctx)
-
-	collectionMap := map[string]*mgo.Collection{
-		"env_tree_node_param_value": mgoSession.DB(config.MgoDB).C("env_tree_node_param_value"),
-		"env_tree_node_param_key":   mgoSession.DB(config.MgoDB).C("env_tree_node_param_key"),
+	//根据
+	selector = bson.M{
+		"pool": bson.ObjectIdHex(poolId),
+		"key":  key.Id,
 	}
 
-	return GetValueHelpers(collectionMap, poolId, keyId)
+	var err error
+	if err = cs["env_tree_node_param_value"].Find(selector).One(&value); err != nil {
+		//如果服务端发生错误则退出
+		//除非是找不到该VALUE
+		//说明这个Pool没有对这个KEY设置自己的VALUE，要使用KEY的DEFAULT
+		if err != mgo.ErrNotFound {
+			return nil, err
+		}
+	}
+
+	rsp.PoolId = value.Pool.Hex()
+	//如果找不到VALUE
+	//则需要使用KEY的默认值
+	if err == mgo.ErrNotFound {
+		rsp.Value = key.Default
+	} else {
+		rsp.Value = value.Value
+	}
+
+	return rsp, nil
 
 }
 
-func GetValueHelpers(cs map[string]*mgo.Collection, poolId string, keyId string) (*EnvValuesDetailsValueResponse, error) {
+func GetValueHelper(cs map[string]*mgo.Collection, poolId string, keyId string) (*EnvValuesDetailsValueResponse, error) {
 	rsp := &EnvValuesDetailsValueResponse{}
 	value := types.EnvTreeNodeParamValue{}
 
