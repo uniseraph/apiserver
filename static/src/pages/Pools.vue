@@ -118,7 +118,6 @@
         no-data-text=""
       >
         <template slot="items" scope="props">
-          <td>{{ props.item.Id }}</td>
           <td><router-link :to="'/pools/' + props.item.Id">{{ props.item.Name }}</router-link></td>
           <td>{{ props.item.EnvTreeName }}</td>
           <td>{{ props.item.Driver }}</td>
@@ -152,7 +151,6 @@
     data() {
       return {
         headers: [
-          { text: 'ID', sortable: false, left: true },
           { text: '名称', sortable: false, left: true },
           { text: '参数目录', sortable: false, left: true },
           { text: '驱动类型', sortable: false, left: true },

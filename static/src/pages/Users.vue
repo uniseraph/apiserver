@@ -32,7 +32,6 @@
         no-data-text=""
       >
         <template slot="items" scope="props">
-          <td>{{ props.item.Id }}</td>
           <td><router-link :to="'/users/' + props.item.Id">{{ props.item.Name }}</router-link></td>
           <td>{{ props.item.Email }}</td>
           <td>{{ props.item.Tel }}</td>
@@ -66,7 +65,6 @@
     data() {
       return {
         headers: [
-          { text: 'ID', sortable: false, left: true },
           { text: '用户名', sortable: false, left: true },
           { text: '邮箱', sortable: false, left: true },
           { text: '电话', sortable: false, left: true },
