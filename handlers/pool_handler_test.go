@@ -20,9 +20,18 @@ var pool *handlers.PoolsRegisterResponse
 func TestPool(t *testing.T) {
 
 	t.Run("Pool=1", func(t *testing.T) {
+		var metaId string
+		if meta, err := createEnvTreeMeta(); err != nil {
+			t.Error(err)
+		} else {
+			t.Log(meta)
+			metaId = meta.Id
+		}
+
 		data, err := registerPool("pool1", &handlers.PoolsRegisterRequest{
-			Name:   "pool1",
-			Driver: "swarm",
+			Name:      "pool1",
+			Driver:    "swarm",
+			EnvTreeId: metaId,
 			DriverOpts: types.DriverOpts{
 				Version:    "v1.0",
 				EndPoint:   "tcp://47.92.49.245:2375",

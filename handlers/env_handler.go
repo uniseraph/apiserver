@@ -652,9 +652,46 @@ func getTreeValueDetails(ctx context.Context, w http.ResponseWriter, r *http.Req
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		selector = bson.M{"_id": bson.M{
-			"$in": user.PoolIds,
-		}}
+
+		//如果是系统管理员，选择器为空
+		//可以看到任何pools
+		if user.RoleSet&types.ROLESET_SYSADMIN == types.ROLESET_SYSADMIN {
+			selector = bson.M{}
+		} else {
+			//如果不是系统管理员
+			//则找到该用户能查看的所有pool id准备查询
+			poolIds := make([]bson.ObjectId, 0, 10)
+			//如果该用户加入过某些团队
+			//则该团队能查看的pool
+			//该用户也可以查看
+			if len(user.TeamIds) > 0 {
+				teams := make([]types.Team, 0, 10)
+				selector = bson.M{
+					"_id": bson.M{
+						"$in": user.TeamIds,
+					},
+				}
+				//查找该用户所在Team
+				if err := cs["team"].Find(selector).All(&teams); err != nil {
+					if err == mgo.ErrNotFound {
+						HttpError(w, "not found params", http.StatusNotFound)
+						return
+					}
+					HttpError(w, err.Error(), http.StatusNotFound)
+					return
+				}
+
+				for _, team := range teams {
+					poolIds = append(poolIds, team.PoolIds...)
+				}
+			}
+			//将授权给用户的pool id也加入查询条件
+			poolIds = append(poolIds, user.PoolIds...)
+
+			selector = bson.M{"_id": bson.M{
+				"$in": poolIds,
+			}}
+		}
 
 		pools := make([]*types.PoolInfo, 0, 20)
 
