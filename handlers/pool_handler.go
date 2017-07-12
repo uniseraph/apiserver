@@ -281,7 +281,6 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	colEnvTree := mgoSession.DB(mgoDB).C("env_tree_meta")
-
 	envTree := &types.EnvTreeMeta{}
 	if err := colEnvTree.FindId(bson.ObjectIdHex(req.EnvTreeId)).One(envTree); err != nil {
 		HttpError(w, "没有这样的env_tree:"+req.EnvTreeId, http.StatusNotFound)

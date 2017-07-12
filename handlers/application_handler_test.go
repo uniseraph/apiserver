@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"testing"
 )
 
 func createApplication(name string, request *handlers.ApplicationCreateRequest) (interface{}, error) {
@@ -45,4 +46,8 @@ func createApplication(name string, request *handlers.ApplicationCreateRequest) 
 	json.Unmarshal(body, &result)
 
 	return result, nil
+}
+
+func TestApplication(t *testing.T) {
+
 }

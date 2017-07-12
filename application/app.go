@@ -90,7 +90,7 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			mem, err := strconv.ParseInt(s.Memory, 10, 64)
 
 			if err == nil {
-				composeService.MemLimit = composeyml.MemStringorInt(mem)
+				composeService.MemLimit = composeyml.MemStringorInt(mem << 20)
 			}
 		}
 
