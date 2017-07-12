@@ -11,7 +11,9 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/libcompose/config"
 	"github.com/docker/libcompose/project/options"
+	composeyml "github.com/docker/libcompose/yaml"
 	"gopkg.in/yaml.v2"
+	"strconv"
 )
 
 //需要根据pool的驱动不同，调用不同的接口创建容器／应用，暂时只管swarm/compose
@@ -80,7 +82,22 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			Image:       s.ImageName + ":" + s.ImageTag,
 			Restart:     s.Restart,
 			NetworkMode: "bridge",
-			Ports:       s.Ports,
+			CPUSet:      s.CPU,
+			//Ports:       s.Ports,
+		}
+
+		if s.Memory != "" {
+			mem, err := strconv.ParseInt(s.Memory, 10, 64)
+
+			if err == nil {
+				composeService.MemLimit = composeyml.MemStringorInt(mem)
+			}
+		}
+
+		composeService.Ports = make([]string, len(s.Ports))
+
+		for i, _ := range s.Ports {
+			composeService.Ports[i] = strconv.Itoa(s.Ports[i].SourcePort)
 		}
 
 		ec.Services[s.Name] = composeService

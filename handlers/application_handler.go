@@ -131,7 +131,6 @@ func replaceEnv(ctx context.Context, l *types.Label, pool *types.PoolInfo) error
 
 	key := l.Value[loc[0]+2 : loc[1]-1]
 
-	//TODO 	到底是id还是key
 	value, err := GetEnvValueByName(ctx, pool.EnvTreeId, pool.Id.Hex(), key)
 
 	if err != nil {
