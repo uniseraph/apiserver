@@ -213,8 +213,7 @@ type Service struct {
 }
 
 type Env struct {
-	Name  string
-	Value string
+	Label
 }
 type Label struct {
 	Name  string
@@ -244,12 +243,13 @@ type Template struct {
 
 type Application struct {
 	Id          bson.ObjectId "_id"
-	TemplateId  string        `json:",omitempty"`
+	TemplateId  string        `json:ApplicationTemplateId",omitempty"`
 	PoolId      string        `json:",omitempty"`
 	Title       string
 	Name        string
 	Version     string
 	Description string
+	Status      string
 
 	Services []Service
 

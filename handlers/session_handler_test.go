@@ -85,18 +85,21 @@ func sessionLogout() error {
 
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Infof("Logout Error: %s", err.Error())
 		return err
 	}
 
+	var body string
 	if resp.StatusCode != http.StatusOK {
 
-		body, err := ioutil.ReadAll(resp.Body)
+		b, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Debugf("login read body statuscode:%d err:%s", resp.StatusCode, err.Error())
 			return err
 		}
-
-		return errors.New(string(body))
+		body = string(b)
+		log.Infof("Logout content[%d]: %s", resp.StatusCode, body)
+		return errors.New(body)
 	}
 	resp.Body.Close()
 	//log.Infof("logout success.")
@@ -104,30 +107,30 @@ func sessionLogout() error {
 	//再调用current user接口
 	//应该看到返回状态是401
 
-	url = fmt.Sprintf("http://localhost:8080/api/users/current")
-
-	req, err = http.NewRequest(http.MethodPost, url, nil)
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	for _, cookie := range cookies {
-		req.AddCookie(cookie)
-	}
-
-	resp, err = client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	//如果是未授权，则退出成功
-	if resp.StatusCode != http.StatusForbidden {
-		return errors.New(string("After logout, current user api is not 401"))
-	} else {
-		return nil
-	}
+	//url = fmt.Sprintf("http://localhost:8080/api/users/current")
+	//
+	//req, err = http.NewRequest(http.MethodPost, url, nil)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//req.Header.Set("Content-Type", "application/json")
+	//for _, cookie := range cookies {
+	//	req.AddCookie(cookie)
+	//}
+	//
+	//resp, err = client.Do(req)
+	//if err != nil {
+	//	return err
+	//}
+	//defer resp.Body.Close()
+	//
+	////如果是未授权，则退出成功
+	//if resp.StatusCode != http.StatusForbidden {
+	//	return errors.New(string("After logout, current user api is not 401"))
+	//} else {
+	//	return nil
+	//}
 
 	return nil
 

@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
@@ -12,11 +13,13 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
+	"regexp"
 	"time"
 )
 
 type ApplicationCreateRequest struct {
-	ApplicationTemplateId, PoolId, Title, Description string
+	TemplateId                 string `json:ApplicationTemplateId",omitempty"`
+	PoolId, Title, Description string
 }
 
 type ApplicationCreateResponse struct {
@@ -50,7 +53,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	colTemplate := mgoSession.DB(config.MgoDB).C("template")
 	template := &types.Template{}
-	if err := colTemplate.FindId(bson.ObjectIdHex(req.ApplicationTemplateId)).One(template); err != nil {
+	if err := colTemplate.FindId(bson.ObjectIdHex(req.TemplateId)).One(template); err != nil {
 		if err == mgo.ErrNotFound {
 			HttpError(w, err.Error(), http.StatusNotFound)
 			return
@@ -59,26 +62,43 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	c := mgoSession.DB(config.MgoDB).C("application")
+	colApplication := mgoSession.DB(config.MgoDB).C("application")
+
+	n, err := colApplication.Find(bson.M{"poolid": req.PoolId, "name": template.Name}).Count()
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	if n >= 1 {
+		HttpError(w, "该集群中存在同名应用", http.StatusInternalServerError)
+		return
+	}
 
 	app := &types.Application{}
 	app.Id = bson.NewObjectId()
 	app.PoolId = req.PoolId
-	app.TemplateId = req.ApplicationTemplateId
+	app.TemplateId = req.TemplateId
 	app.Title = req.Title
 	app.Description = req.Description
 	app.PoolId = req.PoolId
 	app.Name = template.Name
+	app.Version = template.Version
 
 	app.CreatorId = currentuser.Id.Hex()
 	app.UpdaterId = currentuser.Id.Hex()
 	app.UpdaterName = currentuser.Name
 	app.CreatedTime = time.Now().Unix()
 	app.UpdatedTime = time.Now().Unix()
+	app.Status = "running"
 
-	app.Services = mergeServices(template.Services, pool)
+	app.Services, err = mergeServices(ctx, template.Services, pool)
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	if err := c.Insert(app); err != nil {
+	if err := colApplication.Insert(app); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -95,7 +115,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	//	return
 	//}
 
-	m := map[string]int{}
+	m := make(map[string]int)
 	for _, service := range app.Services {
 		m[service.Name] = service.ReplicaCount
 	}
@@ -109,11 +129,59 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	HttpOK(w, app)
 }
 
+func replaceEnv(ctx context.Context, l *types.Label, pool *types.PoolInfo) error {
+
+	re := regexp.MustCompile(`\$\{(.+)\}`)
+
+	loc := re.FindStringIndex(l.Value)
+
+	if loc == nil {
+		return nil
+	}
+
+	key := l.Value[loc[0]+2 : loc[1]-1]
+
+	//TODO 	到底是id还是key
+	value, err := GetEnvValue(ctx, pool.Id.Hex(), key)
+
+	if err != nil {
+		return err
+	}
+
+	l.Value = re.ReplaceAllString(l.Value, value.Value)
+
+	return nil
+}
+
 //用参数目录填充service定义中的环境变量
-func mergeServices(services []types.Service, info *types.PoolInfo) []types.Service {
+func mergeServices(ctx context.Context, services []types.Service, pool *types.PoolInfo) ([]types.Service, error) {
 
 	//TODO
-	return services
+
+	for _, service := range services {
+
+		logrus.Debugf("before merge:: service is %#v", service)
+
+		for i, _ := range service.Labels {
+
+			if err := replaceEnv(ctx, &service.Labels[i], pool); err != nil {
+				return nil, errors.New("替换Label的环境变量失败." + err.Error())
+			}
+
+		}
+
+		for i, _ := range service.Envs {
+
+			if err := replaceEnv(ctx, &service.Envs[i].Label, pool); err != nil {
+
+				return nil, errors.New("替换Label的环境变量失败." + err.Error())
+			}
+		}
+		logrus.Debugf("after merge:: service is %#v", service)
+
+	}
+
+	return services, nil
 
 }
 
@@ -168,7 +236,7 @@ func getApplicationList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	c := mgoSession.DB(config.MgoDB).C("application")
 
 	result := ApplicationListResponse{
-		Data: make([]*types.Application, 0, 100),
+		Data: make([]*types.Application, 100),
 	}
 
 	pattern := fmt.Sprintf("^%s", req.Keyword)
