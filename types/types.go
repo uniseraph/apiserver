@@ -51,6 +51,7 @@ type PoolInfo struct {
 	Driver           string
 	DriverOpts       DriverOpts
 	EnvTreeId        string
+	EnvTreeName      string
 	Labels           []string `json:",omitempty"`
 	ProxyEndpoint    string   `json:",omitempty"`
 	UpdatedTime      int64

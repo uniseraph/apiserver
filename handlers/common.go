@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"net/http"
-	)
+)
 
 type PageRequest struct {
 	Keyword  string
@@ -16,8 +16,7 @@ type PageResponse struct {
 	PageCount int
 }
 
-
-func PageQuery(req *PageRequest , res *PageResponse, w http.ResponseWriter, r *http.Request){
+func PageQuery(req *PageRequest, res *PageResponse, w http.ResponseWriter, r *http.Request) {
 	//
 	//if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 	//	HttpError(w, err.Error(), http.StatusBadRequest)

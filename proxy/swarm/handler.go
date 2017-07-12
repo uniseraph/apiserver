@@ -277,7 +277,6 @@ func setupPrimaryRouter(r *mux.Router, ctx context.Context, rs map[string]map[st
 
 func NewHandler(ctx context.Context) (http.Handler, error) {
 
-
 	r := mux.NewRouter()
 
 	setupPrimaryRouter(r, ctx, routers)
@@ -293,7 +292,7 @@ func NewHandler(ctx context.Context) (http.Handler, error) {
 			httpError(w, err.Error(), http.StatusInternalServerError)
 		}
 	}
-//	r.PathPrefix("/v{version:[0-9.]+}" + "/").HandlerFunc(rootfunc)
+	//	r.PathPrefix("/v{version:[0-9.]+}" + "/").HandlerFunc(rootfunc)
 	r.PathPrefix("/").HandlerFunc(rootfunc)
 
 	return r, nil
@@ -411,14 +410,12 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		}
 	}
 
-
 	cli, err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint, poolInfo.DriverOpts.APIVersion, client, nil)
 	if err != nil {
 		httpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer cli.Close()
-
 
 	resp, err := cli.ContainerCreate(ctx, &config.Config, &config.HostConfig, &config.NetworkingConfig, name)
 	if err != nil {
