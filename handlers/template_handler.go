@@ -19,15 +19,15 @@ type TemplateListRequest struct {
 	Keyword  string
 	PageSize int
 	Page     int
-	Name string
+	Name     string
 }
 
 type TemplateListResponse struct {
 	//PageResponse
 	//PageRequest
-	Keyword  string
-	PageSize int
-	Page     int
+	Keyword   string
+	PageSize  int
+	Page      int
 	Total     int
 	PageCount int
 	Data      []types.Template
@@ -69,14 +69,14 @@ func getTemplateList(ctx context.Context, w http.ResponseWriter, r *http.Request
 	selector := bson.M{}
 
 	if req.Name != "" {
-		selector["name"]=req.Name
+		selector["name"] = req.Name
 	}
 
 	if req.Keyword != "" {
 		pattern := fmt.Sprintf("^%s", req.Keyword)
 		regex1 := bson.M{"name": bson.M{"$regex": bson.RegEx{Pattern: pattern, Options: "i"}}}
 		regex2 := bson.M{"title": bson.M{"$regex": bson.RegEx{pattern, "i"}}}
-		selector =bson.M{"$and":[]bson.M {  {"$or": []bson.M{regex1, regex2}} , selector }  }
+		selector = bson.M{"$and": []bson.M{{"$or": []bson.M{regex1, regex2}}, selector}}
 	}
 	logrus.Debugf("getTemplateList::过滤条件为%#v", selector)
 

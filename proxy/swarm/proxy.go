@@ -7,10 +7,10 @@ import (
 	"github.com/zanecloud/apiserver/proxy"
 	store "github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
+	"gopkg.in/mgo.v2"
 	"net"
 	"net/http"
 	"strings"
-	"gopkg.in/mgo.v2"
 )
 
 type Proxy struct {
@@ -38,8 +38,8 @@ func NewProxy(ctx context.Context, pool *store.PoolInfo) (proxy.Proxy, error) {
 
 func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 
-	ctx , err := setContext(p)
-	if err !=nil{
+	ctx, err := setContext(p)
+	if err != nil {
 		return err
 	}
 	h, err := NewHandler(ctx)
@@ -83,7 +83,7 @@ func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 	}()
 	return nil
 }
-func setContext(p *Proxy) (context.Context , error ) {
+func setContext(p *Proxy) (context.Context, error) {
 
 	ctx := context.WithValue(context.Background(), utils.KEY_PROXY_SELF, p)
 	logrus.Debugf("proxy %s's context is %#v", p.Pool().Name, ctx)
@@ -96,7 +96,7 @@ func setContext(p *Proxy) (context.Context , error ) {
 		return nil, err
 	}
 	session.SetMode(mgo.Monotonic, true)
-	return  utils.PutMgoSession(c1, session) , nil
+	return utils.PutMgoSession(c1, session), nil
 
 }
 

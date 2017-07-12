@@ -8,7 +8,6 @@ import (
 	"github.com/zanecloud/apiserver/proxy"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
-	"golang.org/x/tools/go/gcimporter15/testdata"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
