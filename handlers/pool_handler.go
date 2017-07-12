@@ -8,6 +8,7 @@ import (
 	"github.com/zanecloud/apiserver/proxy"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
+	"golang.org/x/tools/go/gcimporter15/testdata"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
@@ -16,7 +17,7 @@ import (
 
 type PoolInspectResponse struct {
 	types.PoolInfo
-	EnvTreeName string
+	//EnvTreeName string
 }
 
 func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -279,6 +280,16 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		HttpError(w, "the pool is exist", http.StatusConflict)
 		return
 	}
+
+	colEnvTree := mgoSession.DB(mgoDB).C("env_tree_meta")
+
+	envTree := &types.EnvTreeMeta{}
+	if err := colEnvTree.FindId(bson.ObjectIdHex(req.EnvTreeId)).One(envTree); err != nil {
+		HttpError(w, "没有这样的env_tree:"+req.EnvTreeId, http.StatusNotFound)
+		return
+	}
+
+	poolInfo.EnvTreeName = envTree.Name
 
 	p, err := proxy.NewProxyInstanceAndStart(ctx, poolInfo)
 	if err != nil {
