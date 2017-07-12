@@ -290,7 +290,7 @@
           this.Id = data.Id;
           this.Name = data.Name;
           this.EnvTreeId = data.EnvTreeId;
-          this.EnvTree = data.EnvTree;
+          this.EnvTreeName = data.EnvTreeName;
           this.Driver = data.Driver;
           this.DriverOpts = data.DriverOpts;
           this.Nodes = data.Nodes;
