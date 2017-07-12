@@ -10,7 +10,7 @@ GIT_NOTES     = $(shell git log -1 --oneline)
 
 
 IMAGE_NAME     = registry.cn-hangzhou.aliyuncs.com/zanecloud/apiserver
-BUILD_IMAGE     = golang:1.8
+BUILD_IMAGE     = golang:1.8.3
 
 install:
 	brew install mongodb redis npm

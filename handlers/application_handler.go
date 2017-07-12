@@ -18,7 +18,7 @@ import (
 )
 
 type ApplicationCreateRequest struct {
-	TemplateId                 string `json:ApplicationTemplateId",omitempty"`
+	ApplicationTemplateId      string
 	PoolId, Title, Description string
 }
 
@@ -34,6 +34,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		HttpError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	logrus.Debugf("createApplication::recving a request %#v", req)
 
 	//肯定有的，不用处理
 	mgoSession, _ := utils.GetMgoSessionClone(ctx)
@@ -54,7 +55,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	colTemplate := mgoSession.DB(config.MgoDB).C("template")
 	template := &types.Template{}
-	if err := colTemplate.FindId(bson.ObjectIdHex(req.TemplateId)).One(template); err != nil {
+	if err := colTemplate.FindId(bson.ObjectIdHex(req.ApplicationTemplateId)).One(template); err != nil {
 		if err == mgo.ErrNotFound {
 			HttpError(w, err.Error(), http.StatusNotFound)
 			return
@@ -79,7 +80,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	app := &types.Application{}
 	app.Id = bson.NewObjectId()
 	app.PoolId = req.PoolId
-	app.TemplateId = req.TemplateId
+	app.TemplateId = req.ApplicationTemplateId
 	app.Title = req.Title
 	app.Description = req.Description
 	app.PoolId = req.PoolId
