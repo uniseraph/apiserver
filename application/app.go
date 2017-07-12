@@ -15,13 +15,13 @@ import (
 )
 
 //需要根据pool的驱动不同，调用不同的接口创建容器／应用，暂时只管swarm/compose
-func CreateApplication(app *types.Application, pool *types.PoolInfo) error {
+func CreateApplication(ctx context.Context, app *types.Application, pool *types.PoolInfo) error {
 
 	p, err := buildProject(app, pool)
 	if err != nil {
 		return nil
 	}
-	err = p.Up(context.Background(), options.Up{
+	err = p.Up(ctx, options.Up{
 		options.Create{ForceRecreate: false,
 			NoBuild:    true,
 			ForceBuild: false},
@@ -98,39 +98,66 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 	return
 }
 
-func StartApplication(app *types.Application, pool *types.PoolInfo, services []string) error {
+func StartApplication(ctx context.Context, app *types.Application, pool *types.PoolInfo, services []string) error {
 	p, err := buildProject(app, pool)
 	if err != nil {
 		return nil
 	}
-
-	if err := p.Start(context.Background(), services...); err != nil {
+	if err := p.Start(ctx, services...); err != nil {
 		return err
 	}
 	return nil
 }
 
-func ScaleApplication(app *types.Application, pool *types.PoolInfo, services map[string]int) error {
+func ScaleApplication(ctx context.Context, app *types.Application, pool *types.PoolInfo, services map[string]int) error {
 	p, err := buildProject(app, pool)
 	if err != nil {
 		return nil
 	}
 
-	if err := p.Scale(context.Background(), 30, services); err != nil {
+	if err := p.Scale(ctx, 30, services); err != nil {
 		return err
 	}
 	return nil
 }
 
-func ListContainers(app *types.Application, pool *types.PoolInfo, services []string) ([]string, error) {
+func ListContainers(ctx context.Context, app *types.Application, pool *types.PoolInfo, services []string) ([]string, error) {
 	p, err := buildProject(app, pool)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := p.Containers(context.Background(), project.Filter{project.AnyState}, services...)
+	result, err := p.Containers(ctx, project.Filter{project.AnyState}, services...)
 	if err != nil {
 		return nil, err
 	}
 	return result, nil
+}
+
+func StopApplication(ctx context.Context, app *types.Application, pool *types.PoolInfo, services []string) error {
+
+	p, err := buildProject(app, pool)
+	if err != nil {
+		return err
+	}
+
+	if err := p.Stop(ctx, 30, services...); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func DeleteApplication(ctx context.Context, app *types.Application, pool *types.PoolInfo) error {
+
+	p, err := buildProject(app, pool)
+	if err != nil {
+		return err
+	}
+
+	if err := p.Delete(ctx, options.Delete{false, true}); err != nil {
+		return err
+	}
+
+	return nil
 }

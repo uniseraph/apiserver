@@ -1031,6 +1031,21 @@ func getValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 }
 
+func GetEnvValueByName(ctx context.Context, envTtreeId string, poolId string, keyName string) (*EnvValuesDetailsValueResponse, error) {
+
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer mgoSession.Close()
+
+	config := utils.GetAPIServerConfig(ctx)
+	return GetEnvValueByNameHelper(map[string]*mgo.Collection{
+		"env_tree_node_param_key":   mgoSession.DB(config.MgoDB).C("env_tree_node_param_key"),
+		"env_tree_node_param_value": mgoSession.DB(config.MgoDB).C("env_tree_node_param_value"),
+	}, envTtreeId, poolId, keyName)
+}
+
 //根据TreeId以及参数名称keyName
 //查找参数值Value
 //找不到则提供Key的默认值

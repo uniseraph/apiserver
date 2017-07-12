@@ -37,6 +37,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	//肯定有的，不用处理
 	mgoSession, _ := utils.GetMgoSessionClone(ctx)
+	defer mgoSession.Close()
 	config := utils.GetAPIServerConfig(ctx)
 	currentuser, _ := utils.GetCurrentUser(ctx)
 
@@ -120,8 +121,9 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		m[service.Name] = service.ReplicaCount
 	}
 
-	if err := application.ScaleApplication(app, pool, m); err != nil {
+	if err := application.ScaleApplication(ctx, app, pool, m); err != nil {
 		//	//TODO 需要删除所有已创建成功的容器？？？
+
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -142,7 +144,7 @@ func replaceEnv(ctx context.Context, l *types.Label, pool *types.PoolInfo) error
 	key := l.Value[loc[0]+2 : loc[1]-1]
 
 	//TODO 	到底是id还是key
-	value, err := GetEnvValue(ctx, pool.Id.Hex(), key)
+	value, err := GetEnvValueByName(ctx, pool.EnvTreeId, pool.Id.Hex(), key)
 
 	if err != nil {
 		return err
@@ -321,4 +323,6 @@ func getApplication(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 }
 
-func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {}
+func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+}
