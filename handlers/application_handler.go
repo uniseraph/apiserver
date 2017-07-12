@@ -104,18 +104,6 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	//if err := application.CreateApplication(app, pool); err != nil {
-	//	HttpError(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-
-	//TODO 马上start ？
-	//if err := application.StartApplication(app, pool); err != nil {
-	//	//TODO 需要删除所有已创建成功的容器？？？
-	//	HttpError(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-
 	m := make(map[string]int)
 	for _, service := range app.Services {
 		m[service.Name] = service.ReplicaCount
@@ -282,7 +270,69 @@ func getContainerSSHInfo(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 }
 
+type ApplicationScaleRequest struct {
+	ServiceName  string
+	ReplicaCount int
+}
+
 func scaleApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+	req := &ApplicationScaleRequest{}
+
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	id := mux.Vars(r)["id"]
+
+	app := &types.Application{}
+	pool := &types.PoolInfo{}
+
+	utils.GetMgoCollections(ctx, w, []string{"app", "pool"}, func(cs map[string]*mgo.Collection) {
+		colApplication, _ := cs["app"]
+
+		if err := colApplication.FindId(bson.ObjectIdHex(id)).One(app); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, "没有这样的应用Id:"+id, http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		found := false
+		for i, _ := range app.Services {
+			if app.Services[i].Name == req.ServiceName {
+				found = true
+				break
+			}
+		}
+
+		if found == false {
+			HttpError(w, "在应用中没有这样的服务:"+req.ServiceName, http.StatusBadRequest)
+			return
+		}
+
+		colPool, _ := cs["pool"]
+		if err := colPool.FindId(bson.ObjectIdHex(app.PoolId)).One(pool); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, "没有这样的集群Id:"+app.PoolId, http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err := application.ScaleApplication(ctx, app, pool, map[string]int{
+			req.ServiceName: req.ReplicaCount,
+		}); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, "")
+	})
 
 }
 

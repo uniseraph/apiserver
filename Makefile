@@ -56,6 +56,7 @@ test:
 	mongo zanecloud --eval "db.user.remove({'name':'sadan'})"
 	mongo zanecloud --eval "db.team.remove({'name':'team1'})"
 	mongo zanecloud --eval "db.pool.remove({'name':'pool1'})"
+	mongo zanecloud --eval "db.pool.remove({})"
 	cd handlers && go test -v
 
 all:init portal run

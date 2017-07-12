@@ -34,6 +34,9 @@ var eventshandler = newEventsHandler()
 
 const LABEL_CPUCOUNT = "com.zanecloud.omgea.container.cpus"
 const LABEL_CPUEXCLUSIVE = "com.zanecloud.omega.container.exclusive"
+const LABEL_COMPOSE_PROJECT = "com.docker.compose.project"
+const LABEL_COMPOSE_SERVICE = "com.docker.compose.service"
+const LABEL_APPLICATION_ID = "com.zanecloud.compose.application.id"
 
 var routers = map[string]map[string]Handler{
 	"HEAD": {},
@@ -469,6 +472,7 @@ func buildContainerInfoForSave(name string, id string, poolInfo *store.PoolInfo,
 	var cpuCount int64
 	var exclusive bool
 	var err error
+
 	if lCpuCount, ok := config.Config.Labels[LABEL_CPUCOUNT]; ok {
 		cpuCount, err = strconv.ParseInt(lCpuCount, 10, 64)
 		if err != nil {
@@ -487,9 +491,10 @@ func buildContainerInfoForSave(name string, id string, poolInfo *store.PoolInfo,
 		exclusive = false
 	}
 
-	return &Container{
+	c := &Container{
 		Id:           id,
 		Name:         name,
+		PoolId:       poolInfo.Id.Hex(),
 		PoolName:     poolInfo.Name,
 		IsDeleted:    false,
 		GmtCreated:   time.Now().Unix(),
@@ -498,6 +503,23 @@ func buildContainerInfoForSave(name string, id string, poolInfo *store.PoolInfo,
 		CPU:          cpuCount,
 		CPUExclusive: exclusive,
 	}
+
+	if service, ok := config.Config.Labels[LABEL_COMPOSE_SERVICE]; ok {
+		c.Service = service
+	}
+
+	if project, ok := config.Config.Labels[LABEL_COMPOSE_PROJECT]; ok {
+		c.Project = project
+
+		// 我们的application对应compose的project
+		c.ApplicationName = project
+	}
+
+	if applicationId, ok := config.Config.Labels[LABEL_APPLICATION_ID]; ok {
+		c.ApplicationId = applicationId
+	}
+
+	return c
 }
 
 // POST /containers/{name:.*}/start
