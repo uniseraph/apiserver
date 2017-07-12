@@ -330,7 +330,7 @@ func addPoolTeam(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if teamId = r.FormValue("TeamId"); len(teamId) <= 0 {
-		HttpError(w, "KeyId is empty", http.StatusBadRequest)
+		HttpError(w, "TeamId is empty", http.StatusBadRequest)
 		return
 	}
 
@@ -382,7 +382,7 @@ func removePoolTeam(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if teamId = r.FormValue("TeamId"); len(teamId) <= 0 {
-		HttpError(w, "Team is empty", http.StatusBadRequest)
+		HttpError(w, "TeamId is empty", http.StatusBadRequest)
 		return
 	}
 
@@ -433,7 +433,7 @@ func addPoolMember(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if userId = r.FormValue("UserId"); len(userId) <= 0 {
-		HttpError(w, "User is empty", http.StatusBadRequest)
+		HttpError(w, "UserId is empty", http.StatusBadRequest)
 		return
 	}
 
@@ -484,7 +484,7 @@ func removePoolMember(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if userId = r.FormValue("UserId"); len(userId) <= 0 {
-		HttpError(w, "User is empty", http.StatusBadRequest)
+		HttpError(w, "UserId is empty", http.StatusBadRequest)
 		return
 	}
 
