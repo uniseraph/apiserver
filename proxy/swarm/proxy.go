@@ -7,7 +7,6 @@ import (
 	"github.com/zanecloud/apiserver/proxy"
 	store "github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
-	"gopkg.in/mgo.v2"
 	"net"
 	"net/http"
 	"strings"
@@ -19,6 +18,7 @@ type Proxy struct {
 	//mgoDB    string
 	//mgoURLs  string
 	endpoint string
+	server   *http.Server
 }
 
 func init() {
@@ -38,15 +38,11 @@ func NewProxy(ctx context.Context, pool *store.PoolInfo) (proxy.Proxy, error) {
 
 func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 
-	ctx, err := setContext(p)
+	h, err := NewHandler(p)
 	if err != nil {
 		return err
 	}
-	h, err := NewHandler(ctx)
-	if err != nil {
-		return err
-	}
-	server := http.Server{
+	p.server = &http.Server{
 		Handler: h,
 	}
 
@@ -77,33 +73,17 @@ func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 	p.endpoint = listener.Addr().Network() + "://" + listener.Addr().String()
 
 	go func() {
-		if err := server.Serve(listener); err != nil {
+		if err := p.server.Serve(listener); err != nil {
 			logrus.Fatal(err)
 		}
 	}()
 	return nil
 }
-func setContext(p *Proxy) (context.Context, error) {
-
-	ctx := context.WithValue(context.Background(), utils.KEY_PROXY_SELF, p)
-	logrus.Debugf("proxy %s's context is %#v", p.Pool().Name, ctx)
-	//c1 := context.WithValue(ctx, utils.KEY_APISERVER_CONFIG, p.APIServerConfig)
-	c1 := utils.PutAPIServerConfig(ctx, p.APIServerConfig)
-	logrus.Debugf("proxy %s's context is %#v", p.Pool().Name, c1)
-
-	session, err := mgo.Dial(p.APIServerConfig.MgoURLs)
-	if err != nil {
-		return nil, err
-	}
-	session.SetMode(mgo.Monotonic, true)
-	return utils.PutMgoSession(c1, session), nil
-
-}
 
 func (p *Proxy) Stop() error {
 
-	//TODO
-	return nil
+	return p.server.Close()
+
 }
 
 func (p *Proxy) Endpoint() string {

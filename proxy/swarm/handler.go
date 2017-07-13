@@ -34,6 +34,9 @@ var eventshandler = newEventsHandler()
 
 const LABEL_CPUCOUNT = "com.zanecloud.omgea.container.cpus"
 const LABEL_CPUEXCLUSIVE = "com.zanecloud.omega.container.exclusive"
+const LABEL_COMPOSE_PROJECT = "com.docker.compose.project"
+const LABEL_COMPOSE_SERVICE = "com.docker.compose.service"
+const LABEL_APPLICATION_ID = "com.zanecloud.compose.application.id"
 
 var routers = map[string]map[string]Handler{
 	"HEAD": {},
@@ -68,7 +71,7 @@ func deleteContainer(ctx context.Context, req *http.Request, resp *http.Response
 	nameOrId := mux.Vars(req)["name"]
 
 	logrus.Debugf("deleteContainer::status code is %d", resp.StatusCode)
-	logrus.Debugf("deleteContainer::update the container %s", nameOrId)
+	logrus.Debugf("deleteContainer::delete the container %s", nameOrId)
 	logrus.Debugf("deleteContainer::req is %#v", req)
 
 	//删除容器失败，则不需要做拦截
@@ -95,6 +98,7 @@ func deleteContainer(ctx context.Context, req *http.Request, resp *http.Response
 
 	c := mgoSession.DB(mgoDB).C("container")
 
+	//TODO or 删除
 	if err := c.Remove(bson.M{"poolname": poolInfo.Name, "id": nameOrId}); err != nil {
 		if err == mgo.ErrNotFound {
 			err = c.Remove(bson.M{"poolname": poolInfo.Name, "name": nameOrId})
@@ -255,8 +259,44 @@ func hijack(tlsConfig *tls.Config, endpoint string, w http.ResponseWriter, r *ht
 
 type Handler func(c context.Context, w http.ResponseWriter, r *http.Request)
 
-func setupPrimaryRouter(r *mux.Router, ctx context.Context, rs map[string]map[string]Handler) {
-	for method, mappings := range rs {
+func NewHandler(p *Proxy) (http.Handler, error) {
+
+	poolInfo := p.PoolInfo
+
+	logrus.Debugf("NewHandler::before starting a pool proxy , poolInfo is %#v  ", poolInfo)
+
+	var client *http.Client
+	if poolInfo.DriverOpts.TlsConfig != nil {
+
+		tlsc, err := tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		client = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: tlsc,
+			},
+			CheckRedirect: client.CheckRedirect,
+		}
+	}
+
+	cli, err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint, poolInfo.DriverOpts.APIVersion, client, nil)
+	if err != nil {
+
+		return nil, err
+	}
+	defer cli.Close()
+
+	session, err := mgo.Dial(p.APIServerConfig.MgoURLs)
+	if err != nil {
+		return nil, err
+	}
+	session.SetMode(mgo.Monotonic, true)
+
+	r := mux.NewRouter()
+
+	for method, mappings := range routers {
 		for route, fct := range mappings {
 			logrus.WithFields(logrus.Fields{"method": method, "route": route}).Debug("Registering HTTP route")
 
@@ -264,6 +304,11 @@ func setupPrimaryRouter(r *mux.Router, ctx context.Context, rs map[string]map[st
 			localFct := fct
 			wrap := func(w http.ResponseWriter, r *http.Request) {
 				logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI}).Debug("HTTP request received")
+
+				ctx := context.WithValue(r.Context(), utils.KEY_PROXY_SELF, p)
+				ctx = context.WithValue(ctx, utils.KEY_APISERVER_CONFIG, p.APIServerConfig)
+				ctx = context.WithValue(ctx, utils.KEY_MGO_SESSION, session)
+				ctx = context.WithValue(ctx, utils.KEY_POOL_CLIENT, cli)
 
 				localFct(ctx, w, r)
 			}
@@ -273,21 +318,18 @@ func setupPrimaryRouter(r *mux.Router, ctx context.Context, rs map[string]map[st
 			r.Path(localRoute).Methods(localMethod).HandlerFunc(wrap)
 		}
 	}
-}
-
-func NewHandler(ctx context.Context) (http.Handler, error) {
-
-	r := mux.NewRouter()
-
-	setupPrimaryRouter(r, ctx, routers)
-
-	poolInfo, _ := getPoolInfo(ctx)
 
 	// 作为swarm的代理，默认逻辑是所有请求都是转发给后端的swarm集群
 	rootfunc := func(w http.ResponseWriter, req *http.Request) {
 		logrus.WithFields(logrus.Fields{"method": req.Method,
 			"uri": req.RequestURI,
 			"pool backend endpoint": poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in proxy rootfunc")
+
+		ctx := context.WithValue(req.Context(), utils.KEY_PROXY_SELF, p)
+		ctx = context.WithValue(ctx, utils.KEY_APISERVER_CONFIG, p.APIServerConfig)
+		ctx = context.WithValue(ctx, utils.KEY_MGO_SESSION, session)
+		ctx = context.WithValue(ctx, utils.KEY_POOL_CLIENT, cli)
+
 		if err := proxyAsync(ctx, w, req, nil); err != nil {
 			httpError(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -393,29 +435,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 	logrus.Debugf("postContainersCreate::before create a container , poolInfo is %#v  ", poolInfo)
 
-	var client *http.Client
-	if poolInfo.DriverOpts.TlsConfig != nil {
-
-		tlsc, err := tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
-		if err != nil {
-			httpError(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		client = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: tlsc,
-			},
-			CheckRedirect: client.CheckRedirect,
-		}
-	}
-
-	cli, err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint, poolInfo.DriverOpts.APIVersion, client, nil)
-	if err != nil {
-		httpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer cli.Close()
+	cli, _ := utils.GetPoolClient(ctx)
 
 	resp, err := cli.ContainerCreate(ctx, &config.Config, &config.HostConfig, &config.NetworkingConfig, name)
 	if err != nil {
@@ -448,7 +468,8 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if err := mgoSession.DB(mgoDB).C("container").Insert(buildContainerInfoForSave(name, resp.ID, poolInfo, &config)); err != nil {
+	container := buildContainerInfoForSave(name, resp.ID, poolInfo, &config)
+	if err := mgoSession.DB(mgoDB).C("container").Insert(container); err != nil {
 
 		//TODO 如果清理容器失败，需要记录一下日志，便于人工干预
 		cli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{Force: true})
@@ -456,9 +477,54 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	flushContainerInfo(ctx, container, container.Id)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(w, "{%q:%q}", "Id", resp.ID)
+
+}
+
+type NoOpResponseWriter struct {
+}
+
+func (w *NoOpResponseWriter) Header() http.Header {
+	panic("no impl")
+}
+
+func (w *NoOpResponseWriter) Write([]byte) (int, error) {
+	panic("no impl")
+}
+
+func (w *NoOpResponseWriter) WriteHeader(int) {
+	panic("no impl")
+}
+
+func flushContainerInfo(ctx context.Context, container *Container, id string) {
+
+	utils.GetMgoCollections(ctx, &NoOpResponseWriter{}, []string{"container"}, func(cs map[string]*mgo.Collection) {
+
+		dockerclient, _ := utils.GetPoolClient(ctx)
+
+		poolInfo, _ := getPoolInfo(ctx)
+
+		containerJSON, err := dockerclient.ContainerInspect(ctx, id)
+		if err != nil {
+			logrus.Errorf("inspect the container:%d in the pool:(%s,%s) error:%s", id, poolInfo.Id, poolInfo.Name, err.Error())
+			return
+		}
+
+		container.Name = containerJSON.Name
+		container.Node = containerJSON.Node
+
+		colApplication, _ := cs["container"]
+		if err := colApplication.Update(bson.M{"id": id, "poolid": poolInfo.Id.Hex()}, container); err != nil {
+			logrus.Errorf("flushContainerInfo::save  container:%#v into db  error:%s", container, err.Error())
+			return
+
+		}
+
+	})
 
 }
 func OptionsHandler(c context.Context, w http.ResponseWriter, r *http.Request) {
@@ -469,6 +535,7 @@ func buildContainerInfoForSave(name string, id string, poolInfo *store.PoolInfo,
 	var cpuCount int64
 	var exclusive bool
 	var err error
+
 	if lCpuCount, ok := config.Config.Labels[LABEL_CPUCOUNT]; ok {
 		cpuCount, err = strconv.ParseInt(lCpuCount, 10, 64)
 		if err != nil {
@@ -487,9 +554,10 @@ func buildContainerInfoForSave(name string, id string, poolInfo *store.PoolInfo,
 		exclusive = false
 	}
 
-	return &Container{
+	c := &Container{
 		Id:           id,
 		Name:         name,
+		PoolId:       poolInfo.Id.Hex(),
 		PoolName:     poolInfo.Name,
 		IsDeleted:    false,
 		GmtCreated:   time.Now().Unix(),
@@ -498,6 +566,23 @@ func buildContainerInfoForSave(name string, id string, poolInfo *store.PoolInfo,
 		CPU:          cpuCount,
 		CPUExclusive: exclusive,
 	}
+
+	if service, ok := config.Config.Labels[LABEL_COMPOSE_SERVICE]; ok {
+		c.Service = service
+	}
+
+	if project, ok := config.Config.Labels[LABEL_COMPOSE_PROJECT]; ok {
+		c.Project = project
+
+		// 我们的application对应compose的project
+		c.ApplicationName = project
+	}
+
+	if applicationId, ok := config.Config.Labels[LABEL_APPLICATION_ID]; ok {
+		c.ApplicationId = applicationId
+	}
+
+	return c
 }
 
 // POST /containers/{name:.*}/start

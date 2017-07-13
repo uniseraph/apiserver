@@ -194,7 +194,7 @@
                   autocomplete
                 >
               </v-select>
-              <v-btn floating small primary @click.native="addTeam">
+              <v-btn floating small primary @click.native="addUser">
                 <v-icon light>add</v-icon>
               </v-btn>
             </v-card-title>
@@ -290,7 +290,7 @@
           this.Id = data.Id;
           this.Name = data.Name;
           this.EnvTreeId = data.EnvTreeId;
-          this.EnvTree = data.EnvTree;
+          this.EnvTreeName = data.EnvTreeName;
           this.Driver = data.Driver;
           this.DriverOpts = data.DriverOpts;
           this.Nodes = data.Nodes;

@@ -10,7 +10,7 @@ GIT_NOTES     = $(shell git log -1 --oneline)
 
 
 IMAGE_NAME     = registry.cn-hangzhou.aliyuncs.com/zanecloud/apiserver
-BUILD_IMAGE     = golang:1.8
+BUILD_IMAGE     = golang:1.8.3
 
 install:
 	brew install mongodb redis npm
@@ -21,14 +21,15 @@ init:
 apiserver:clean
 	CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}" -o ${TARGET}
 
-apicli:cleancli
+apicli:
+	@rm -rf apicli
 	CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}"  -o ${CLI_TARGET}  client/client.go
 
 portal:
 	cd static && npm install && npm run build && cd ..
 
 build:
-	docker run --rm -v $(shell pwd):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} ${BUILD_IMAGE} make apiserver apicli
+	docker run --rm -v $(shell pwd):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} ${BUILD_IMAGE} make apiserver
 image: build
 	docker build --rm -t ${IMAGE_NAME}:${MAJOR_VERSION}-${GIT_VERSION} .
 	docker tag  ${IMAGE_NAME}:${MAJOR_VERSION}-${GIT_VERSION} ${IMAGE_NAME}:${MAJOR_VERSION}
@@ -54,8 +55,10 @@ cleancli:
 
 test:
 	mongo zanecloud --eval "db.user.remove({'name':'sadan'})"
-	mongo zanecloud --eval "db.team.remove({'name':'team1'})"
-	mongo zanecloud --eval "db.pool.remove({'name':'pool1'})"
+	mongo zanecloud --eval "db.team.remove({})"
+	mongo zanecloud --eval "db.pool.remove({})"
+	mongo zanecloud --eval "db.node.remove({})"
+	mongo zanecloud --eval "db.container.remove({})"
 	cd handlers && go test -v
 
 all:init portal run

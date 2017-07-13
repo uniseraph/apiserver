@@ -18,7 +18,7 @@ import (
 )
 
 type ApplicationCreateRequest struct {
-	TemplateId                 string `json:ApplicationTemplateId",omitempty"`
+	ApplicationTemplateId      string
 	PoolId, Title, Description string
 }
 
@@ -34,6 +34,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		HttpError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	logrus.Debugf("createApplication::recving a request %#v", req)
 
 	//肯定有的，不用处理
 	mgoSession, _ := utils.GetMgoSessionClone(ctx)
@@ -54,7 +55,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	colTemplate := mgoSession.DB(config.MgoDB).C("template")
 	template := &types.Template{}
-	if err := colTemplate.FindId(bson.ObjectIdHex(req.TemplateId)).One(template); err != nil {
+	if err := colTemplate.FindId(bson.ObjectIdHex(req.ApplicationTemplateId)).One(template); err != nil {
 		if err == mgo.ErrNotFound {
 			HttpError(w, err.Error(), http.StatusNotFound)
 			return
@@ -79,7 +80,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	app := &types.Application{}
 	app.Id = bson.NewObjectId()
 	app.PoolId = req.PoolId
-	app.TemplateId = req.TemplateId
+	app.TemplateId = req.ApplicationTemplateId
 	app.Title = req.Title
 	app.Description = req.Description
 	app.PoolId = req.PoolId
@@ -103,18 +104,6 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	//if err := application.CreateApplication(app, pool); err != nil {
-	//	HttpError(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-
-	//TODO 马上start ？
-	//if err := application.StartApplication(app, pool); err != nil {
-	//	//TODO 需要删除所有已创建成功的容器？？？
-	//	HttpError(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 
 	m := make(map[string]int)
 	for _, service := range app.Services {
@@ -143,7 +132,6 @@ func replaceEnv(ctx context.Context, l *types.Label, pool *types.PoolInfo) error
 
 	key := l.Value[loc[0]+2 : loc[1]-1]
 
-	//TODO 	到底是id还是key
 	value, err := GetEnvValueByName(ctx, pool.EnvTreeId, pool.Id.Hex(), key)
 
 	if err != nil {
@@ -282,15 +270,217 @@ func getContainerSSHInfo(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 }
 
+type ApplicationScaleRequest struct {
+	ServiceName  string
+	ReplicaCount int
+}
+
 func scaleApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+	req := &ApplicationScaleRequest{}
+
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	id := mux.Vars(r)["id"]
+
+	app := &types.Application{}
+	pool := &types.PoolInfo{}
+
+	utils.GetMgoCollections(ctx, w, []string{"application", "pool"}, func(cs map[string]*mgo.Collection) {
+		colApplication, _ := cs["application"]
+
+		if err := colApplication.FindId(bson.ObjectIdHex(id)).One(app); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, "没有这样的应用Id:"+id, http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		found := false
+		for i, _ := range app.Services {
+			if app.Services[i].Name == req.ServiceName {
+				found = true
+				break
+			}
+		}
+
+		if found == false {
+			HttpError(w, "在应用中没有这样的服务:"+req.ServiceName, http.StatusBadRequest)
+			return
+		}
+
+		colPool, _ := cs["pool"]
+		if err := colPool.FindId(bson.ObjectIdHex(app.PoolId)).One(pool); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, "没有这样的集群Id:"+app.PoolId, http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err := application.ScaleApplication(ctx, app, pool, map[string]int{
+			req.ServiceName: req.ReplicaCount,
+		}); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, "")
+	})
 
 }
 
+type ApplicationUpgradeRequest struct {
+	ApplicationTemplateId string
+}
+
+type ApplicationUpgradeResponse struct {
+	types.Application
+}
+
 func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	req := &ApplicationUpgradeRequest{}
+
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	logrus.Debugf("upgradeApplication::recving a request %#v", req)
+
+	id := mux.Vars(r)["id"]
+
+	app := &types.Application{}
+	pool := &types.PoolInfo{}
+	template := &types.Template{}
+
+	utils.GetMgoCollections(ctx, w, []string{"application", "pool", "template"}, func(cs map[string]*mgo.Collection) {
+		colApplication, _ := cs["app"]
+
+		if err := colApplication.FindId(bson.ObjectIdHex(id)).One(app); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, "没有这样的应用Id:"+id, http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		colTemplate, _ := cs["template"]
+		if err := colTemplate.FindId(bson.ObjectIdHex(req.ApplicationTemplateId)).One(template); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, "没有这样的集群Id:"+app.PoolId, http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if app.Name != template.Name {
+			HttpError(w, "升级应用时，应用Id必须一致！", http.StatusBadRequest)
+			return
+		}
+
+		colPool, _ := cs["pool"]
+		if err := colPool.FindId(bson.ObjectIdHex(app.PoolId)).One(pool); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, "没有这样的集群Id:"+app.PoolId, http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		app.TemplateId = req.ApplicationTemplateId
+		app.Version = template.Version
+		currentUser, _ := utils.GetCurrentUser(ctx)
+		app.UpdatedTime = time.Now().Unix()
+		app.UpdaterId = currentUser.Id.Hex()
+		app.UpdaterName = currentUser.Name
+		app.Status = "running"
+
+		services, err := mergeServices(ctx, template.Services, pool)
+		if err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		app.Services = services
+
+		if err := colApplication.UpdateId(bson.ObjectIdHex(id), app); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err := application.UpApplication(ctx, app, pool); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, "")
+	})
 
 }
 
 func stopApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+	utils.GetMgoCollections(ctx, w, []string{"application"}, func(cs map[string]*mgo.Collection) {
+
+		app := &types.Application{}
+
+		colApplication, _ := cs["application"]
+		if err := colApplication.FindId(bson.ObjectIdHex(id)).One(app); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, "没有这样的应用", http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		pool := &types.PoolInfo{}
+
+		colPool, _ := cs["pool"]
+		if err := colPool.FindId(bson.ObjectIdHex(app.PoolId)).One(pool); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, "没有这样的集群Id:"+app.PoolId, http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		services := make([]string, len(app.Services))
+
+		for i, _ := range app.Services {
+			services = append(services, app.Services[i].Name)
+		}
+
+		if err := application.StopApplication(ctx, app, pool, services); err != nil {
+			HttpError(w, "停止应用失败："+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		currentUser, _ := utils.GetCurrentUser(ctx)
+
+		app.UpdatedTime = time.Now().Unix()
+		app.UpdaterId = currentUser.Id.Hex()
+		app.UpdaterName = currentUser.Name
+		app.Status = "stopped"
+
+		if err := colApplication.UpdateId(bson.ObjectIdHex(id), app); err != nil {
+			HttpError(w, "保存应用状态失败："+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, app)
+
+	})
 
 }
 
@@ -300,6 +490,60 @@ func restartApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 }
 
 func startApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+	id := mux.Vars(r)["id"]
+	utils.GetMgoCollections(ctx, w, []string{"application"}, func(cs map[string]*mgo.Collection) {
+
+		app := &types.Application{}
+
+		colApplication, _ := cs["application"]
+		if err := colApplication.FindId(bson.ObjectIdHex(id)).One(app); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, "没有这样的应用", http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		pool := &types.PoolInfo{}
+
+		colPool, _ := cs["pool"]
+		if err := colPool.FindId(bson.ObjectIdHex(app.PoolId)).One(pool); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, "没有这样的集群Id:"+app.PoolId, http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		services := make([]string, len(app.Services))
+
+		for i, _ := range app.Services {
+			services = append(services, app.Services[i].Name)
+		}
+
+		if err := application.StartApplication(ctx, app, pool, services); err != nil {
+			HttpError(w, "启动应用失败："+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		currentUser, _ := utils.GetCurrentUser(ctx)
+
+		app.UpdatedTime = time.Now().Unix()
+		app.UpdaterId = currentUser.Id.Hex()
+		app.UpdaterName = currentUser.Name
+		app.Status = "running"
+
+		if err := colApplication.UpdateId(bson.ObjectIdHex(id), app); err != nil {
+			HttpError(w, "保存应用状态失败："+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, app)
+
+	})
 
 }
 

@@ -52,6 +52,8 @@ type PoolInfo struct {
 	DriverOpts       DriverOpts
 	EnvTreeId        string
 	EnvTreeName      string
+	TunneldAddr      string `json:",omitempty"`
+	TunneldPort      int
 	Labels           []string `json:",omitempty"`
 	ProxyEndpoint    string   `json:",omitempty"`
 	UpdatedTime      int64
@@ -197,9 +199,9 @@ type Service struct {
 	Name         string
 	ImageName    string
 	ImageTag     string
-	CPU          int `json:",string"`
+	CPU          string
 	ExclusiveCPU bool
-	Memory       int `json:",string"`
+	Memory       string
 	ReplicaCount int `json:",string"`
 	Description  string
 	Restart      string
@@ -207,12 +209,17 @@ type Service struct {
 	Envs         []Env
 	Volumns      []Volumne
 	Labels       []Label
-	Ports        []string
-	Privileged   bool
-	CapAdd       []string
-	CapDrop      []string
+	//Ports        []string
+	Ports      []Port
+	Privileged bool
+	CapAdd     []string
+	CapDrop    []string
 }
 
+type Port struct {
+	SourcePort     int
+	LoadBalancerId string
+}
 type Env struct {
 	Label
 }

@@ -1,11 +1,11 @@
 package application_test
 
 import (
-	"flag"
 	"github.com/zanecloud/apiserver/application"
 	"github.com/zanecloud/apiserver/types"
-	"os"
 	"testing"
+	"os"
+	"flag"
 )
 
 func TestMain(m *testing.M) {
@@ -37,7 +37,7 @@ func TestCreateApplication(t *testing.T) {
 			APIVersion: "v1.23",
 		},
 	}
-	err := application.CreateApplication(app1, pool1)
+	err := application.UpApplication(app1, pool1)
 
 	if err != nil {
 		t.Error(err)

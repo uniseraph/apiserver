@@ -91,7 +91,7 @@ export default {
             e = e[0];
           }
 
-          if (e.validate) {
+          if (e && e.validate) {
             e.validate();
             if (e.errorBucket && e.errorBucket.length > 0) {
               result = false;

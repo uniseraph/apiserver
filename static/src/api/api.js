@@ -5,7 +5,7 @@ import * as ui from '../util/ui'
 import store from '../vuex/store'
 
 // axios默认配置
-axios.defaults.timeout = 5000;
+axios.defaults.timeout = 40000;
 axios.defaults.baseURL = 'http://localhost:8080/api';
 
 // 仅测试用
@@ -72,19 +72,19 @@ export default {
     },
 
     AddTeamToPool(params) {
-        return fetch('/pools/' + params.Id + '/add-team', params);
+        return fetch('/pools/' + params.Id + '/add-team?TeamId=' + params.TeamId);
     },
 
     RemoveTeamFromPool(params) {
-        return fetch('/pools/' + params.Id + '/remove-team', params);
+        return fetch('/pools/' + params.Id + '/remove-team?TeamId=' + params.TeamId);
     },
 
     AddUserToPool(params) {
-        return fetch('/pools/' + params.Id + '/add-user', params);
+        return fetch('/pools/' + params.Id + '/add-user?UserId=' + params.UserId);
     },
 
     RemoveUserFromPool(params) {
-        return fetch('/pools/' + params.Id + '/remove-user', params);
+        return fetch('/pools/' + params.Id + '/remove-user?UserId=' + params.UserId);
     },
 
     EnvTrees(params) {
@@ -277,19 +277,19 @@ export default {
     },
 
     AddTeamToApplication(params) {
-        return fetch('/applications/' + params.Id + '/add-team');
+        return fetch('/applications/' + params.Id + '/add-team?TeamId=' + params.TeamId);
     },
 
     RemoveUserToApplication(params) {
-        return fetch('/applications/' + params.Id + '/remove-team');
+        return fetch('/applications/' + params.Id + '/remove-team?TeamId=' + params.TeamId);
     },
 
     AddUserToApplication(params) {
-        return fetch('/applications/' + params.Id + '/add-user');
+        return fetch('/applications/' + params.Id + '/add-user?UserId=' + params.UserId);
     },
 
     RemoveUserToApplication(params) {
-        return fetch('/applications/' + params.Id + '/remove-user');
+        return fetch('/applications/' + params.Id + '/remove-user?UserId=' + params.UserId);
     },
 
     Logs(params) {
