@@ -3,14 +3,18 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
+	"github.com/hashicorp/consul/api"
 	"github.com/zanecloud/apiserver/proxy"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
+	regexp "regexp"
+	"strings"
 	"time"
 )
 
@@ -125,9 +129,9 @@ func postPoolsFlush(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	config := utils.GetAPIServerConfig(ctx)
 
-	c := mgoSession.DB(config.MgoDB).C("pool")
+	colPool := mgoSession.DB(config.MgoDB).C("pool")
 
-	if err := c.FindId(bson.ObjectIdHex(id)).One(&result.PoolInfo); err != nil {
+	if err := colPool.FindId(bson.ObjectIdHex(id)).One(&result.PoolInfo); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -166,11 +170,16 @@ func postPoolsFlush(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	result.PoolInfo.Filters = filters
 	result.Nodes = nodes
 
+	if err := getTunneldInfo(ctx, &result.PoolInfo); err != nil {
+		logrus.Errorf("flush tunneld info err : %s", err.Error())
+		// 这个错误不要紧，下次在刷
+	}
+
 	logrus.Debugf("postPoolsFlush::result is %#v", result)
 
 	//httpJsonResponse(w,result)
 
-	if err := c.UpdateId(bson.ObjectIdHex(id), bson.M{"$set": bson.M{"labels": clusterInfo.Labels,
+	if err := colPool.UpdateId(bson.ObjectIdHex(id), bson.M{"$set": bson.M{"labels": result.PoolInfo.Labels,
 		"ncpu":              clusterInfo.NCPU,
 		"memtotal":          clusterInfo.MemTotal,
 		"clusterstore":      clusterInfo.ClusterStore,
@@ -182,6 +191,8 @@ func postPoolsFlush(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		"updatedtime":       time.Now().Unix(),
 		"strategy":          strategy,
 		"filters":           filters,
+		"tunneldaddr":       result.PoolInfo.TunneldAddr,
+		"tunneldport":       result.PoolInfo.TunneldPort,
 	}}); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -216,6 +227,38 @@ func postPoolsFlush(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(result)
+
+}
+
+func getTunneldInfo(ctx context.Context, pool *types.PoolInfo) error {
+
+	re := regexp.MustCompile(`^tcp://(.+):`)
+
+	// tcp://1.1.1.1:
+	str := re.FindString(pool.DriverOpts.EndPoint)
+	str = strings.TrimLeft(str, "tcp://")
+	str = strings.TrimRight(str, ":")
+
+	metadUrl := fmt.Sprintf("http://%s:6400/services/tunneld/inspect", str)
+
+	logrus.Debugf("the pool1's metad url is %s", metadUrl)
+
+	cli := &http.Client{}
+
+	resp, err := cli.Get(metadUrl)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	tunneld := &api.AgentService{}
+	if err := json.NewDecoder(resp.Body).Decode(tunneld); err != nil {
+		return err
+	}
+
+	pool.TunneldAddr = tunneld.Address
+	pool.TunneldPort = tunneld.Port
+	return nil
 
 }
 

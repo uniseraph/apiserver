@@ -477,7 +477,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	go flushContainerInfo(ctx, container.Id)
+	flushContainerInfo(ctx, container, container.Id)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -485,7 +485,46 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 }
 
-func flushContainerInfo(ctx context.Context, id string) {
+type NoOpResponseWriter struct {
+}
+
+func (w *NoOpResponseWriter) Header() http.Header {
+	panic("no impl")
+}
+
+func (w *NoOpResponseWriter) Write([]byte) (int, error) {
+	panic("no impl")
+}
+
+func (w *NoOpResponseWriter) WriteHeader(int) {
+	panic("no impl")
+}
+
+func flushContainerInfo(ctx context.Context, container *Container, id string) {
+
+	utils.GetMgoCollections(ctx, &NoOpResponseWriter{}, []string{"container"}, func(cs map[string]*mgo.Collection) {
+
+		dockerclient, _ := utils.GetPoolClient(ctx)
+
+		poolInfo, _ := getPoolInfo(ctx)
+
+		containerJSON, err := dockerclient.ContainerInspect(ctx, id)
+		if err != nil {
+			logrus.Errorf("inspect the container:%d in the pool:(%s,%s) error:%s", id, poolInfo.Id, poolInfo.Name, err.Error())
+			return
+		}
+
+		container.Name = containerJSON.Name
+		container.Node = containerJSON.Node
+
+		colApplication, _ := cs["container"]
+		if err := colApplication.Update(bson.M{"id": id, "poolid": poolInfo.Id.Hex()}, container); err != nil {
+			logrus.Errorf("flushContainerInfo::save  container:%#v into db  error:%s", container, err.Error())
+			return
+
+		}
+
+	})
 
 }
 func OptionsHandler(c context.Context, w http.ResponseWriter, r *http.Request) {
