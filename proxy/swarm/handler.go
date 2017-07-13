@@ -72,7 +72,7 @@ func deleteContainer(ctx context.Context, req *http.Request, resp *http.Response
 
 	logrus.Debugf("deleteContainer::status code is %d", resp.StatusCode)
 	logrus.Debugf("deleteContainer::delete the container %s", nameOrId)
-	logrus.Debugf("deleteContainer::req is %#v", req)
+	//	logrus.Debugf("deleteContainer::req is %#v", req)
 
 	//删除容器失败，则不需要做拦截
 	if resp.StatusCode != http.StatusNoContent {
@@ -464,7 +464,11 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	//这些信息是通过创建上下文的相对静态信息
 	container := buildContainerInfoForSave(name, resp.ID, poolInfo, &config)
+
+	//docker inspect 查容器的具体信息
+	flushContainerInfo(ctx, container)
 
 	if err := mgoSession.DB(mgoDB).C("container").Insert(container); err != nil {
 
@@ -475,8 +479,6 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		httpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	flushContainerInfo(ctx, container)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -501,30 +503,30 @@ func (w *NoOpResponseWriter) WriteHeader(int) {
 
 func flushContainerInfo(ctx context.Context, container *Container) {
 
-	utils.GetMgoCollections(ctx, &NoOpResponseWriter{}, []string{"container"}, func(cs map[string]*mgo.Collection) {
+	//utils.GetMgoCollections(ctx, &NoOpResponseWriter{}, []string{"container"}, func(cs map[string]*mgo.Collection) {
 
-		dockerclient, _ := utils.GetPoolClient(ctx)
+	dockerclient, _ := utils.GetPoolClient(ctx)
 
-		poolInfo, _ := getPoolInfo(ctx)
+	poolInfo, _ := getPoolInfo(ctx)
 
-		containerJSON, err := dockerclient.ContainerInspect(ctx, container.ContainerId)
-		if err != nil {
-			logrus.Errorf("inspect the container:%d in the pool:(%s,%s) error:%s", container.ContainerId, poolInfo.Id, poolInfo.Name, err.Error())
-			return
-		}
+	containerJSON, err := dockerclient.ContainerInspect(ctx, container.ContainerId)
+	if err != nil {
+		logrus.Errorf("inspect the container:%d in the pool:(%s,%s) error:%s", container.ContainerId, poolInfo.Id, poolInfo.Name, err.Error())
+		return
+	}
 
-		container.Name = containerJSON.Name
-		container.Node = containerJSON.Node
-		container.State = containerJSON.State
+	container.Name = containerJSON.Name
+	container.Node = containerJSON.Node
+	container.State = containerJSON.State
 
-		colApplication, _ := cs["container"]
-		if err := colApplication.UpdateId(container.Id, container); err != nil {
-			logrus.Errorf("flushContainerInfo::save  container:%#v into db  error:%s", container, err.Error())
-			return
+	//	colApplication, _ := cs["container"]
+	//	if err := colApplication.UpdateId(container.Id, container); err != nil {
+	//		logrus.Errorf("flushContainerInfo::save  container:%#v into db  error:%s", container, err.Error())
+	//		return
 
-		}
+	//	}
 
-	})
+	//})
 
 }
 func OptionsHandler(c context.Context, w http.ResponseWriter, r *http.Request) {
