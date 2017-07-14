@@ -15,6 +15,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"strconv"
 	"fmt"
+	"github.com/zanecloud/apiserver/proxy/swarm"
 )
 
 //需要根据pool的驱动不同，调用不同的接口创建容器／应用，暂时只管swarm/compose
@@ -119,6 +120,7 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 		for i , _ := range appService.Labels {
 			composeService.Labels[appService.Labels[i].Name] = appService.Labels[i].Value
 		}
+		composeService.Labels[swarm.LABEL_APPLICATION_ID] = app.Id.Hex()
 		//TODO 加上cpuset的label
 
 		composeService.Environment = make([]string, 0,len(appService.Envs))

@@ -114,3 +114,8 @@ func getContainerList(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	})
 
 }
+
+
+func restartContainer(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+}
