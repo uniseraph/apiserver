@@ -72,7 +72,7 @@ export default {
     },
 
     RefreshPool(id) {
-        return fetch('/pools/' + id + '/flush'); 
+        return fetch('/pools/' + id + '/refresh'); 
     },
 
     AddTeamToPool(params) {
