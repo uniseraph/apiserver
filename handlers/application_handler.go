@@ -360,7 +360,7 @@ func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	template := &types.Template{}
 
 	utils.GetMgoCollections(ctx, w, []string{"application", "pool", "template"}, func(cs map[string]*mgo.Collection) {
-		colApplication, _ := cs["app"]
+		colApplication, _ := cs["application"]
 
 		if err := colApplication.FindId(bson.ObjectIdHex(id)).One(app); err != nil {
 			if err == mgo.ErrNotFound {
