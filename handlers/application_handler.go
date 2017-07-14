@@ -325,6 +325,8 @@ func scaleApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 			return
 		}
 
+		//TODO update Application table
+
 		if err := application.ScaleApplication(ctx, app, pool, map[string]int{
 			req.ServiceName: req.ReplicaCount,
 		}); err != nil {

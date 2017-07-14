@@ -14,6 +14,10 @@ const (
 	ROLESET_NORMAL   = 1      //普通员工
 	ROLESET_APPADMIN = 1 << 1 //应用管理员
 	ROLESET_SYSADMIN = 1 << 2 //系统管理员
+
+	DEPLOYMENT_OPERATION_CREATE ="create"
+	DEPLOYMENT_OPERATION_UPGRADE ="upgrade"
+	DEPLOYMENT_OPERATION_ROLLBACK ="rollback"
 )
 
 type APIServerConfig struct {
@@ -266,4 +270,19 @@ type Application struct {
 	UpdaterId   string `json:",omitempty"`
 	UpdaterName string `json:",omitempty"`
 	UpdatedTime int64  `json:",omitempty"`
+}
+
+
+type DeploymentOpts map[string]interface{}
+
+
+
+type Deployment struct {
+	Id  bson.ObjectId  "_id"
+	ApplicationId  string
+	ApplicationVersion string
+	OperationType string
+	PoolId string
+	CreatorId string
+	CreatedTime int64
 }

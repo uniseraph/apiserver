@@ -105,6 +105,27 @@ func GetMgoCollections(ctx context.Context, w http.ResponseWriter, names []strin
 	cb(cs)
 }
 
+type execCallback func(cs map[string]*mgo.Collection)error
+
+func ExecMgoCollections(ctx context.Context,  names []string, cb execCallback) error{
+	mgoSession, err := GetMgoSessionClone(ctx)
+	if err != nil {
+		//走不到这里的,ctx中必然有mgoSesson
+		return err
+	}
+	defer mgoSession.Close()
+
+	mgoDB := GetAPIServerConfig(ctx).MgoDB
+
+	var cs = make(map[string]*mgo.Collection)
+	for _, name := range names {
+		c := mgoSession.DB(mgoDB).C(name)
+		cs[name] = c
+	}
+
+	return cb(cs)
+}
+
 //
 
 func GetClusterInfo(ctx context.Context, endpoint string) (*types.ClusterInfo, error) {
