@@ -296,24 +296,22 @@ func NewMainHandler(ctx context.Context) (http.Handler, error) {
 	})
 
 	return r, nil
-
-	//	return NewHandler(c1, routes), nil
 }
 
-func SetupPrimaryRouter(r *mux.Router, ctx context.Context, rs map[string]map[string]*MyHandler) {
-	for method, mappings := range rs {
+func SetupPrimaryRouter(r *mux.Router, ctx context.Context, routers map[string]map[string]*MyHandler) {
+	for method, mappings := range routers {
 		for route, myHandler := range mappings {
 			logrus.WithFields(logrus.Fields{"method": method, "route": route}).Debug("Registering HTTP route")
 
 			localRoute := route
 			localHandler := myHandler
-			wrap := func(w http.ResponseWriter, r *http.Request) {
-				logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI, "localHandler": localHandler}).Debug("HTTP request received")
+			wrap := func(w http.ResponseWriter, req *http.Request) {
+				logrus.WithFields(logrus.Fields{"method": req.Method, "uri": req.RequestURI, "localHandler": localHandler}).Debug("HTTP request received")
 
 				if localHandler.opChecker != nil {
-					localHandler.opChecker(localHandler.h, localHandler.roleset)(ctx, w, r)
+					localHandler.opChecker(localHandler.h, localHandler.roleset)(ctx, w, req)
 				} else {
-					localHandler.h(ctx, w, r)
+					localHandler.h(ctx, w, req)
 				}
 			}
 			localMethod := method

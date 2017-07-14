@@ -17,7 +17,7 @@ import (
 )
 
 //需要根据pool的驱动不同，调用不同的接口创建容器／应用，暂时只管swarm/compose
-func CreateApplication(ctx context.Context, app *types.Application, pool *types.PoolInfo) error {
+func UpApplication(ctx context.Context, app *types.Application, pool *types.PoolInfo) error {
 
 	p, err := buildProject(app, pool)
 	if err != nil {

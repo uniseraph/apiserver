@@ -92,7 +92,7 @@ func (eh *eventsHandler) cleanupHandler(remoteAddr string) {
 //	node := fmt.Sprintf(",%q:{%q:%q,%q:%q,%q:%q,%q:%q}}",
 //		"node",
 //		"Name", e.Engine.Name,
-//		"Id", e.Engine.ID,
+//		"ContainerId", e.Engine.ID,
 //		"Addr", e.Engine.Addr,
 //		"Ip", e.Engine.IP,
 //	)
