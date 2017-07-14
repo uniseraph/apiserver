@@ -68,7 +68,6 @@
         no-data-text=""
       >
         <template slot="items" scope="props">
-          <td>{{ props.item.Id }}</td>
           <td><router-link :to="'/teams/' + props.item.Id">{{ props.item.Name }}</router-link></td>
           <td>{{ props.item.Leader.Name }}</td>
           <td>{{ props.item.Description }}</td>
@@ -93,7 +92,6 @@
     data() {
       return {
         headers: [
-          { text: 'ID', sortable: false, left: true },
           { text: '名称', sortable: false, left: true },
           { text: '主管', sortable: false, left: true },
           { text: '说明', sortable: false, left: true },
