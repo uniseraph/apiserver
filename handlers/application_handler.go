@@ -272,7 +272,7 @@ func getContainerSSHInfo(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 type ApplicationScaleRequest struct {
 	ServiceName  string
-	ReplicaCount int
+	ReplicaCount int      `json:",string"`
 }
 
 func scaleApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {

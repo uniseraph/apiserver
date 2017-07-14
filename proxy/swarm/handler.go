@@ -38,6 +38,7 @@ const LABEL_COMPOSE_PROJECT = "com.docker.compose.project"
 const LABEL_COMPOSE_SERVICE = "com.docker.compose.service"
 const LABEL_APPLICATION_ID = "com.zanecloud.compose.application.id"
 
+
 var routers = map[string]map[string]Handler{
 	"HEAD": {},
 	"GET": {
@@ -46,6 +47,7 @@ var routers = map[string]map[string]Handler{
 	},
 	"POST": {
 		"/containers/create": postContainersCreate,
+		"/containers/{idorname:.*}/restart":  proxyAsyncWithCallBack(restartContainer),
 		//"/containers/{name:.*}/kill":   handlers.MgoSessionInject(proxyAsyncWithCallBack(updateContainer)),
 
 		//	"/containers/{name:.*}/start":  handlers.MgoSessionInject(dockerClientInject(postContainersStart)),
@@ -520,6 +522,12 @@ func flushContainerInfo(ctx context.Context, container *Container) {
 	container.Node = containerJSON.Node
 	container.State = containerJSON.State
 
+	logrus.WithFields(logrus.Fields{"container":containerJSON}).Debug("flush the container info")
+
+	if applicationId, ok := containerJSON.Config.Labels[LABEL_APPLICATION_ID] ; ok {
+		container.ApplicationId = applicationId
+	}
+
 	//	colApplication, _ := cs["container"]
 	//	if err := colApplication.UpdateId(container.Id, container); err != nil {
 	//		logrus.Errorf("flushContainerInfo::save  container:%#v into db  error:%s", container, err.Error())
@@ -737,4 +745,6 @@ func getEvents(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	eventshandler.Wait(r.RemoteAddr, until)
+}
+func restartContainer(ctx context.Context, req *http.Request, resp *http.Response) {
 }
