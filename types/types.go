@@ -267,3 +267,15 @@ type Application struct {
 	UpdaterName string `json:",omitempty"`
 	UpdatedTime int64  `json:",omitempty"`
 }
+
+//copy自 consul/api/agent.go 避免引入consul/api及其依赖的库
+type AgentService struct {
+	ID                string
+	Service           string
+	Tags              []string
+	Port              int
+	Address           string
+	EnableTagOverride bool
+	CreateIndex       uint64
+	ModifyIndex       uint64
+}
