@@ -574,7 +574,7 @@ func buildContainerInfoForSave(name string, containerId string, poolInfo *store.
 		ContainerId:  containerId,
 		Name:         name,
 		PoolId:       poolInfo.Id.Hex(),
-		PoolName:     poolInfo.Name,
+		//PoolName:     poolInfo.Name,
 		IsDeleted:    false,
 		GmtCreated:   time.Now().Unix(),
 		GmtDeleted:   0,

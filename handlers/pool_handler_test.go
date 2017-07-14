@@ -63,7 +63,7 @@ func TestPool(t *testing.T) {
 			t.Log(info)
 		}
 
-		poolFlushResponse, err := flushPool(pool.Id)
+		poolFlushResponse, err := refreshPool(pool.Id)
 		if err != nil {
 			t.Error(err)
 			return
@@ -129,9 +129,9 @@ func registerPool(name string, request *handlers.PoolsRegisterRequest) (*handler
 	return result, nil
 }
 
-func flushPool(id string) (*handlers.PoolsFlushResponse, error) {
+func refreshPool(id string) (*handlers.PoolsFlushResponse, error) {
 
-	url := fmt.Sprintf("http://localhost:8080/api/pools/%s/reflush", id)
+	url := fmt.Sprintf("http://localhost:8080/api/pools/%s/refresh", id)
 
 	//buf, _ := json.Marshal(request)
 
