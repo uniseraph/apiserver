@@ -278,11 +278,22 @@ type DeploymentOpts map[string]interface{}
 
 
 type Deployment struct {
-	Id  bson.ObjectId  "_id"
-	ApplicationId  string
+	Id                 bson.ObjectId  "_id"
+	ApplicationId      string
 	ApplicationVersion string
-	OperationType string
-	PoolId string
-	CreatorId string
-	CreatedTime int64
+	OperationType      string
+	PoolId             string
+	CreatorId          string
+	CreatedTime        int64
+}
+//copy自 consul/api/agent.go 避免引入consul/api及其依赖的库
+type AgentService struct {
+	ID                string
+	Service           string
+	Tags              []string
+	Port              int
+	Address           string
+	EnableTagOverride bool
+	CreateIndex       uint64
+	ModifyIndex       uint64
 }

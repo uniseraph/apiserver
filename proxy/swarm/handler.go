@@ -38,7 +38,6 @@ const LABEL_COMPOSE_PROJECT = "com.docker.compose.project"
 const LABEL_COMPOSE_SERVICE = "com.docker.compose.service"
 const LABEL_APPLICATION_ID = "com.zanecloud.compose.application.id"
 
-
 var routers = map[string]map[string]Handler{
 	"HEAD": {},
 	"GET": {
@@ -46,8 +45,8 @@ var routers = map[string]map[string]Handler{
 		"/events":                         getEvents, //docker-1.11.1不需要，之后版本需要
 	},
 	"POST": {
-		"/containers/create": postContainersCreate,
-		"/containers/{idorname:.*}/restart":  proxyAsyncWithCallBack(restartContainer),
+		"/containers/create":                postContainersCreate,
+		"/containers/{idorname:.*}/restart": proxyAsyncWithCallBack(restartContainer),
 		//"/containers/{name:.*}/kill":   handlers.MgoSessionInject(proxyAsyncWithCallBack(updateContainer)),
 
 		//	"/containers/{name:.*}/start":  handlers.MgoSessionInject(dockerClientInject(postContainersStart)),
@@ -111,46 +110,6 @@ func deleteContainer(ctx context.Context, req *http.Request, resp *http.Response
 	}
 
 }
-
-//func dockerClientInject(h Handler) Handler {
-//
-//	return func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-//		poolInfo, err := getPoolInfo(ctx)
-//		if err != nil {
-//			httpError(w, err.Error(), http.StatusInternalServerError)
-//			return
-//		}
-//
-//		logrus.Debugf("before inject a dockerclient , poolInfo is %#v  ", poolInfo)
-//
-//		var client *http.Client
-//		if poolInfo.DriverOpts.TlsConfig != nil {
-//
-//			tlsc, err := tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
-//			if err != nil {
-//				httpError(w, err.Error(), http.StatusBadRequest)
-//				return
-//			}
-//
-//			client = &http.Client{
-//				Transport: &http.Transport{
-//					TLSClientConfig: tlsc,
-//				},
-//				CheckRedirect: client.CheckRedirect,
-//			}
-//		}
-//
-//		cli, err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint, poolInfo.DriverOpts.APIVersion, client, nil)
-//		defer cli.Close()
-//		if err != nil {
-//			httpError(w, err.Error(), http.StatusInternalServerError)
-//			return
-//		}
-//
-//		logrus.Debugf("ctx is %#v", ctx)
-//		h(context.WithValue(ctx, utils.KEY_POOL_CLIENT, cli), w, r)
-//	}
-//}
 
 // Proxy a hijack request to the right node
 func proxyHijack(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -283,7 +242,10 @@ func NewHandler(p *Proxy) (http.Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer cli.Close()
+	//defer func() {
+	//	logrus.Debug("close the docker cli in proxy ctx")
+	//	cli.Close()
+	//}()
 
 	session, err := mgo.Dial(p.APIServerConfig.MgoURLs)
 	if err != nil {
@@ -294,16 +256,14 @@ func NewHandler(p *Proxy) (http.Handler, error) {
 	session.SetMode(mgo.Monotonic, true)
 
 	r := mux.NewRouter()
-
 	for method, mappings := range routers {
 		for route, fct := range mappings {
-			logrus.WithFields(logrus.Fields{"method": method, "route": route}).Debug("Registering HTTP route")
+			logrus.WithFields(logrus.Fields{"method": method, "route": route}).Info("Registering HTTP route in pool proxy")
 
 			localRoute := route
 			localFct := fct
 			wrap := func(w http.ResponseWriter, r *http.Request) {
-				logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI}).Debug("HTTP request received")
-
+				logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI}).Debug("HTTP request received in proxy")
 				ctx := prepareContext(r, p, session, cli)
 				localFct(ctx, w, r)
 			}
@@ -317,8 +277,8 @@ func NewHandler(p *Proxy) (http.Handler, error) {
 	// 作为swarm的代理，默认逻辑是所有请求都是转发给后端的swarm集群
 	rootfunc := func(w http.ResponseWriter, req *http.Request) {
 		logrus.WithFields(logrus.Fields{"method": req.Method,
-			"uri": req.RequestURI,
-			"pool backend endpoint": poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in proxy rootfunc")
+			"uri":           req.RequestURI,
+			"pool endpoint": poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in proxy rootfunc")
 
 		ctx := prepareContext(req, p, session, cli)
 
@@ -371,16 +331,17 @@ func getPoolInfo(ctx context.Context) (*store.PoolInfo, error) {
 	return p.PoolInfo, nil
 }
 
-func getDockerClient(ctx context.Context) (dockerclient.APIClient, error) {
-	client, ok := ctx.Value(utils.KEY_POOL_CLIENT).(dockerclient.APIClient)
-
-	if !ok {
-		logrus.Errorf("can't get pool.client from ctx:%#v", ctx)
-		return nil, errors.Errorf("can't get pool.client from ctx:%#v", ctx)
-	}
-
-	return client, nil
-}
+//
+//func getDockerClient(ctx context.Context) (dockerclient.APIClient, error) {
+//	client, ok := ctx.Value(utils.KEY_POOL_CLIENT).(dockerclient.APIClient)
+//
+//	if !ok {
+//		logrus.Errorf("can't get pool.client from ctx:%#v", ctx)
+//		return nil, errors.Errorf("can't get pool.client from ctx:%#v", ctx)
+//	}
+//
+//	return client, nil
+//}
 
 func httpError(w http.ResponseWriter, err string, status int) {
 	utils.HttpError(w, err, status)
@@ -447,7 +408,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		}
 	}
 
-	logrus.WithFields(logrus.Fields{"resp":resp}).Debugf("create container success!")
+	logrus.WithFields(logrus.Fields{"resp": resp}).Debugf("create container success!")
 	//TODO save to mongodb
 
 	mgoSession, err := utils.GetMgoSessionClone(ctx)
@@ -522,13 +483,13 @@ func flushContainerInfo(ctx context.Context, container *Container) {
 	container.Node = containerJSON.Node
 	container.State = containerJSON.State
 
-	if networkSettings , ok:= containerJSON.NetworkSettings.Networks["bridge"] ; ok {
+	if networkSettings, ok := containerJSON.NetworkSettings.Networks["bridge"]; ok {
 		container.IP = networkSettings.IPAddress
 	}
 
-	logrus.WithFields(logrus.Fields{"container":containerJSON}).Debug("flush the container info")
+	logrus.WithFields(logrus.Fields{"container": containerJSON}).Debug("flush the container info")
 
-	if applicationId, ok := containerJSON.Config.Labels[LABEL_APPLICATION_ID] ; ok {
+	if applicationId, ok := containerJSON.Config.Labels[LABEL_APPLICATION_ID]; ok {
 		container.ApplicationId = applicationId
 	}
 
@@ -570,10 +531,10 @@ func buildContainerInfoForSave(name string, containerId string, poolInfo *store.
 	}
 
 	c := &Container{
-		Id:           bson.NewObjectId(),
-		ContainerId:  containerId,
-		Name:         name,
-		PoolId:       poolInfo.Id.Hex(),
+		Id:          bson.NewObjectId(),
+		ContainerId: containerId,
+		Name:        name,
+		PoolId:      poolInfo.Id.Hex(),
 		//PoolName:     poolInfo.Name,
 		IsDeleted:    false,
 		GmtCreated:   time.Now().Unix(),
@@ -581,7 +542,7 @@ func buildContainerInfoForSave(name string, containerId string, poolInfo *store.
 		Memory:       config.HostConfig.Memory,
 		CPU:          cpuCount,
 		CPUExclusive: exclusive,
-		Status: "running",  // TODO 需要create/start多个钩子然后设置不同的状态
+		Status:       "running", // TODO 需要create/start多个钩子然后设置不同的状态
 
 	}
 
@@ -754,7 +715,6 @@ func getEvents(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 }
 func restartContainer(ctx context.Context, req *http.Request, resp *http.Response) {
 
-
 	idorname := mux.Vars(req)["idorname"]
 
 	logrus.Debugf("restartContainer::status code is %d", resp.StatusCode)
@@ -784,15 +744,14 @@ func restartContainer(ctx context.Context, req *http.Request, resp *http.Respons
 
 	c := mgoSession.DB(mgoDB).C("container")
 
-
 	container := &Container{}
 
-	selector1:= bson.M{"poolid":poolInfo.Id.Hex() , "containerid":idorname}
-	selector2:= bson.M{"poolid":poolInfo.Id.Hex(), "name":idorname}
+	selector1 := bson.M{"poolid": poolInfo.Id.Hex(), "containerid": idorname}
+	selector2 := bson.M{"poolid": poolInfo.Id.Hex(), "name": idorname}
 
-	if err := c.Find(bson.M{"$or":[]bson.M{selector1,selector2}}).One(container); err!=nil{
+	if err := c.Find(bson.M{"$or": []bson.M{selector1, selector2}}).One(container); err != nil {
 
-		logrus.WithFields(logrus.Fields{"idorname":idorname,"poolid":poolInfo.Id}).Error("nosuch a container")
+		logrus.WithFields(logrus.Fields{"idorname": idorname, "poolid": poolInfo.Id}).Error("nosuch a container")
 		return
 	}
 
@@ -800,7 +759,7 @@ func restartContainer(ctx context.Context, req *http.Request, resp *http.Respons
 
 	//TODO or 删除
 	if err := c.UpdateId(container.Id, container); err != nil {
-		logrus.WithFields(logrus.Fields{"idorname":idorname,"poolid":poolInfo.Id}).Error("restart  the  container error")
+		logrus.WithFields(logrus.Fields{"idorname": idorname, "poolid": poolInfo.Id}).Error("restart  the  container error")
 		return
 	}
 }
