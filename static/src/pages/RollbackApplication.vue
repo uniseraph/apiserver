@@ -185,9 +185,9 @@
           this.Name = data.Name;
           this.Version = data.Version;
           this.Description = data.Description;
-        });
 
-        this.getDataFromApi();
+          this.getDataFromApi();
+        });
       },
 
       goback() {
@@ -227,15 +227,17 @@
           };
 
           ui.showAlertAt('RollbackApplication');
+          this.Submitting = true;
 
           api.RollbackApplication(params).then(data => {
             ui.alert('回滚应用成功', 'success');
+            this.Submitting = false;
             let that = this;
             setTimeout(() => {
               that.goback();
             }, 1500);
           }, err => {
-            
+            this.Submitting = false;
           });
         });
       }
