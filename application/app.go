@@ -14,6 +14,7 @@ import (
 	composeyml "github.com/docker/libcompose/yaml"
 	"gopkg.in/yaml.v2"
 	"strconv"
+	"fmt"
 )
 
 //需要根据pool的驱动不同，调用不同的接口创建容器／应用，暂时只管swarm/compose
@@ -68,39 +69,66 @@ func buildProject(app *types.Application, pool *types.PoolInfo) (p project.APIPr
 
 	return p, nil
 }
+func buildDefaultNetwork() map[string]*config.NetworkConfig {
+	result := make( map[string]*config.NetworkConfig)
 
+	//result["default"]=&config.NetworkConfig{
+	//	Driver: "bridge",
+	//}
+
+	return result
+}
+
+
+func buildDefaultVolumes() map[string]*config.VolumeConfig {
+	return make(map[string]*config.VolumeConfig)
+}
 func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf []byte, err error) {
 
 	ec := &project.ExportedConfig{
 		Version:  "2",
 		Services: map[string]*config.ServiceConfig{},
+		Networks: buildDefaultNetwork(),
+		Volumes:  buildDefaultVolumes(),
 	}
 
-	for _, s := range app.Services {
+	for _, appService := range app.Services {
 
 		composeService := &config.ServiceConfig{
-			Image:       s.ImageName + ":" + s.ImageTag,
-			Restart:     s.Restart,
+			Image:       appService.ImageName + ":" + appService.ImageTag,
+			Restart:     appService.Restart,
 			NetworkMode: "bridge",
-			CPUSet:      s.CPU,
+			CPUSet:      appService.CPU,
 			//Ports:       s.Ports,
 		}
 
-		if s.Memory != "" {
-			mem, err := strconv.ParseInt(s.Memory, 10, 64)
+		if appService.Memory != "" {
+			mem, err := strconv.ParseInt(appService.Memory, 10, 64)
 
 			if err == nil {
 				composeService.MemLimit = composeyml.MemStringorInt(mem << 20)
 			}
 		}
 
-		composeService.Ports = make([]string, len(s.Ports))
-
-		for i, _ := range s.Ports {
-			composeService.Ports[i] = strconv.Itoa(s.Ports[i].SourcePort)
+		composeService.Ports = make([]string, len(appService.Ports))
+		for i, _ := range appService.Ports {
+			composeService.Ports[i] = strconv.Itoa(appService.Ports[i].SourcePort)
 		}
 
-		ec.Services[s.Name] = composeService
+		composeService.Labels = map[string]string{}
+		for i , _ := range appService.Labels {
+			composeService.Labels[appService.Labels[i].Name] = appService.Labels[i].Value
+		}
+		//TODO 加上cpuset的label
+
+		composeService.Environment = make([]string, 0,len(appService.Envs))
+		for i , _ := range appService.Envs {
+
+			composeService.Environment=append(composeService.Environment,  fmt.Sprintf("%s=%s",appService.Envs[i].Name,appService.Envs[i].Value))
+		}
+
+
+		ec.Services[appService.Name] = composeService
 
 	}
 
@@ -110,7 +138,7 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 		return
 	}
 
-	logrus.Debugf("application %#v encode to bytes is %s", app, string(buf))
+	logrus.Debugf("application %#v encode to bytes is \n%s", app, string(buf))
 
 	return
 }
