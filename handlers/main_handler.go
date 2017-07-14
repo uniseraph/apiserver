@@ -135,7 +135,7 @@ var routes = map[string]map[string]*MyHandler{
 		"/applications/{id:.*}/scale":           &MyHandler{h: scaleApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 		"/applications/containers/:id/ssh-info": &MyHandler{h: getContainerSSHInfo, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 		"/applications/create":                  &MyHandler{h: createApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/:id/containers/list":     &MyHandler{h: getContainerList, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/containers/list":     &MyHandler{h: getContainerList, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 
 		"/templates/list":            &MyHandler{h: getTemplateList},
 		"/templates/{id:.*}/inspect": &MyHandler{h: getTemplate},
