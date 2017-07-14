@@ -517,7 +517,7 @@ func flushContainerInfo(ctx context.Context, container *Container) {
 		logrus.Errorf("inspect the container:%d in the pool:(%s,%s) error:%s", container.ContainerId, poolInfo.Id, poolInfo.Name, err.Error())
 		return
 	}
-	
+
 	container.Name = containerJSON.Name
 	container.Node = containerJSON.Node
 	container.State = containerJSON.State
@@ -581,7 +581,7 @@ func buildContainerInfoForSave(name string, containerId string, poolInfo *store.
 		Memory:       config.HostConfig.Memory,
 		CPU:          cpuCount,
 		CPUExclusive: exclusive,
-		Status: "running",
+		Status: "running",  // TODO 需要create/start多个钩子然后设置不同的状态
 
 	}
 
@@ -753,4 +753,54 @@ func getEvents(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	eventshandler.Wait(r.RemoteAddr, until)
 }
 func restartContainer(ctx context.Context, req *http.Request, resp *http.Response) {
+
+
+	idorname := mux.Vars(req)["idorname"]
+
+	logrus.Debugf("restartContainer::status code is %d", resp.StatusCode)
+	logrus.Debugf("restartContainer::restart the container %s", idorname)
+
+	//restart容器失败，则不需要做拦截
+	if resp.StatusCode != http.StatusNoContent {
+		return
+	}
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	if err != nil {
+		logrus.Errorf("cant get mgo session")
+		return
+	}
+	defer mgoSession.Close()
+
+	poolInfo, err := getPoolInfo(ctx)
+	if err != nil {
+		logrus.Errorf("cant get pool info")
+		return
+	}
+
+	mgoDB, err := getMgoDB(ctx)
+	if err != nil {
+		return
+	}
+
+	c := mgoSession.DB(mgoDB).C("container")
+
+
+	container := &Container{}
+
+	selector1:= bson.M{"poolid":poolInfo.Id.Hex() , "containerid":idorname}
+	selector2:= bson.M{"poolid":poolInfo.Id.Hex(), "name":idorname}
+
+	if err := c.Find(bson.M{"$or":[]bson.M{selector1,selector2}}).One(container); err!=nil{
+
+		logrus.WithFields(logrus.Fields{"idorname":idorname,"poolid":poolInfo.Id}).Error("nosuch a container")
+		return
+	}
+
+	container.StartedTime = time.Now().Unix()
+
+	//TODO or 删除
+	if err := c.UpdateId(container.Id, container); err != nil {
+		logrus.WithFields(logrus.Fields{"idorname":idorname,"poolid":poolInfo.Id}).Error("restart  the  container error")
+		return
+	}
 }

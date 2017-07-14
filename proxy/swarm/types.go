@@ -26,4 +26,5 @@ type Container struct {
 	GmtCreated      int64
 	Node            *types.ContainerNode  `json:",omitempty"`
 	State           *types.ContainerState `json:",omitempty"`
+	StartedTime     int64
 }

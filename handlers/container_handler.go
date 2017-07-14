@@ -10,9 +10,13 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
+	dockerclient "github.com/docker/docker/client"
 
 	"github.com/Sirupsen/logrus"
 	"fmt"
+	"github.com/zanecloud/apiserver/types"
+	"github.com/docker/go-connections/tlsconfig"
+	"time"
 )
 
 
@@ -64,7 +68,7 @@ func getContainerList(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	}
 
 
-	utils.GetMgoCollections(ctx,w,[]string{"application", "container"}, func(cs map[string]*mgo.Collection) {
+	utils.GetMgoCollections(ctx,w,[]string{ "container"}, func(cs map[string]*mgo.Collection) {
 		colContainer := cs["container"]
 
 		result := ContainerListResponse{
@@ -117,5 +121,76 @@ func getContainerList(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 
 func restartContainer(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+	id:= mux.Vars(r)["id"]
+
+	//config:=utils.GetAPIServerConfig(ctx)
+	//
+	//poolInfo := config.
+	//cli, err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint, poolInfo.DriverOpts.APIVersion, client, nil)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//defer cli.Close()
+	
+	
+	utils.GetMgoCollections(ctx,w,[]string{"container","pool"}, func(cs map[string]*mgo.Collection) {
+
+		container := & swarm.Container{}
+
+		colContainer , _ :=  cs["container"]
+		colPool,_ := cs["pool"]
+
+		if err := colContainer.FindId(bson.ObjectIdHex(id)).One(container); err != nil{
+			if err == mgo.ErrNotFound {
+				http.Error(w, "No such a container" , http.StatusNotFound)
+				return
+			}
+			http.Error(w,err.Error(),http.StatusInternalServerError)
+			return
+		}
+
+		poolInfo := &types.PoolInfo{}
+		if err:= colPool.FindId(bson.ObjectIdHex(container.PoolId)).One(poolInfo) ; err != nil {
+			if err == mgo.ErrNotFound {
+				http.Error(w, "No such a pool:"+container.PoolId , http.StatusNotFound)
+				return
+			}
+			http.Error(w,err.Error(),http.StatusInternalServerError)
+			return
+		}
+
+		var client *http.Client
+		if poolInfo.DriverOpts.TlsConfig != nil {
+			tlsc, err := tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
+			if err != nil {
+				http.Error(w,err.Error(),http.StatusInternalServerError)
+				return
+			}
+			client = &http.Client{
+				Transport: &http.Transport{
+					TLSClientConfig: tlsc,
+				},
+				CheckRedirect: client.CheckRedirect,
+			}
+		}
+
+		cli , err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint,poolInfo.DriverOpts.APIVersion,client,nil)
+		if err !=nil {
+			http.Error(w,err.Error(),http.StatusInternalServerError)
+			return
+		}
+		defer  cli.Close()
+
+		timeout :=time.Duration(30)*time.Second
+		if err := cli.ContainerRestart(ctx,container.ContainerId,&timeout) ; err!=nil{
+			http.Error(w,err.Error(),http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w,"")
+
+	})
+
 
 }
