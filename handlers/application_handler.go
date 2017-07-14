@@ -272,7 +272,7 @@ func getContainerSSHInfo(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 type ApplicationScaleRequest struct {
 	ServiceName  string
-	ReplicaCount int      `json:",string"`
+	ReplicaCount int `json:",string"`
 }
 
 func scaleApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -325,7 +325,17 @@ func scaleApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 			return
 		}
 
-		//TODO update Application table
+		// update Application table
+
+		selector := bson.M{"_id": bson.ObjectIdHex(id), "service.name": req.ServiceName}
+
+		updator := bson.M{"$set": bson.M{"service.$.replicacount": req.ReplicaCount}}
+
+		if err := colApplication.Update(selector, updator); err != nil {
+			HttpError(w, fmt.Sprintf("更新Applicatiion失败，error:%s", err.Error()), http.StatusInternalServerError)
+			return
+
+		}
 
 		if err := application.ScaleApplication(ctx, app, pool, map[string]int{
 			req.ServiceName: req.ReplicaCount,

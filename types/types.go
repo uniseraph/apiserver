@@ -282,9 +282,11 @@ type Deployment struct {
 	ApplicationId      string
 	ApplicationVersion string
 	OperationType      string
+	Operator           string
 	PoolId             string
 	CreatorId          string
 	CreatedTime        int64
+	Opts               DeploymentOpts
 }
 //copy自 consul/api/agent.go 避免引入consul/api及其依赖的库
 type AgentService struct {
