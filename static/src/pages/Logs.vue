@@ -308,8 +308,8 @@
       },
 
       getDataFromApi() {
-        let startTime = '';
-        let endTime = '';
+        let startTime = 0;
+        let endTime = 0;
 
         if (this.StartTime1 && this.StartTime1.length > 0) {
           startTime = Math.floor(this.parseDate(this.StartTime1 + ' ' + this.StartTime2, 'yyyy-MM-dd HH:mm').getTime() / 1000);
