@@ -35,8 +35,9 @@ func CreateSSHSession(ctx context.Context, container swarm.Container, user *type
 		"uid":   user.Id.Hex(),
 		"uname": user.Name,
 		"pname": container.PoolName,
-		//存入tunnel的url
-		//"url": container.url,
+		"pid":   container.PoolId,
+		"aid":   container.ApplicationId,
+		"sname": container.Service,
 	}
 	err = redis.HMSet(ContainerAuditSessionKey(rdsKey), rdsContent).Err()
 	if err != nil {
@@ -45,16 +46,26 @@ func CreateSSHSession(ctx context.Context, container swarm.Container, user *type
 	}
 	//五分钟失效
 	age := time.Minute * 5
-	//设置session一周超时
-	//一周后再登录，会找不到redis中的key，导致认证不再可以通过，需要重新登录
+	//设置key超时
 	redis.Expire(ContainerAuditSessionKey(rdsKey), age)
 
 	return rdsKey, nil
 }
 
+func RemoveSSHSession(ctx context.Context, token string) (err error) {
+	redis, err := GetRedisClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	redis.Del(ContainerAuditSessionKey(token))
+
+	return nil
+}
+
 //格式化返回的SSH连接字符串
-func GenerateSSHToken(user string, token string) (ssh string) {
-	return fmt.Sprintf("ssh://%s@%s", user, token)
+func GenerateSSHToken(token string, pool types.PoolInfo) (ssh string) {
+	return fmt.Sprintf("ssh -p %s %s@%s", pool.TunneldPort, token, pool.TunneldAddr)
 }
 
 //从SSH字符串中，解析出Redis中的KEY

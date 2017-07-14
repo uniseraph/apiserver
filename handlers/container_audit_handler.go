@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Sirupsen/logrus"
 	"github.com/zanecloud/apiserver/proxy/swarm"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -42,7 +44,7 @@ func createSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	utils.GetMgoCollections(ctx, w, []string{"container_audit", "container", "containeraudittrace"}, func(cs map[string]*mgo.Collection) {
+	utils.GetMgoCollections(ctx, w, []string{"pool", "container"}, func(cs map[string]*mgo.Collection) {
 		container := swarm.Container{}
 		selector := bson.M{
 			"_id": bson.ObjectIdHex(id),
@@ -62,62 +64,68 @@ func createSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Reques
 			return
 		}
 
+		/*
+			验证用户是否有权访问该容器
+		*/
+
 		//检查当前用户是否有权限操作该容器
 		if user.RoleSet&types.ROLESET_SYSADMIN == types.ROLESET_SYSADMIN {
 			//如果用户是系统管理员
 			//则不需要校验用户对该机器的权限
-		} else {
-			//如果不是系统管理员
-			//则找到该用户能查看的所有pool id准备查询
-			poolIds := make([]bson.ObjectId, 0, 10)
-			//如果该用户加入过某些团队
-			//则该团队能查看的pool
-			//该用户也可以查看
-			if len(user.TeamIds) > 0 {
-				teams := make([]types.Team, 0, 10)
-				selector = bson.M{
-					"_id": bson.M{
-						"$in": user.TeamIds,
-					},
-				}
-				//查找该用户所在Team
-				if err := cs["team"].Find(selector).All(&teams); err != nil {
-					if err == mgo.ErrNotFound {
-						HttpError(w, "not found params", http.StatusNotFound)
-						return
-					}
-					HttpError(w, err.Error(), http.StatusNotFound)
-					return
-				}
+			goto AUTHORIZED
+		}
 
-				for _, team := range teams {
-					poolIds = append(poolIds, team.PoolIds...)
-				}
+		//如果当前容器所在集群
+		//已经给当前用户授权过
+		//则验证通过
+		for _, id := range user.PoolIds {
+			if id.Hex() == container.PoolId {
+				goto AUTHORIZED
 			}
-			//将授权给用户的pool id也加入查询条件
-			poolIds = append(poolIds, user.PoolIds...)
+		}
 
+		//如果该用户加入过某些团队
+		//则该团队能查看的pool
+		//该用户也可以查看
+		//则验证通过
+		if len(user.TeamIds) > 0 {
+			teams := make([]types.Team, 0, 10)
 			selector = bson.M{
 				"_id": bson.M{
-					"$in": poolIds,
+					"$in": user.TeamIds,
 				},
-				"name": container.PoolName,
 			}
-
-			//批量查找出Pool数据
-			if c, err := cs["pool"].Find(selector).Count(); err != nil {
+			//查找该用户所在Team
+			if err := cs["team"].Find(selector).All(&teams); err != nil {
 				if err == mgo.ErrNotFound {
-					HttpError(w, "the container is not permit access.", http.StatusUnauthorized)
+					HttpError(w, "not found params", http.StatusNotFound)
 					return
 				}
 				HttpError(w, err.Error(), http.StatusNotFound)
 				return
-			} else if c <= 0 {
-				HttpError(w, "the container is not permit access.", http.StatusUnauthorized)
-				return
-			} else {
-				//允许访问
 			}
+
+			//如果用户所在的某个TEAM
+			//拥有对该集群的授权
+			//则验证通过
+			for _, team := range teams {
+				for _, id := range team.PoolIds {
+					if id.Hex() == container.PoolId {
+						goto AUTHORIZED
+					}
+				}
+			}
+		}
+
+	AUTHORIZED:
+
+		pool := types.PoolInfo{}
+		if err := cs["pool"].FindId(bson.ObjectIdHex(container.PoolId)).One(&pool); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, fmt.Sprintf("no such id for pool: %s", container.PoolId), http.StatusNotFound)
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		//如果用户对该Container有权操作
@@ -128,7 +136,7 @@ func createSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Reques
 			return
 		}
 
-		ssh := utils.GenerateSSHToken(user.Name, token)
+		ssh := utils.GenerateSSHToken(token, pool)
 		rsp := CreateSSHSessionResponse{
 			Token: ssh,
 		}
@@ -166,15 +174,34 @@ func validateSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	token, err := utils.ParseSSHToken(req.Token)
+	token := req.Token
+
+	//创建会话需要一条操作记录
+	//记录这个会话创建动作的结果
+	log := types.ContainerAuditLog{
+		Id:     bson.NewObjectId(),
+		Token:  req.Token,
+		Ip:     req.User,
+		Detail: types.ContainerAuditLogOperationDetail{},
+	}
+
+	//需要检查当Redis的KEY不存在时
+	//info是nil还是空的map
+	info, err := utils.FetchContainerFromSSHCache(ctx, token)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	info, err := utils.FetchContainerFromSSHCache(ctx, token)
-	if err != nil {
-		HttpError(w, err.Error(), http.StatusInternalServerError)
+	//如果验证登陆不成功
+	//要记录OPERATION是不成功的log实例
+	if len(info) <= 0 {
+		utils.GetMgoCollections(ctx, w, []string{"container_audit_log"}, func(cs map[string]*mgo.Collection) {
+			if err := validateSSHSessionFailedLog(cs, fmt.Sprintf("Token is invalid: %s", token), log); err != nil {
+				HttpError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		})
 		return
 	}
 
@@ -188,7 +215,9 @@ func validateSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	cid := info["cid"]     //容器ID
 	cname := info["cname"] //容器名称
 	pname := info["pname"] //集群名称
-	url := info["url"]     //tunnel的URL
+	pid := info["pid"]     //集群ID
+	aid := info["aid"]     //应用ID
+	sname := info["sname"] //Service名称
 
 	//当前操作用户
 	u := types.ContainerAuditUser{
@@ -202,50 +231,135 @@ func validateSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		Name: cname,
 	}
 
-	utils.GetMgoCollections(ctx, w, []string{"pool", "container_audit_trace", "container"}, func(cs map[string]*mgo.Collection) {
-		pool := &types.PoolInfo{}
-		//找到容器所属的集群
-		if err := cs["pool"].Find(bson.M{"name": pname}).One(&pool); err != nil {
+	utils.GetMgoCollections(ctx, w, []string{"application", "container_audit_trace", "container_audit_log", "container"}, func(cs map[string]*mgo.Collection) {
+		app := types.Application{}
+
+		if err := cs["application"].FindId(bson.ObjectIdHex(aid)).One(&app); err != nil {
+			if e := validateSSHSessionFailedLog(cs, err.Error(), log); err != nil {
+				HttpError(w, e.Error(), http.StatusInternalServerError)
+				return
+			}
 			if err == mgo.ErrNotFound {
-				HttpError(w, "no such a pool", http.StatusNotFound)
+				HttpError(w, "no such a application", http.StatusNotFound)
 				return
 			}
 			HttpError(w, err.Error(), http.StatusNotFound)
+		}
+
+		//Service
+		var service *types.Service
+		for _, s := range app.Services {
+			if s.Name == sname {
+				service = &s
+				break
+			}
+		}
+		if service == nil {
+			if err := validateSSHSessionFailedLog(cs, fmt.Sprintf("could not found service with name: %s", sname), log); err != nil {
+				HttpError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			HttpError(w, fmt.Sprintf("could not found service with name: %s", sname), http.StatusNotFound)
 			return
+		}
+
+		//应用
+		a := types.ContainerAuditApplication{
+			Id:      bson.ObjectIdHex(aid),
+			Name:    app.Name,
+			Title:   app.Title,
+			Version: app.Version,
 		}
 
 		//集群
 		p := types.ContainerAuditPool{
-			Id:   pool.Id,
-			Name: pool.Name,
+			Id:   bson.ObjectIdHex(pid),
+			Name: pname,
 		}
 
+		//服务
+		s := types.ContainerAuditService{
+			Name:  service.Name,
+			Title: service.Title,
+		}
+
+		//创建一次Tunnel的会话过程记录
+		//记住环境信息，但不包含会话过程中的交互信息
+		//会话过程中的交互信息存在Log表中
+		//Trace has many Logs
 		trace := types.ContainerAuditTrace{
-			Id:          bson.NewObjectId(),
-			Token:       token,
-			UserId:      bson.ObjectIdHex(uid),
-			User:        u,
-			ContainerId: bson.ObjectIdHex(cid),
-			Container:   c,
-			PoolId:      pool.Id,
-			Pool:        p,
+			Id:            bson.NewObjectId(),
+			Token:         token,
+			UserId:        bson.ObjectIdHex(uid),
+			User:          u,
+			ContainerId:   bson.ObjectIdHex(cid),
+			Container:     c,
+			PoolId:        bson.ObjectIdHex(pid),
+			Pool:          p,
+			ApplicationId: a.Id,
+			Application:   a,
+			Service:       s,
 
 			CreatedTime: time.Now().Unix(),
 		}
 
 		if err := cs["container_audit_trace"].Insert(trace); err != nil {
+			if e := validateSSHSessionFailedLog(cs, err.Error(), log); err != nil {
+				HttpError(w, e.Error(), http.StatusInternalServerError)
+				return
+			}
 			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		//认证成功后
+		//删除该Token
+		//避免被重复使用
+		if err := utils.RemoveSSHSession(ctx, token); err != nil {
+			if e := validateSSHSessionFailedLog(cs, err.Error(), log); err != nil {
+				HttpError(w, e.Error(), http.StatusInternalServerError)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		//到此为止登录成功
+		//记录登录成功的操作
+		if e := validateSSHSessionSuccessLog(cs, log); err != nil {
+			HttpError(w, e.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		rlt := ValidateSSHSessionResponse{
 			Result:    "OK",
 			Status:    1,
-			Container: url,
+			Container: cid,
 		}
 
 		HttpOK(w, rlt)
 	})
+}
+
+//写入一条登录记录
+//将登录的输入和失败结果入库
+func validateSSHSessionFailedLog(cs map[string]*mgo.Collection, msg string, log types.ContainerAuditLog) (err error) {
+	log.Detail.Reason = msg
+	log.Operation = "LoginFailed"
+	if err := cs["container_audit_log"].Insert(log); err != nil {
+		return err
+	}
+	return nil
+}
+
+//写入一条登录记录
+//将登录的输入和成功结果入库
+func validateSSHSessionSuccessLog(cs map[string]*mgo.Collection, log types.ContainerAuditLog) (err error) {
+	log.Operation = "Logined"
+	if err := cs["container_audit_log"].Insert(log); err != nil {
+		return err
+	}
+	return nil
 }
 
 /*
@@ -321,10 +435,13 @@ func createAuditLog(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		audit := types.ContainerAuditLog{
 			Id:        bson.NewObjectId(),
 			Ip:        req.Ip,
-			TraceId:   req.Token,
-			Cmd:       cmd,
-			Arguments: args,
-			Stdout:    req.Output,
+			Token:     req.Token,
+			Operation: "ExecCmd",
+			Detail: types.ContainerAuditLogOperationDetail{
+				Command:   cmd,
+				Arguments: args,
+				Stdout:    req.Output,
+			},
 
 			CreatedTime: time.Now().Unix(),
 		}
@@ -354,8 +471,8 @@ func updateAuditLog(ctx context.Context, w http.ResponseWriter, r *http.Request)
 */
 
 type GetAuditListRequest struct {
-	StartTime     time.Time
-	EndTime       time.Time
+	StartTime     string
+	EndTime       string
 	UserId        string
 	IP            string
 	Operation     string
@@ -371,15 +488,14 @@ type GetAuditListResponseData struct {
 		从ContainerAuditTrace模型中获取
 	*/
 	Id            string
-	UserId        bson.ObjectId
+	UserId        string
 	User          types.ContainerAuditUser
-	PoolId        bson.ObjectId
+	PoolId        string
 	Pool          types.ContainerAuditPool
-	ApplicationId bson.ObjectId
+	ApplicationId string
 	Application   types.ContainerAuditApplication
-	ServiceId     bson.ObjectId
 	Service       types.ContainerAuditService
-	ContainerId   bson.ObjectId
+	ContainerId   string
 	Container     types.ContainerAuditContainer
 
 	/*
@@ -415,14 +531,24 @@ func getAuditList(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	selector := bson.M{}
 
 	//设定时间查询条件
-	if !req.StartTime.IsZero() || !req.EndTime.IsZero() {
+	if len(req.StartTime) > 0 || len(req.EndTime) > 0 {
 		createdtime := bson.M{}
 
-		if !req.StartTime.IsZero() {
-			createdtime["$gte"] = req.StartTime
+		if len(req.StartTime) > 0 {
+			i, err := strconv.ParseInt(req.StartTime, 10, 64)
+			if err != nil {
+				panic(err)
+			}
+			tm := time.Unix(i, 0)
+			createdtime["$gte"] = tm
 		}
-		if !req.EndTime.IsZero() {
-			createdtime["$lt"] = req.EndTime
+		if len(req.EndTime) > 0 {
+			i, err := strconv.ParseInt(req.EndTime, 10, 64)
+			if err != nil {
+				panic(err)
+			}
+			tm := time.Unix(i, 0)
+			createdtime["$lt"] = tm
 		}
 
 		selector["createdtime"] = createdtime
@@ -449,23 +575,118 @@ func getAuditList(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		selector["containerid"] = bson.ObjectIdHex(req.ContainerId)
 	}
 
-	if req.Page != 0 {
-		//前端page第一页从1开始计数
-		page = req.Page - 1
+	page = req.Page - 1
+
+	if page <= 0 {
+		page = 0
 	}
 
-	if req.PageSize == 0 {
+	pageSize = req.PageSize
+
+	if pageSize == 0 {
 		//默认每页20条
 		pageSize = 20
 	}
 
-	utils.GetMgoCollections(ctx, w, []string{"container_audit_log"}, func(cs map[string]*mgo.Collection) {
-		data := make([]types.ContainerAuditLog, 0, pageSize)
+	utils.GetMgoCollections(ctx, w, []string{"container_audit_log", "container_audit_trace"}, func(cs map[string]*mgo.Collection) {
+		logs := make([]types.ContainerAuditLog, 0, pageSize)
 
-		if err := cs["container_audit_log"].Find(selector).Sort("-createdtime").Skip(page * pageSize).Limit(pageSize).All(&data); err != nil {
+		if err := cs["container_audit_log"].Find(selector).Sort("-createdtime").Skip(page * pageSize).Limit(pageSize).All(&logs); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		var pageCount, total int
+		if t, err := cs["container_audit_log"].Find(selector).Count(); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else {
+			total = t
+		}
+
+		if total%pageSize == 0 {
+			pageCount = total / pageSize
+		} else {
+			pageCount = total/pageSize + 1
+		}
+
+		//根据Log集合的tokens
+		//找到每个log对应的trace记录
+		tokens := make(map[string]string)
+		for _, log := range logs {
+			tokens[log.Token] = "ok"
+		}
+		tokenKeys := make([]string, 0, 20)
+		for k := range tokens {
+			tokenKeys = append(tokenKeys, k)
+		}
+
+		selector = bson.M{
+			"token": bson.M{
+				"$in": tokenKeys,
+			},
+		}
+
+		//查询traces记录
+		traces := make([]types.ContainerAuditTrace, 0, 20)
+		if err := cs["container_audit_trace"].Find(selector).All(&traces); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		//将trace记录做成map
+		//以便整理数据的时候
+		//可以根据TOKEN作为KEY，来查找log对应的trace
+		tracesMap := make(map[string]types.ContainerAuditTrace)
+		for _, t := range traces {
+			tracesMap[t.Token] = t
+		}
+
+		data := make([]GetAuditListResponseData, 0, len(logs))
+
+		//整理数据
+		//每条数据由如下组成：一条log信息，及log对应的trace信息
+		for _, log := range logs {
+			t, ok := tracesMap[log.Token]
+			if !ok {
+				logrus.Errorf("no trace found for token: %s", log.Token)
+				continue
+			}
+			d := GetAuditListResponseData{
+				Id:            log.Id.Hex(),
+				UserId:        t.UserId.Hex(),
+				User:          t.User,
+				PoolId:        t.PoolId.Hex(),
+				Pool:          t.Pool,
+				ApplicationId: t.ApplicationId.Hex(),
+				Application:   t.Application,
+				Service:       t.Service,
+				ContainerId:   t.ContainerId.Hex(),
+				Container:     t.Container,
+
+				Ip:        log.Ip,
+				Cmd:       log.Detail.Command,
+				Arguments: log.Detail.Arguments,
+				Stdout:    log.Detail.Stdout,
+				Stderr:    log.Detail.Stderr,
+				Stdin:     log.Detail.Stdin,
+				ExitCode:  log.Detail.ExitCode,
+
+				CreatedTime: log.CreatedTime,
+			}
+			data = append(data, d)
+		}
+
+		//整理返回值
+		rlt := GetAuditListResponse{
+			Total:     total,
+			PageCount: pageCount,
+			PageSize:  pageSize,
+			Page:      page,
+			Data:      data,
+		}
+
+		HttpOK(w, rlt)
 
 	})
 }

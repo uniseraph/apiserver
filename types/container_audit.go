@@ -22,7 +22,6 @@ type ContainerAuditApplication struct {
 }
 
 type ContainerAuditService struct {
-	Id    bson.ObjectId "_id"
 	Name  string
 	Title string
 }
@@ -47,12 +46,21 @@ type ContainerAuditTrace struct {
 	Pool          ContainerAuditPool
 	ApplicationId bson.ObjectId
 	Application   ContainerAuditApplication
-	ServiceId     bson.ObjectId
 	Service       ContainerAuditService
 	ContainerId   bson.ObjectId
 	Container     ContainerAuditContainer
 
 	CreatedTime int64 `json:",omitempty"`
+}
+
+type ContainerAuditLogOperationDetail struct {
+	Command   string
+	Arguments []string
+	Stderr    string
+	Stdout    string
+	Stdin     string
+	ExitCode  int8
+	Reason    string // 记录登录失败原因
 }
 
 //容器审计
@@ -61,15 +69,13 @@ type ContainerAuditLog struct {
 	//客户端IP
 	Ip string
 	//跟踪ID，用于某次会话的统计，就是TOKEN
-	TraceId string
+	Token string
 
+	//操作类型
+	//分三种，LoginFailed，Logined，ExecCmd
+	Operation string
 	//用户操作行为
-	Cmd       string
-	Arguments []string
-	Stderr    string
-	Stdout    string
-	Stdin     string
-	ExitCode  int8
+	Detail ContainerAuditLogOperationDetail
 
 	//本次审计操作是否被允许
 	Permission bool
