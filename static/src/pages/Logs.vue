@@ -308,8 +308,16 @@
       },
 
       getDataFromApi() {
-        let startTime = this.StartTime1 && this.StartTime1.length > 0 ? this.StartTime1 + ' ' + this.StartTime2 : '';
-        let endTime = this.EndTime1 && this.EndTime1.length > 0 ? this.EndTime1 + ' ' + this.EndTime2 : '';
+        let startTime = '';
+        let endTime = '';
+
+        if (this.StartTime1 && this.StartTime1.length > 0) {
+          startTime = Math.floor(this.parseDate(this.StartTime1 + ' ' + this.StartTime2, 'yyyy-MM-dd HH:mm').getTime() / 1000);
+        }
+
+        if (this.EndTime1 && this.EndTime1.length > 0) {
+          endTime = Math.floor(this.parseDate(this.EndTime1 + ' ' + this.EndTime2, 'yyyy-MM-dd HH:mm').getTime() / 1000);
+        }
 
         let params = {
           StartTime: startTime,
