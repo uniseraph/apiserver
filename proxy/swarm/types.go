@@ -14,8 +14,10 @@ type Container struct {
 	PoolId          string
 	Service         string
 	Project         string
+	IP              string
 	ApplicationId   string
 	ApplicationName string
+	Status          string
 	Memory          int64
 	CPU             int64
 	CPUExclusive    bool
