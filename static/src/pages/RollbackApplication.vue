@@ -111,6 +111,7 @@
 </template>
 
 <script>
+  import store, { mapGetters } from 'vuex'
   import api from '../api/api'
   import * as ui from '../util/ui'
 
@@ -157,6 +158,14 @@
       }
     },
 
+    computed: {
+      ...mapGetters([
+          'alertArea',
+          'alertType',
+          'alertMsg'
+      ])
+    },
+
     watch: {
         pagination: {
           handler(v, o) {
@@ -170,6 +179,7 @@
     },
 
     mounted() {
+      ui.showAlertAt('RollbackApplication');
       this.init();
     },
 
@@ -226,7 +236,6 @@
             DeploymentHistoryId: this.DeploymentHistoryId
           };
 
-          ui.showAlertAt('RollbackApplication');
           this.Submitting = true;
 
           api.RollbackApplication(params).then(data => {
