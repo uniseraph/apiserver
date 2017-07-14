@@ -214,17 +214,6 @@ func getApplicationList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		req.PageSize = 20
 	}
 
-	mgoSession, err := utils.GetMgoSessionClone(ctx)
-	if err != nil {
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer mgoSession.Close()
-
-	config := utils.GetAPIServerConfig(ctx)
-
-	c := mgoSession.DB(config.MgoDB).C("application")
-
 	result := ApplicationListResponse{
 		Data: make([]*types.Application, 100),
 	}
@@ -240,30 +229,91 @@ func getApplicationList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	if req.Keyword != "" {
 		regex1 := bson.M{"name": bson.M{"$regex": bson.RegEx{Pattern: pattern, Options: "i"}}}
 		regex2 := bson.M{"title": bson.M{"$regex": bson.RegEx{Pattern: pattern, Options: "i"}}}
-		selector = bson.M{"$and": []bson.M{bson.M{"$or": []bson.M{regex1, regex2}}, selector}}
+		selector["$or"] = []bson.M{regex1, regex2}
 	}
 
 	logrus.Debugf("getApplication::过滤条件为%#v", selector)
 
-	if result.Total, err = c.Find(selector).Count(); err != nil {
-		HttpError(w, fmt.Sprintf("查询记录数出错，%s", err.Error()), http.StatusInternalServerError)
-		return
-	}
+	utils.GetMgoCollections(ctx, w, []string{"application", "team"}, func(cs map[string]*mgo.Collection) {
+		/*
+			开始权限校验
+		*/
+		appIds := make([]bson.ObjectId, 0, 20)
 
-	logrus.Debugf("getApplication::符合条件的application有%d个", result.Total)
+		user, err := utils.GetCurrentUser(ctx)
+		if err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-	if err := c.Find(selector).Sort("title").Limit(req.PageSize).Skip(req.PageSize * (req.Page - 1)).All(&result.Data); err != nil {
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+		/*
+			验证用户是否有权访问集群
+		*/
 
-	result.Keyword = req.Keyword
-	result.Page = req.Page
-	result.PageSize = req.PageSize
-	result.PageCount = result.Total / result.PageSize
+		//检查当前用户是否有权限操作该容器
+		if user.RoleSet&types.ROLESET_SYSADMIN == types.ROLESET_SYSADMIN {
+			//如果用户是系统管理员
+			//则不需要校验用户对该机器的权限
+			goto AUTHORIZED
+		}
 
-	HttpOK(w, &result)
+		//已经给当前用户授权过的集群，可以查看
+		appIds = append(appIds, user.ApplicationIds...)
 
+		//如果该用户加入过某些团队
+		//则该团队能查看的pool
+		//该用户也可以查看
+		//则验证通过
+		if len(user.TeamIds) > 0 {
+			teams := make([]types.Team, 0, 10)
+			selector := bson.M{
+				"_id": bson.M{
+					"$in": user.TeamIds,
+				},
+			}
+			//查找该用户所在Team
+			if err := cs["team"].Find(selector).All(&teams); err != nil {
+				if err == mgo.ErrNotFound {
+					HttpError(w, "not found params", http.StatusNotFound)
+					return
+				}
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			//如果用户所在的某个TEAM
+			//拥有对该集群的授权
+			//则验证通过
+			for _, team := range teams {
+				appIds = append(appIds, team.ApplicationIds...)
+			}
+		}
+
+		selector["_id"] = bson.M{
+			"$in": appIds,
+		}
+
+	AUTHORIZED:
+
+		if result.Total, err = cs["application"].Find(selector).Count(); err != nil {
+			HttpError(w, fmt.Sprintf("查询记录数出错，%s", err.Error()), http.StatusInternalServerError)
+			return
+		}
+
+		logrus.Debugf("getApplication::符合条件的application有%d个", result.Total)
+
+		if err := cs["application"].Find(selector).Sort("title").Limit(req.PageSize).Skip(req.PageSize * (req.Page - 1)).All(&result.Data); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		result.Keyword = req.Keyword
+		result.Page = req.Page
+		result.PageSize = req.PageSize
+		result.PageCount = result.Total / result.PageSize
+
+		HttpOK(w, &result)
+	})
 }
 
 func getContainerSSHInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -569,4 +619,207 @@ func getApplication(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
+}
+
+/*
+/applications/:id/add-team
+	请求参数：
+		TeamId
+	返回：无
+权限控制：应用管理员。
+*/
+func addApplicationTeam(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var appId string
+	var teamId string
+
+	//检查参数合法性
+	if appId = mux.Vars(r)["id"]; len(appId) <= 0 {
+		HttpError(w, "Application Id is empty", http.StatusBadRequest)
+		return
+	}
+	if teamId = r.FormValue("TeamId"); len(teamId) <= 0 {
+		HttpError(w, "TeamId is empty", http.StatusBadRequest)
+		return
+	}
+
+	utils.GetMgoCollections(ctx, w, []string{"team", "application"}, func(cs map[string]*mgo.Collection) {
+		//检查PoolId合法性
+		if c, err := cs["application"].FindId(bson.ObjectIdHex(appId)).Count(); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else if c <= 0 {
+			HttpError(w, "", http.StatusNotFound)
+			return
+		}
+
+		if err := cs["team"].Update(bson.M{"_id": bson.ObjectIdHex(teamId)}, bson.M{"$addToSet": bson.M{"applicationids": bson.ObjectIdHex(appId)}}); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, nil)
+	})
+
+}
+
+/*
+/applications/:id/remove-team
+	请求参数：
+		TeamId
+	返回：无
+权限控制：应用管理员。
+*/
+func removeApplicationTeam(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var appId string
+	var teamId string
+
+	//检查参数合法性
+	if appId = mux.Vars(r)["id"]; len(appId) <= 0 {
+		HttpError(w, "Application Id is empty", http.StatusBadRequest)
+		return
+	}
+	if teamId = r.FormValue("TeamId"); len(teamId) <= 0 {
+		HttpError(w, "TeamId is empty", http.StatusBadRequest)
+		return
+	}
+
+	utils.GetMgoCollections(ctx, w, []string{"team", "application"}, func(cs map[string]*mgo.Collection) {
+		//检查PoolId合法性
+		if c, err := cs["application"].FindId(bson.ObjectIdHex(appId)).Count(); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else if c <= 0 {
+			HttpError(w, "", http.StatusNotFound)
+			return
+		}
+
+		if err := cs["team"].Update(bson.M{"_id": bson.ObjectIdHex(teamId)}, bson.M{"$pull": bson.M{"applicationids": bson.ObjectIdHex(appId)}}); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, nil)
+	})
+}
+
+/*
+
+/applications/:id/add-user
+	请求参数：
+		UserId
+	返回：无
+权限控制：应用管理员。
+*/
+func addApplicationMember(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var appId string
+	var userId string
+
+	//检查参数合法性
+	if appId = mux.Vars(r)["id"]; len(appId) <= 0 {
+		HttpError(w, "Application Id is empty", http.StatusBadRequest)
+		return
+	}
+	if userId = r.FormValue("UserId"); len(userId) <= 0 {
+		HttpError(w, "UserId is empty", http.StatusBadRequest)
+		return
+	}
+
+	utils.GetMgoCollections(ctx, w, []string{"user", "application"}, func(cs map[string]*mgo.Collection) {
+		//检查PoolId合法性
+		if c, err := cs["application"].FindId(bson.ObjectIdHex(appId)).Count(); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else if c <= 0 {
+			HttpError(w, "", http.StatusNotFound)
+			return
+		}
+
+		if err := cs["user"].Update(bson.M{"_id": bson.ObjectIdHex(userId)}, bson.M{"$addToSet": bson.M{"applicationids": bson.ObjectIdHex(appId)}}); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, nil)
+	})
+}
+
+/*
+
+/applications/:id/remove-user
+	请求参数：
+		UserId
+	返回：无
+权限控制：应用管理员。
+*/
+func removeApplicationMember(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var appId string
+	var userId string
+
+	//检查参数合法性
+	if appId = mux.Vars(r)["id"]; len(appId) <= 0 {
+		HttpError(w, "Application Id is empty", http.StatusBadRequest)
+		return
+	}
+	if userId = r.FormValue("UserId"); len(userId) <= 0 {
+		HttpError(w, "UserId is empty", http.StatusBadRequest)
+		return
+	}
+
+	utils.GetMgoCollections(ctx, w, []string{"user", "application"}, func(cs map[string]*mgo.Collection) {
+		//检查PoolId合法性
+		if c, err := cs["application"].FindId(bson.ObjectIdHex(appId)).Count(); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else if c <= 0 {
+			HttpError(w, "", http.StatusNotFound)
+			return
+		}
+
+		if err := cs["user"].Update(bson.M{"_id": bson.ObjectIdHex(userId)}, bson.M{"$pull": bson.M{"applicationids": bson.ObjectIdHex(appId)}}); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, nil)
+	})
 }

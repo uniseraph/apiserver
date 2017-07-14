@@ -73,6 +73,14 @@ var routes = map[string]map[string]*MyHandler{
 		"/audit/log":        &MyHandler{h: createAuditLog, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/audit/log/update": &MyHandler{h: updateAuditLog, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/audit/list":       &MyHandler{h: getAuditList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+
+		/*
+			应用授权
+		*/
+		"/applications/{id:.*}/add-team":    &MyHandler{h: addApplicationTeam, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/remove-team": &MyHandler{h: removeApplicationTeam, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/add-user":    &MyHandler{h: addApplicationMember, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/remove-user": &MyHandler{h: removeApplicationMember, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 	},
 	"POST": {
 		"/pools/{id:.*}/flush":       &MyHandler{h: postPoolsFlush, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
@@ -155,6 +163,10 @@ var routes = map[string]map[string]*MyHandler{
 		"/applications/containers/:id/ssh-info": &MyHandler{h: getContainerSSHInfo, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 		"/applications/create":                  &MyHandler{h: createApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 		//	"/applications/:id/containers/list":     &MyHandler{h: copyTemplate, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/add-team":    &MyHandler{h: addApplicationTeam, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/remove-team": &MyHandler{h: removeApplicationTeam, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/add-user":    &MyHandler{h: addApplicationMember, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/remove-user": &MyHandler{h: removeApplicationMember, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 
 		"/templates/list":            &MyHandler{h: getTemplateList},
 		"/templates/{id:.*}/inspect": &MyHandler{h: getTemplate},

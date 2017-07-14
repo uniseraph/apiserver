@@ -63,17 +63,18 @@ type PoolInfo struct {
 type Roleset uint64
 
 type User struct {
-	Id          bson.ObjectId "_id"
-	Name        string
-	Pass        string `json:",omitempty"`
-	Salt        string `json:"-"`
-	RoleSet     Roleset
-	Email       string
-	TeamIds     []bson.ObjectId
-	Tel         string          `json:",omitempty"`
-	CreatedTime int64           `json:",omitempty"`
-	Comments    string          `json:",omitempty"`
-	PoolIds     []bson.ObjectId //一个用户has many pool
+	Id             bson.ObjectId "_id"
+	Name           string
+	Pass           string `json:",omitempty"`
+	Salt           string `json:"-"`
+	RoleSet        Roleset
+	Email          string
+	TeamIds        []bson.ObjectId
+	Tel            string          `json:",omitempty"`
+	CreatedTime    int64           `json:",omitempty"`
+	Comments       string          `json:",omitempty"`
+	PoolIds        []bson.ObjectId //一个用户has many pool
+	ApplicationIds []bson.ObjectId //一个用户has many application
 }
 
 type Leader struct {
@@ -87,9 +88,10 @@ type Team struct {
 	Description string
 	Leader      Leader
 	//UserIds     []bson.ObjectId
-	Users       []User
-	CreatedTime int64           `json:",omitempty"`
-	PoolIds     []bson.ObjectId //一个Team has many pool
+	Users          []User
+	CreatedTime    int64           `json:",omitempty"`
+	PoolIds        []bson.ObjectId //一个Team has many pool
+	ApplicationIds []bson.ObjectId //一个Team has many application
 }
 
 //type TeamUser struct {
@@ -136,6 +138,8 @@ type EnvTreeNodeDir struct {
 
 //参数目录树节点的参数名称
 //EnvTreeNodeParamKey has many EnvTreeNodeParamValue
+//一棵树下，每个Key都要名字唯一
+//mongo zanecloud --eval "db.env_tree_node_param_key.createIndex({name:1,tree:1}, {unique:true})"
 type EnvTreeNodeParamKey struct {
 	Id          bson.ObjectId "_id"
 	Name        string

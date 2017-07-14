@@ -74,27 +74,74 @@ type PoolsRegisterResponse struct {
 }
 
 func getPoolsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	utils.GetMgoCollections(ctx, w, []string{"pool", "team"}, func(cs map[string]*mgo.Collection) {
+		poolSelector := bson.M{}
+		poolIds := make([]bson.ObjectId, 0, 20)
 
-	if err != nil {
-		//走不到这里的,ctx中必然有mgoSesson
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer mgoSession.Close()
+		user, err := utils.GetCurrentUser(ctx)
+		if err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
+		/*
+			验证用户是否有权访问集群
+		*/
 
-	c := mgoSession.DB(mgoDB).C("pool")
+		//检查当前用户是否有权限操作该容器
+		if user.RoleSet&types.ROLESET_SYSADMIN == types.ROLESET_SYSADMIN {
+			//如果用户是系统管理员
+			//则不需要校验用户对该机器的权限
+			goto AUTHORIZED
+		}
 
-	result := make([]types.PoolInfo, 20)
-	if err := c.Find(bson.M{}).All(&result); err != nil {
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+		//已经给当前用户授权过的集群，可以查看
+		poolIds = append(poolIds, user.PoolIds...)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+		//如果该用户加入过某些团队
+		//则该团队能查看的pool
+		//该用户也可以查看
+		//则验证通过
+		if len(user.TeamIds) > 0 {
+			teams := make([]types.Team, 0, 10)
+			selector := bson.M{
+				"_id": bson.M{
+					"$in": user.TeamIds,
+				},
+			}
+			//查找该用户所在Team
+			if err := cs["team"].Find(selector).All(&teams); err != nil {
+				if err == mgo.ErrNotFound {
+					HttpError(w, "not found params", http.StatusNotFound)
+					return
+				}
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			//如果用户所在的某个TEAM
+			//拥有对该集群的授权
+			//则验证通过
+			for _, team := range teams {
+				poolIds = append(poolIds, team.PoolIds...)
+			}
+		}
+
+		poolSelector["_id"] = bson.M{
+			"$in": poolIds,
+		}
+
+	AUTHORIZED:
+
+		pools := make([]*types.PoolInfo, 0, 20)
+		if err := cs["pool"].Find(poolSelector).All(&pools); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, pools)
+
+	})
 
 }
 

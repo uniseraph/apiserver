@@ -35,7 +35,7 @@ type ContainerAuditContainer struct {
 //
 type ContainerAuditTrace struct {
 	Id    bson.ObjectId "_id"
-	Token string        //临时有效的token
+	Token string        //临时有效的token，容器中的唯一值
 
 	//当前用户
 	UserId bson.ObjectId

@@ -6,7 +6,6 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	"github.com/zanecloud/apiserver/proxy/swarm"
 	"github.com/zanecloud/apiserver/types"
 	"strings"
 	"time"
@@ -15,34 +14,34 @@ import (
 /*
 	生成登录SSH用的临时唯一Token
 */
-func CreateSSHSession(ctx context.Context, container swarm.Container, user *types.User) (token string, err error) {
+func CreateSSHSession(ctx context.Context, cname string, cid string, aid string, sname string, user *types.User, pool *types.PoolInfo) (token string, err error) {
 	redis, err := GetRedisClient(ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	sessionUUID, err := uuid.NewUUID()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	//去掉uuid的横线
 	r := strings.NewReplacer("-", "_")
 	rdsKey := r.Replace(sessionUUID.String())
 
 	rdsContent := map[string]interface{}{
-		"cname": container.Name,
-		"cid":   container.Id,
+		"cname": cname,
+		"cid":   cid,
 		"uid":   user.Id.Hex(),
 		"uname": user.Name,
-		"pname": container.PoolName,
-		"pid":   container.PoolId,
-		"aid":   container.ApplicationId,
-		"sname": container.Service,
+		"pname": pool.Name,
+		"pid":   pool.Id.Hex(),
+		"aid":   aid,
+		"sname": sname,
 	}
 	err = redis.HMSet(ContainerAuditSessionKey(rdsKey), rdsContent).Err()
 	if err != nil {
 		logrus.Fatalf("Redis hmset error: %#v", err)
-		return nil, err
+		return "", err
 	}
 	//五分钟失效
 	age := time.Minute * 5
@@ -64,14 +63,14 @@ func RemoveSSHSession(ctx context.Context, token string) (err error) {
 }
 
 //格式化返回的SSH连接字符串
-func GenerateSSHToken(token string, pool types.PoolInfo) (ssh string) {
+func GenerateSSHToken(token string, pool *types.PoolInfo) (ssh string) {
 	return fmt.Sprintf("ssh -p %s %s@%s", pool.TunneldPort, token, pool.TunneldAddr)
 }
 
 //从SSH字符串中，解析出Redis中的KEY
 func ParseSSHToken(token string) (key string, err error) {
 	if len(token) <= 0 {
-		return nil, errors.New("Token is empty string")
+		return "", errors.New("Token is empty string")
 	}
 	arr := strings.Split(token, "@")
 

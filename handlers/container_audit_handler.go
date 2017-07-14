@@ -119,8 +119,8 @@ func createSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 	AUTHORIZED:
 
-		pool := types.PoolInfo{}
-		if err := cs["pool"].FindId(bson.ObjectIdHex(container.PoolId)).One(&pool); err != nil {
+		pool := &types.PoolInfo{}
+		if err := cs["pool"].FindId(bson.ObjectIdHex(container.PoolId)).One(pool); err != nil {
 			if err == mgo.ErrNotFound {
 				HttpError(w, fmt.Sprintf("no such id for pool: %s", container.PoolId), http.StatusNotFound)
 			}
@@ -131,7 +131,7 @@ func createSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		//如果用户对该Container有权操作
 		//则生成临时的token给用户
 		var token string
-		if token, err = utils.CreateSSHSession(ctx, container, user); err != nil {
+		if token, err = utils.CreateSSHSession(ctx, container.Name, container.Id, container.ApplicationId, container.Service, user, pool); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

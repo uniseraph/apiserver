@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/handlers"
 	"github.com/zanecloud/apiserver/utils"
+	"gopkg.in/mgo.v2"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -17,6 +18,7 @@ import (
 
 var cookies []*http.Cookie
 var client *http.Client
+var mgoSession *mgo.Session
 
 //当前用户
 var user *handlers.SessionCreateResp
@@ -32,6 +34,9 @@ func TestMain(m *testing.M) {
 	resp, _ := sessionCreate(client, u)
 	user = u
 	cookies = resp.Cookies()
+	//
+	mgoSession, _ = mgo.Dial("mongo://localhost:27017")
+	defer mgoSession.Close()
 
 	//执行测试用例
 	exitVal := m.Run()
