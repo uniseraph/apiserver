@@ -304,6 +304,7 @@ func scaleApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		found := false
 		for i, _ := range app.Services {
 			if app.Services[i].Name == req.ServiceName {
+				app.Services[i].ReplicaCount = req.ReplicaCount
 				found = true
 				break
 			}

@@ -131,7 +131,7 @@ func registerPool(name string, request *handlers.PoolsRegisterRequest) (*handler
 
 func flushPool(id string) (*handlers.PoolsFlushResponse, error) {
 
-	url := fmt.Sprintf("http://localhost:8080/api/pools/%s/flush", id)
+	url := fmt.Sprintf("http://localhost:8080/api/pools/%s/reflush", id)
 
 	//buf, _ := json.Marshal(request)
 
