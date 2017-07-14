@@ -79,14 +79,24 @@
                 v-model="Description"
               ></v-text-field>
             </v-flex>
-            <v-flex xs12 mt-4 class="text-md-center">
+            <v-flex xs12>
+              <v-alert 
+                    v-if="alertArea==='CreateApplication'"
+                    v-bind:success="alertType==='success'" 
+                    v-bind:info="alertType==='info'" 
+                    v-bind:warning="alertType==='warning'" 
+                    v-bind:error="alertType==='error'" 
+                    v-model="alertMsg" 
+                    dismissible>{{ alertMsg }}</v-alert>
+            </v-flex>
+            <v-flex v-if="!Submitting" xs12 mt-4 class="text-md-center">
               <v-btn class="orange darken-2 white--text" @click.native="save">
                 <v-icon light left>save</v-icon>发布应用
               </v-btn>     
             </v-flex>
-            <v-flex xs3>
+            <v-flex v-if="Submitting" xs12 mt-4 class="text-md-center">
+              <v-progress-linear v-bind:indeterminate="true"></v-progress-linear>
             </v-flex>
-          </v-layout>
         </v-container>
       </div>
     </div>
@@ -126,6 +136,8 @@
         Title: '',
         Description: '',
 
+        Submitting: false,
+
         rules: {},
 
         rules0: {
@@ -156,6 +168,10 @@
 
     mounted() {
       this.init();
+    },
+
+    destroyed() {
+      ui.showAlertAt();
     },
 
     methods: {
@@ -211,12 +227,16 @@
             Description: this.Description
           };
 
+          ui.showAlertAt('CreateApplication');
+
           api.CreateApplication(params).then(data => {
             ui.alert('发布应用成功', 'success');
             let that = this;
             setTimeout(() => {
               that.goback();
             }, 1500);
+          }, err => {
+
           });
         });
       }

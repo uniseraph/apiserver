@@ -1,6 +1,7 @@
 export default {
   install(Vue, options) {
     Vue.prototype.constants = {
+
     	ROLE_NORMAL_USER: 0x01,
     	ROLE_APP_ADMIN: 0x02,
     	ROLE_SYS_ADMIN: 0x04,
@@ -34,23 +35,23 @@ export default {
     	},
 
     	TIME_LIST: [
-          "00:00","01:00","02:00","03:00","04:00","05:00","06:00","07:00","08:00","09:00","10:00","11:00",
-          "12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00","22:00","23:00"
-        ],
+        "00:00","01:00","02:00","03:00","04:00","05:00","06:00","07:00","08:00","09:00","10:00","11:00",
+        "12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00","22:00","23:00"
+      ],
 
-        SSH_OP_LIST: [
-          { Id: 'LoginFailed', Name: '登录失败' },
-	      { Id: 'Logined', Name: '登录成功' },
-	      { Id: 'ExecCmd', Name: '命令执行' }
-        ],
+      SSH_OP_LIST: [
+        { Id: 'LoginFailed', Name: '登录失败' },
+        { Id: 'Logined', Name: '登录成功' },
+        { Id: 'ExecCmd', Name: '命令执行' }
+      ],
 
     	MODULE_LIST: [
-    	  { Id: 'User', Name: '用户'},
-          { Id: 'Team', Name: '团队'},
-          { Id: 'Pool', Name: '集群'},
-          { Id: 'Env', Name: '参数目录'},
-          { Id: 'ApplicationTemplate', Name: '应用模板'},
-          { Id: 'Application', Name: '应用管理'}
+        { Id: 'User', Name: '用户'},
+        { Id: 'Team', Name: '团队'},
+        { Id: 'Pool', Name: '集群'},
+        { Id: 'Env', Name: '参数目录'},
+        { Id: 'ApplicationTemplate', Name: '应用模板'},
+        { Id: 'Application', Name: '应用管理'}
     	],
 
     	MODULE_MAP: {
@@ -63,7 +64,7 @@ export default {
     	},
 
     	OPERATION_MAP: {
-		  User: [
+		    User: [
 	        { Id: 'Create', Name: '新增' },
 	        { Id: 'Update', Name: '修改' },
 	        { Id: 'Delete', Name: '删除' },
@@ -108,6 +109,7 @@ export default {
 	        { Id: 'RevokerUser', Name: '取消授权用户' }
 	      ]
 	    }
+      
     }
   }
 }

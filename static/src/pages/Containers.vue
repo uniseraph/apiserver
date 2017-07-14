@@ -23,7 +23,7 @@
         </v-dialog>
       </v-layout>
       <v-layout row justify-center>
-        <v-dialog v-model="SSHInfoDlg" persistent width="450">
+        <v-dialog v-model="SSHInfoDlg" persistent width="540">
           <v-card>
             <v-card-row>
               <v-card-title>{{ SelectedContainer.Name }}登录信息</v-card-title>
@@ -57,11 +57,9 @@
         no-data-text=""
       >
         <template slot="items" scope="props">
-          <td>{{ props.item.Id }}</td>
           <td>{{ props.item.Name }}</td>
           <td :class="applicationClass(props.item.Status)">{{ applicationStatus(props.item.Status) }}</td>
-          <td>{{ props.item.Network ? props.item.Network.IP : '' }}</td>
-          <td>{{ props.item.StartedTime | formatDateTime }}</td>
+          <td>{{ props.item.IP }}</td>
           <td>{{ props.item.Node ? props.item.Node.Name : '' }}</td>
           <td>{{ props.item.Node ? props.item.Node.IP : '' }}</td>
           <td>
@@ -89,11 +87,9 @@
     data() {
       return {
         headers: [
-          { text: '容器ID', sortable: false, left: true },
           { text: '容器名', sortable: false, left: true },
           { text: '状态', sortable: false, left: true },
           { text: 'IP', sortable: false, left: true },
-          { text: '启动时间', sortable: false, left: true },
           { text: '宿主机名', sortable: false, left: true },
           { text: '宿主机IP', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
