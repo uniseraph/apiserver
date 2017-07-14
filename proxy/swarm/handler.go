@@ -445,6 +445,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		}
 	}
 
+	logrus.WithFields(logrus.Fields{"resp":resp}).Debugf("create container success!")
 	//TODO save to mongodb
 
 	mgoSession, err := utils.GetMgoSessionClone(ctx)
@@ -472,7 +473,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 	if err := mgoSession.DB(mgoDB).C("container").Insert(container); err != nil {
 
-		logrus.WithFields(logrus.Fields{"container": container, "error": err}).Debug("postContainersCreate::before insert container table error")
+		logrus.WithFields(logrus.Fields{"container": container, "error": err}).Debug("postContainersCreate::after insert container table error")
 
 		//TODO 如果清理容器失败，需要记录一下日志，便于人工干预
 		cli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{Force: true})
