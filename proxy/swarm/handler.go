@@ -517,10 +517,14 @@ func flushContainerInfo(ctx context.Context, container *Container) {
 		logrus.Errorf("inspect the container:%d in the pool:(%s,%s) error:%s", container.ContainerId, poolInfo.Id, poolInfo.Name, err.Error())
 		return
 	}
-
+	
 	container.Name = containerJSON.Name
 	container.Node = containerJSON.Node
 	container.State = containerJSON.State
+
+	if networkSettings , ok:= containerJSON.NetworkSettings.Networks["bridge"] ; ok {
+		container.IP = networkSettings.IPAddress
+	}
 
 	logrus.WithFields(logrus.Fields{"container":containerJSON}).Debug("flush the container info")
 
@@ -577,6 +581,8 @@ func buildContainerInfoForSave(name string, containerId string, poolInfo *store.
 		Memory:       config.HostConfig.Memory,
 		CPU:          cpuCount,
 		CPUExclusive: exclusive,
+		Status: "running",
+
 	}
 
 	if service, ok := config.Config.Labels[LABEL_COMPOSE_SERVICE]; ok {

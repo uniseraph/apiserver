@@ -15,14 +15,15 @@ func TestCreateApplication(t *testing.T) {
 
 
 	logrus.SetOutput(os.Stderr)
-	level, err := logrus.ParseLevel("debug")
+	level, err := logrus.ParseLevel("info")
 	if err != nil {
 		logrus.Fatalf(err.Error())
 	}
 	logrus.SetLevel(level)
 
 	app1 := &types.Application{
-		Name: "test",
+		Name: "testx",
+		Id:"applicationidxxxxx000",
 		Services: []types.Service{
 			types.Service{
 				ImageName: "docker.io/nginx",
@@ -38,7 +39,7 @@ func TestCreateApplication(t *testing.T) {
 		},
 	}
 	pool1 := &types.PoolInfo{
-		ProxyEndpoint: "tcp://127.0.0.1:50131",
+		ProxyEndpoint: "tcp://127.0.0.1:58589",
 		DriverOpts: types.DriverOpts{
 			APIVersion: "v1.23",
 		},
