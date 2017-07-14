@@ -16,7 +16,7 @@ Vue.filter('formatDate', function(value) {
 		return '';
 	}
 
-    return new Date(value).toLocaleDateString();
+    return new Date(value * 1000).toLocaleDateString();
 });
 
 Vue.filter('formatDateTime', function(value) {
@@ -24,7 +24,7 @@ Vue.filter('formatDateTime', function(value) {
 		return '';
 	}
 	
-    return new Date(value).toLocaleString();
+    return new Date(value * 1000).toLocaleString();
 });
 
 Vue.filter('dividedBy1024', function(value) {
