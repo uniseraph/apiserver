@@ -228,15 +228,17 @@
           };
 
           ui.showAlertAt('CreateApplication');
+          this.Submitting = true;
 
           api.CreateApplication(params).then(data => {
             ui.alert('发布应用成功', 'success');
+            this.Submitting = false;
             let that = this;
             setTimeout(() => {
               that.goback();
             }, 1500);
           }, err => {
-
+            this.Submitting = false;
           });
         });
       }

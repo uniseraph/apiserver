@@ -132,6 +132,9 @@
             {{ props.item.Disk }}
           </td>
           <td>
+            <v-btn outline small icon class="green green--text" @click.native="refreshPool(props.item)" title="删除集群">
+              <v-icon>refresh</v-icon>
+            </v-btn>
             <v-btn outline small icon class="orange orange--text" @click.native="confirmBeforeRemove(props.item)" title="删除集群">
               <v-icon>close</v-icon>
             </v-btn>
@@ -255,6 +258,12 @@
       removePool() {
         this.RemoveConfirmDlg = false;
         api.RemovePool(this.SelectedPool.Id).then(data => {
+          this.init();
+        })
+      },
+
+      refreshPool(pool) {
+        api.RefreshPool(pool.Id).then(data => {
           this.init();
         })
       }
