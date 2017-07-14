@@ -82,7 +82,12 @@ func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 
 func (p *Proxy) Stop() error {
 
-	return p.server.Close()
+	if err := p.server.Close(); err != nil {
+		logrus.WithFields(logrus.Fields{"err": err.Error()}).Errorf("close the proxy server error")
+		return err
+	}
+
+	return nil
 
 }
 
