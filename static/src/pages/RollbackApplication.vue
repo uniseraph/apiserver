@@ -69,7 +69,7 @@
         >
           <template slot="items" scope="props">
             <td><v-radio label="" v-model="DeploymentHistoryId" :value="props.item.Id"></v-radio></td>
-            <td>{{ props.item.ApplicationVersion }}</td>
+            <td>{{ props.item.Version }}</td>
             <td v-if="props.item.OperationType == 'create'">新增</td>
             <td v-if="props.item.OperationType == 'upgrade'">升级</td>
             <td v-if="props.item.OperationType == 'rollback'">回滚</td>
