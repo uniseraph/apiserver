@@ -63,9 +63,27 @@ var routes = map[string]map[string]*MyHandler{
 		"/envs/values/{id:.*}/remove":        &MyHandler{h: deleteValue, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/envs/values/{id:.*}/update-values": &MyHandler{h: updateValueAttributes, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/envs/value/get":                    &MyHandler{h: getValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+
+		/*
+			容器日志审计
+		*/
+
+		"/audit/ssh":        &MyHandler{h: createSSHSession, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/audit/login":      &MyHandler{h: validateSSHSession, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/audit/log":        &MyHandler{h: createAuditLog, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/audit/log/update": &MyHandler{h: updateAuditLog, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/audit/list":       &MyHandler{h: getAuditList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+
+		/*
+			应用授权
+		*/
+		"/applications/{id:.*}/add-team":    &MyHandler{h: addApplicationTeam, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/remove-team": &MyHandler{h: removeApplicationTeam, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/add-user":    &MyHandler{h: addApplicationMember, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/remove-user": &MyHandler{h: removeApplicationMember, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 	},
 	"POST": {
-		"/pools/{id:.*}/refresh":       &MyHandler{h: postPoolsFlush, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/pools/{id:.*}/refresh":     &MyHandler{h: postPoolsFlush, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/pools/{id:.*}/inspect":     &MyHandler{h: getPoolJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/pools/register":            &MyHandler{h: postPoolsRegister, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/pools/ps":                  &MyHandler{h: getPoolsJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
@@ -123,21 +141,35 @@ var routes = map[string]map[string]*MyHandler{
 		"/envs/values/{id:.*}/update-values": &MyHandler{h: updateValueAttributes, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/envs/value/get":                    &MyHandler{h: getValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 
-		"/containers/list":                      &MyHandler{h: getContainerList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/list":                    &MyHandler{h: getApplicationList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/inspect":         &MyHandler{h: getApplication, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/detail":          &MyHandler{h: getApplication, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/start":           &MyHandler{h: startApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/restart":         &MyHandler{h: restartApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/stop":            &MyHandler{h: stopApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/remove":          &MyHandler{h: removeApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/rollback":        &MyHandler{h: rollbackApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/upgrade":         &MyHandler{h: upgradeApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/scale":           &MyHandler{h: scaleApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/containers/:id/ssh-info": &MyHandler{h: getContainerSSHInfo, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/create":                  &MyHandler{h: createApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/containers/list":     &MyHandler{h: getContainerList, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/containers/{id:.*}/restart":     &MyHandler{h: restartContainer, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		/*
+			容器日志审计
+		*/
+
+		"/audit/ssh":        &MyHandler{h: createSSHSession, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/audit/login":      &MyHandler{h: validateSSHSession, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/audit/log":        &MyHandler{h: createAuditLog, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/audit/log/update": &MyHandler{h: updateAuditLog, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/audit/list":       &MyHandler{h: getAuditList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+
+		"/containers/list":                         &MyHandler{h: getContainerList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/list":                       &MyHandler{h: getApplicationList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/inspect":            &MyHandler{h: getApplication, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/detail":             &MyHandler{h: getApplication, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/start":              &MyHandler{h: startApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/restart":            &MyHandler{h: restartApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/stop":               &MyHandler{h: stopApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/rollback":           &MyHandler{h: rollbackApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/upgrade":            &MyHandler{h: upgradeApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/scale":              &MyHandler{h: scaleApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/containers/:id/ssh-info":    &MyHandler{h: getContainerSSHInfo, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/create":                     &MyHandler{h: createApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/add-team":           &MyHandler{h: addApplicationTeam, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/remove-team":        &MyHandler{h: removeApplicationTeam, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/add-user":           &MyHandler{h: addApplicationMember, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/remove-user":        &MyHandler{h: removeApplicationMember, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/containers/list":    &MyHandler{h: getContainerList, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/containers/{id:.*}/restart": &MyHandler{h: restartContainer, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/remove":             &MyHandler{h: removeApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 
 		"/templates/list":            &MyHandler{h: getTemplateList},
 		"/templates/{id:.*}/inspect": &MyHandler{h: getTemplate},

@@ -9,11 +9,13 @@ mongo zanecloud --eval "db.team.createIndex({name:1}, {unique:true})"
 mongo zanecloud --eval "db.pool.createIndex({name:1}, {unique:true})"
 #TODO name + poolid做唯一性约束
 mongo zanecloud --eval "db.application.createIndex({name:1,poolid:1}, {unique:true})"
+mongo zanecloud --eval "db.container.createIndex({id:1}, {unique:true})"
+mongo zanecloud --eval "db.env_tree_node_param_key.createIndex({name:1,tree:1}, {unique:true})"
+mongo zanecloud --eval "db.container_audit_trace.createIndex({token:1}, {unique:true})"
 mongo zanecloud --eval "db.container.createIndex({name:1,poolid:1}, {unique:true})"  #创建容器时候一开始不知道容器名字
 mongo zanecloud --eval "db.container.createIndex({containerid:1,poolid:1}, {unique:true})"
 mongo zanecloud --eval "db.container.createIndex({poolid:1})"
 mongo zanecloud --eval "db.container.createIndex({applicationid:1})"
-
 
 #准备加盐计算
 name=root
