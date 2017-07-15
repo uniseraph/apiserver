@@ -70,7 +70,6 @@
             no-data-text=""
           >
             <template slot="items" scope="props">
-              <td>{{ props.item.PoolId }}</td>
               <td>{{ props.item.PoolName }}</td>
               <td>
                 <v-text-field
@@ -102,7 +101,6 @@
     data() {
       return {
         headers: [
-          { text: '集群ID', sortable: false, left: true },
           { text: '集群名称', sortable: false, left: true },
           { text: '当前值', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }

@@ -192,7 +192,6 @@
               no-data-text=""
             >
               <template slot="items" scope="props">
-                <td>{{ props.item.Id }}</td>
                 <td><router-link :to="'/env/trees/values/' + props.item.Id">{{ props.item.Name }}</router-link></td>
                 <td>{{ props.item.Value }}</td>
                 <td>{{ props.item.Description }}</td>
@@ -225,7 +224,6 @@
         treeOptions: {},
         treeData: { nodeData: [], currentNodeId: null },
         headers: [
-          { text: '参数ID', sortable: false, left: true },
           { text: '参数名', sortable: false , left: true},
           { text: '默认值', sortable: false, left: true },
           { text: '说明', sortable: false, left: true },
