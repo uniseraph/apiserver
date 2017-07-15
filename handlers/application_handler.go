@@ -199,6 +199,9 @@ type ApplicationListResponse struct {
 	Data []*types.Application
 }
 
+func getApplicationHistory(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+}
 func getApplicationList(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	req := &ApplicationListRequest{}
@@ -687,7 +690,7 @@ type ApplicationInspectResponse struct {
 func getApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
-	utils.GetMgoCollections(ctx, w, []string{"application", "team", "user"}, func(cs map[string]*mgo.Collection) {
+	utils.GetMgoCollections(ctx, w, []string{"application", "team", "user","pool"}, func(cs map[string]*mgo.Collection) {
 		app := types.Application{}
 		if err := cs["pool"].Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&app); err != nil {
 
