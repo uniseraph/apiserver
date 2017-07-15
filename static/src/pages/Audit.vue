@@ -331,7 +331,7 @@
 
       displayDetail(item) {
         if (item.Detail) {
-          this.Detail = JSON.stringify(JSON.parse(item.Detail), null, 4); 
+          this.Detail = JSON.stringify(item.Detail, null, 4); 
         } else {
           this.Detail = '';
         }
