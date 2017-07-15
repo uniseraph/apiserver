@@ -121,12 +121,12 @@
           <td><router-link :to="'/pools/' + props.item.Id">{{ props.item.Name }}</router-link></td>
           <td>{{ props.item.EnvTreeName }}</td>
           <td>{{ props.item.Driver }}</td>
-          <td class="text-xs-right">{{ props.item.Nodes }}</td>
+          <td class="text-xs-right">{{ props.item.NodeCount }}</td>
           <td class="text-xs-right">
             {{ props.item.CPUs }}
           </td>
           <td class="text-xs-right">
-            {{ props.item.Memory }}
+            {{ props.item.Memory | dividedBy1024 | dividedBy1024 | dividedBy1024 }}
           </td>
           <td class="text-xs-right">
             {{ props.item.Disk }}

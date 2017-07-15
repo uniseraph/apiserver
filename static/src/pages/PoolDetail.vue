@@ -6,6 +6,9 @@
           <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
           &nbsp;&nbsp;集群列表&nbsp;&nbsp;/&nbsp;&nbsp;{{ Name }}
           <v-spacer></v-spacer>
+          <v-btn class="green darken-2 white--text" small @click.native="refreshPool()">
+            <v-icon light left>refresh</v-icon>同步集群状态
+          </v-btn>
         </v-card-title>
         <div>
           <v-container fluid>
@@ -116,13 +119,13 @@
                 ></v-select-->
               </v-flex>
               <v-flex xs3>
-                <v-subheader>节点个数：{{ Nodes }}</v-subheader>
+                <v-subheader>节点个数：{{ NodeCount }}</v-subheader>
               </v-flex>
               <v-flex xs3>
                 <v-subheader>CPU：{{ CPUs }}</v-subheader>
               </v-flex>
               <v-flex xs3>
-                <v-subheader>内存 (GB)：{{ Memory }}</v-subheader>
+                <v-subheader>内存 (GB)：{{ Memory | dividedBy1024 | dividedBy1024 | dividedBy1024 }}</v-subheader>
               </v-flex>
               <v-flex xs3>
                 <v-subheader>磁盘 (GB)：{{ Disk }}</v-subheader>
@@ -235,7 +238,7 @@
         EnvTree: {},
         Driver: 'swarm',
         DriverOpts: { Version: 'v1.0', EndPoint: '', APIVersion: 'v1.23' },
-        Nodes: 0,
+        NodeCount: 0,
         CPUs: 0,
         Memory: 0,
         Disk: 0,
@@ -293,7 +296,7 @@
           this.EnvTreeName = data.Pool.EnvTreeName;
           this.Driver = data.Pool.Driver;
           this.DriverOpts = data.Pool.DriverOpts;
-          this.Nodes = data.Pool.Nodes;
+          this.NodeCount = data.Pool.NodeCount;
           this.CPUs = data.Pool.CPUs;
           this.Memory = data.Pool.Memory;
           this.Disk = data.Pool.Disk;
@@ -365,6 +368,13 @@
         api.RemoveUserFromPool({ Id: this.Id, UserId: user.Id }).then(data => {
             this.init();
           })
+      },
+
+      refreshPool() {
+        api.RefreshPool(this.Id).then(data => {
+          ui.alert('集群状态同步完成', 'success');
+          this.init();
+        })
       }
     }
   }
