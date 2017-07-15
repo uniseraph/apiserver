@@ -72,7 +72,8 @@ func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		users := make([]types.User, 0, 10)
 		selector = bson.M{
 			"poolids": bson.M{
-				"$in": bson.ObjectIdHex(id),
+				"$in": []bson.ObjectId{bson.ObjectIdHex(id)},
+
 			},
 		}
 		if err := cs["user"].Find(selector).All(&users); err != nil {
