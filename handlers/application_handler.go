@@ -224,15 +224,15 @@ func getApplicationHistory(ctx context.Context, w http.ResponseWriter, r *http.R
 	}
 
 	//TODO 权限控制
-	result := ApplicationHisotryResponse{}
+	result := &ApplicationHisotryResponse{}
 
-	deployments := make([]*types.Deployment,0, 100)
+	deployments := []*types.Deployment{}
 
 	utils.GetMgoCollections(ctx, w, []string{"deployment"}, func(cs map[string]*mgo.Collection) {
 
 		colDeployment, _ := cs["deployment"]
 
-		selector := bson.M{"applicationid": bson.ObjectIdHex(id)}
+		selector := bson.M{"applicationid": id}
 
 		total, err := colDeployment.Find(selector).Count()
 		if err != nil {
