@@ -1,20 +1,13 @@
 <template>
-  <v-app light>
-    <div v-if="token && token.Id == null" class="text-xs-center" primary>
-      <v-layout row wrap style="margin-top:100px;">
+  <v-app light :class="{ 'login-ui': token && token.Id == null }">
+    <div v-if="token && token.Id == null" class="text-xs-center login-ui" primary>
+      <v-layout row wrap class="login-box">
         <v-flex xs4 offset-xs4>
-          <v-alert 
-            v-if="alertArea==='global'"
-            v-bind:success="alertType==='success'" 
-            v-bind:info="alertType==='info'" 
-            v-bind:warning="alertType==='warning'" 
-            v-bind:error="alertType==='error'" 
-            v-model="alertMsg" 
-            dismissible>{{ alertMsg }}</v-alert>
+          <img src="/public/logo.png"></img>
         </v-flex>
         <v-flex xs4>
         </v-flex>
-        <v-flex xs4 offset-xs4>
+        <v-flex xs4 offset-xs4 class="mt-4">
           <v-card>
             <v-card-title class="text-xs-center" style="font-size:24px;display:block;">
               登录
@@ -62,7 +55,23 @@
             </div>
           </v-card>
         </v-flex>
+        <v-flex xs4>
+        </v-flex>
+        <v-flex xs4 offset-xs4>
+          <v-alert 
+            v-if="alertArea==='global'"
+            v-bind:success="alertType==='success'" 
+            v-bind:info="alertType==='info'" 
+            v-bind:warning="alertType==='warning'" 
+            v-bind:error="alertType==='error'" 
+            v-model="alertMsg" 
+            dismissible>{{ alertMsg }}</v-alert>
+        </v-flex>
+        <v-flex xs4>
+        </v-flex>
       </v-layout>
+      <div class="login-footer">
+      </div>
     </div>
     <div v-if="token && token.Id != null">
       <v-navigation-drawer
@@ -320,4 +329,25 @@
 
 <style lang="stylus">
   @import './stylus/main'
+
+  .login-ui
+    background-color: #2196f3
+    position: relative
+    left: 0
+    top: 0
+    width: 100%
+    height: 100%
+
+  .login-box
+    position: relative
+    top: 20%
+
+  .login-footer
+    width: 100%
+    height: 205px
+    position: relative
+    bottom: 85px
+    left: 0
+    background: url("/public/loginbottom.png") no-repeat
+    background-size: 100% 205px
 </style>
