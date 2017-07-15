@@ -202,6 +202,10 @@
         </v-toolbar-side-icon>
         <v-toolbar-title>峥云网络</v-toolbar-title>
         <v-spacer></v-spacer>
+        <v-subheader light>{{ token.Name }}</v-subheader>
+        <v-btn light icon @click.native="logout" title="退出">
+          <v-icon>exit_to_app</v-icon>
+        </v-btn>
       </v-toolbar>
       <main>
         <v-container fluid>
@@ -301,6 +305,13 @@
           }, err => {
             ui.alert('用户名或密码不正确');
           });
+        });
+      },
+
+      logout() {
+        api.Logout().then(data => {
+          window.location.reload();
+        }, err => {
         });
       }
     }

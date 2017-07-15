@@ -57,6 +57,7 @@
         no-data-text=""
       >
         <template slot="items" scope="props">
+          <td>{{ props.item.Id }}</td>
           <td>{{ props.item.Name }}</td>
           <td :class="applicationClass(props.item.Status)">{{ applicationStatus(props.item.Status) }}</td>
           <td>{{ props.item.IP }}</td>
@@ -87,6 +88,7 @@
     data() {
       return {
         headers: [
+          { text: '容器ID', sortable: false, left: true },
           { text: '容器名', sortable: false, left: true },
           { text: '状态', sortable: false, left: true },
           { text: 'IP', sortable: false, left: true },
