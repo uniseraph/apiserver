@@ -121,15 +121,10 @@
     },
 
     watch: {
-        pagination: {
-          handler(v, o) {
-            if (v.rowsPerPage != o.rowsPerPage || v.page != o.page || v.sortBy != o.sortBy || v.descending != o.descending) {
-              this.getDataFromApi();
-            }
-          },
-
-          deep: true
-        }
+      'pagination.rowsPerPage': 'paginationChanged',
+      'pagination.page': 'paginationChanged',
+      'pagination.sortBy': 'paginationChanged',
+      'pagination.descending': 'paginationChanged'
     },
 
     mounted() {
@@ -143,6 +138,12 @@
 
       goback() {
         this.$router.go(-1);
+      },
+
+      paginationChanged(v, o) {
+        if (v != o) {
+          this.getDataFromApi();
+        }
       },
 
       displaySSHInfo(container) {
@@ -160,6 +161,7 @@
       restartContainer() {
         this.RestartConfirmDlg = false;
         api.RestartContainer(this.SelectedContainer.Id).then(data => {
+          ui.alert('容器重启成功', 'success');
           this.getDataFromApi();
         });
       },

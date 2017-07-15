@@ -132,7 +132,7 @@
             {{ props.item.Disk }}
           </td>
           <td>
-            <v-btn outline small icon class="green green--text" @click.native="refreshPool(props.item)" title="删除集群">
+            <v-btn outline small icon class="green green--text" @click.native="refreshPool(props.item)" title="同步集群状态">
               <v-icon>refresh</v-icon>
             </v-btn>
             <v-btn outline small icon class="orange orange--text" @click.native="confirmBeforeRemove(props.item)" title="删除集群">
@@ -264,6 +264,7 @@
 
       refreshPool(pool) {
         api.RefreshPool(pool.Id).then(data => {
+          ui.alert('集群状态同步完成', 'success');
           this.init();
         })
       }

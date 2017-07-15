@@ -265,7 +265,7 @@ export default {
     },
 
     ContainerSSHInfo(id) {
-        return fetch('/applications/containers/' + id + '/ssh-info');
+        return fetch('/audit/ssh?ContainerId=' + id);
     },
 
     ScaleService(params) {
