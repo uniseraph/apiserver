@@ -320,7 +320,7 @@ func updateTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	//result.CreatorId = user.Id.Hex()
 	req.Id = bson.ObjectIdHex(id)
 	req.UpdaterId = user.Id.Hex()
-	req.UpdatedTime = result.CreatedTime
+	req.UpdatedTime = time.Now().Unix()
 	req.UpdaterName = user.Name
 
 	if err := c.UpdateId(bson.ObjectIdHex(id), req.Template); err != nil {

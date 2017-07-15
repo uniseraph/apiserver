@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
-	"github.com/hashicorp/consul/api"
 	"github.com/zanecloud/apiserver/proxy"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
@@ -349,7 +348,7 @@ func getTunneldInfo(ctx context.Context, pool *types.PoolInfo) error {
 	}
 	defer resp.Body.Close()
 
-	tunneld := &api.AgentService{}
+	tunneld := &types.AgentService{}
 	if err := json.NewDecoder(resp.Body).Decode(tunneld); err != nil {
 		return err
 	}

@@ -71,6 +71,10 @@ export default {
         return fetch('/pools/' + params.Id + '/update', params); 
     },
 
+    RefreshPool(id) {
+        return fetch('/pools/' + id + '/refresh'); 
+    },
+
     AddTeamToPool(params) {
         return fetch('/pools/' + params.Id + '/add-team?TeamId=' + params.TeamId);
     },
@@ -265,15 +269,15 @@ export default {
     },
 
     DeploymentHistory(params) {
-        return fetch('/applications/' + params.Id + '/history');
+        return fetch('/applications/' + params.Id + '/history', params);
     },
 
     UpgradeApplication(params) {
-        return fetch('/applications/' + params.Id + '/upgrade');
+        return fetch('/applications/' + params.Id + '/upgrade', params);
     },
 
     RollbackApplication(params) {
-        return fetch('/applications/' + params.Id + '/rollback');
+        return fetch('/applications/' + params.Id + '/rollback', params);
     },
 
     AddTeamToApplication(params) {

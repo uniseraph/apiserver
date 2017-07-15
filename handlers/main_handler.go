@@ -83,7 +83,7 @@ var routes = map[string]map[string]*MyHandler{
 		"/applications/{id:.*}/remove-user": &MyHandler{h: removeApplicationMember, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 	},
 	"POST": {
-		"/pools/{id:.*}/flush":       &MyHandler{h: postPoolsFlush, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/pools/{id:.*}/refresh":     &MyHandler{h: postPoolsFlush, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/pools/{id:.*}/inspect":     &MyHandler{h: getPoolJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/pools/register":            &MyHandler{h: postPoolsRegister, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/pools/ps":                  &MyHandler{h: getPoolsJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
@@ -151,22 +151,25 @@ var routes = map[string]map[string]*MyHandler{
 		"/audit/log/update": &MyHandler{h: updateAuditLog, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/audit/list":       &MyHandler{h: getAuditList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 
-		"/applications/list":                    &MyHandler{h: getApplicationList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/inspect":         &MyHandler{h: getApplication, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/detail":          &MyHandler{h: getApplication, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/start":           &MyHandler{h: startApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/restart":         &MyHandler{h: restartApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/stop":            &MyHandler{h: stopApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/rollback":        &MyHandler{h: rollbackApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/upgrade":         &MyHandler{h: upgradeApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/scale":           &MyHandler{h: scaleApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/containers/:id/ssh-info": &MyHandler{h: getContainerSSHInfo, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/create":                  &MyHandler{h: createApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		//	"/applications/:id/containers/list":     &MyHandler{h: copyTemplate, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/add-team":    &MyHandler{h: addApplicationTeam, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/remove-team": &MyHandler{h: removeApplicationTeam, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/add-user":    &MyHandler{h: addApplicationMember, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
-		"/applications/{id:.*}/remove-user": &MyHandler{h: removeApplicationMember, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/containers/list": &MyHandler{h: getContainerList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+
+		"/applications/list":                       &MyHandler{h: getApplicationList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/inspect":            &MyHandler{h: getApplication, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/detail":             &MyHandler{h: getApplication, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/start":              &MyHandler{h: startApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/restart":            &MyHandler{h: restartApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/stop":               &MyHandler{h: stopApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/rollback":           &MyHandler{h: rollbackApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/upgrade":            &MyHandler{h: upgradeApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/scale":              &MyHandler{h: scaleApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/containers/:id/ssh-info":    &MyHandler{h: getContainerSSHInfo, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/create":                     &MyHandler{h: createApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/add-team":           &MyHandler{h: addApplicationTeam, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/remove-team":        &MyHandler{h: removeApplicationTeam, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/add-user":           &MyHandler{h: addApplicationMember, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/remove-user":        &MyHandler{h: removeApplicationMember, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/containers/list":    &MyHandler{h: getContainerList, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/containers/{id:.*}/restart": &MyHandler{h: restartContainer, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 
 		"/templates/list":            &MyHandler{h: getTemplateList},
 		"/templates/{id:.*}/inspect": &MyHandler{h: getTemplate},
@@ -328,24 +331,22 @@ func NewMainHandler(ctx context.Context) (http.Handler, error) {
 	})
 
 	return r, nil
-
-	//	return NewHandler(c1, routes), nil
 }
 
-func SetupPrimaryRouter(r *mux.Router, ctx context.Context, rs map[string]map[string]*MyHandler) {
-	for method, mappings := range rs {
+func SetupPrimaryRouter(r *mux.Router, ctx context.Context, routers map[string]map[string]*MyHandler) {
+	for method, mappings := range routers {
 		for route, myHandler := range mappings {
 			logrus.WithFields(logrus.Fields{"method": method, "route": route}).Debug("Registering HTTP route")
 
 			localRoute := route
 			localHandler := myHandler
-			wrap := func(w http.ResponseWriter, r *http.Request) {
-				logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI, "localHandler": localHandler}).Debug("HTTP request received")
+			wrap := func(w http.ResponseWriter, req *http.Request) {
+				logrus.WithFields(logrus.Fields{"method": req.Method, "uri": req.RequestURI, "localHandler": localHandler}).Debug("HTTP request received")
 
 				if localHandler.opChecker != nil {
-					localHandler.opChecker(localHandler.h, localHandler.roleset)(ctx, w, r)
+					localHandler.opChecker(localHandler.h, localHandler.roleset)(ctx, w, req)
 				} else {
-					localHandler.h(ctx, w, r)
+					localHandler.h(ctx, w, req)
 				}
 			}
 			localMethod := method

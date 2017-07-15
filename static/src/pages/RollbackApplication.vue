@@ -69,7 +69,7 @@
         >
           <template slot="items" scope="props">
             <td><v-radio label="" v-model="DeploymentHistoryId" :value="props.item.Id"></v-radio></td>
-            <td>{{ props.item.Version }}</td>
+            <td>{{ props.item.ApplicationVersion }}</td>
             <td v-if="props.item.OperationType == 'create'">新增</td>
             <td v-if="props.item.OperationType == 'upgrade'">升级</td>
             <td v-if="props.item.OperationType == 'rollback'">回滚</td>
@@ -85,12 +85,23 @@
       <div>
         <v-container fluid>
           <v-layout row wrap>
-            <v-flex xs12 mt-4 class="text-md-center">
+            <v-flex xs12>
+              <v-alert 
+                    v-if="alertArea==='RollbackApplication'"
+                    v-bind:success="alertType==='success'" 
+                    v-bind:info="alertType==='info'" 
+                    v-bind:warning="alertType==='warning'" 
+                    v-bind:error="alertType==='error'" 
+                    v-model="alertMsg" 
+                    dismissible>{{ alertMsg }}</v-alert>
+            </v-flex>
+            <v-flex v-if="!Submitting" xs12 mt-4 class="text-md-center">
               <v-btn class="orange darken-2 white--text" @click.native="save">
                 <v-icon light left>save</v-icon>回滚应用
               </v-btn>     
             </v-flex>
-            <v-flex xs3>
+            <v-flex v-if="Submitting" xs12 mt-4 class="text-md-center">
+              <v-progress-linear v-bind:indeterminate="true"></v-progress-linear>
             </v-flex>
           </v-layout>
         </v-container>
@@ -100,6 +111,7 @@
 </template>
 
 <script>
+  import store, { mapGetters } from 'vuex'
   import api from '../api/api'
   import * as ui from '../util/ui'
 
@@ -134,6 +146,8 @@
         Version: '',
         Description: '',
 
+        Submitting: false,
+
         rules: {},
 
         rules0: {
@@ -142,6 +156,14 @@
           ]
         }
       }
+    },
+
+    computed: {
+      ...mapGetters([
+          'alertArea',
+          'alertType',
+          'alertMsg'
+      ])
     },
 
     watch: {
@@ -157,7 +179,12 @@
     },
 
     mounted() {
+      ui.showAlertAt('RollbackApplication');
       this.init();
+    },
+
+    destroyed() {
+      ui.showAlertAt();
     },
 
     methods: {
@@ -168,9 +195,9 @@
           this.Name = data.Name;
           this.Version = data.Version;
           this.Description = data.Description;
-        });
 
-        this.getDataFromApi();
+          this.getDataFromApi();
+        });
       },
 
       goback() {
@@ -209,12 +236,17 @@
             DeploymentHistoryId: this.DeploymentHistoryId
           };
 
+          this.Submitting = true;
+
           api.RollbackApplication(params).then(data => {
             ui.alert('回滚应用成功', 'success');
+            this.Submitting = false;
             let that = this;
             setTimeout(() => {
               that.goback();
             }, 1500);
+          }, err => {
+            this.Submitting = false;
           });
         });
       }

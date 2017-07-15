@@ -106,7 +106,6 @@
         no-data-text=""
       >
         <template slot="items" scope="props">
-          <td>{{ props.item.Id }}</td>
           <td><router-link :to="'/env/trees/' + props.item.Id + '/' + encodeURIComponent(props.item.Name)">{{ props.item.Name }}</router-link></td>
           <td>{{ props.item.Description }}</td>
           <td>
@@ -132,7 +131,6 @@
     data() {
       return {
         headers: [
-          { text: 'ID', sortable: false, left: true },
           { text: '名称', sortable: false, left: true },
           { text: '说明', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }

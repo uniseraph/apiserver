@@ -131,7 +131,7 @@ func createSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		//如果用户对该Container有权操作
 		//则生成临时的token给用户
 		var token string
-		if token, err = utils.CreateSSHSession(ctx, container.Name, container.Id, container.ApplicationId, container.Service, user, pool); err != nil {
+		if token, err = utils.CreateSSHSession(ctx, container.Name, container.Id.Hex(), container.ContainerId, container.ApplicationId, container.Service, user, pool); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -214,6 +214,7 @@ func validateSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	uname := info["uname"] //用户名称
 	cid := info["cid"]     //容器ID
 	cname := info["cname"] //容器名称
+	scid := info["scid"]   //Swarm Container Id
 	pname := info["pname"] //集群名称
 	pid := info["pid"]     //集群ID
 	aid := info["aid"]     //应用ID
@@ -227,8 +228,9 @@ func validateSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	//容器
 	c := types.ContainerAuditContainer{
-		Id:   bson.ObjectIdHex(cid),
-		Name: cname,
+		Id:               bson.ObjectIdHex(cid),
+		Name:             cname,
+		SwarmContainerId: scid,
 	}
 
 	utils.GetMgoCollections(ctx, w, []string{"application", "container_audit_trace", "container_audit_log", "container"}, func(cs map[string]*mgo.Collection) {
@@ -334,7 +336,7 @@ func validateSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		rlt := ValidateSSHSessionResponse{
 			Result:    "OK",
 			Status:    1,
-			Container: cid,
+			Container: scid,
 		}
 
 		HttpOK(w, rlt)

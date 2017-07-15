@@ -322,7 +322,7 @@ func getContainerSSHInfo(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 type ApplicationScaleRequest struct {
 	ServiceName  string
-	ReplicaCount int
+	ReplicaCount int `json:",string"`
 }
 
 func scaleApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -354,6 +354,7 @@ func scaleApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		found := false
 		for i, _ := range app.Services {
 			if app.Services[i].Name == req.ServiceName {
+				app.Services[i].ReplicaCount = req.ReplicaCount
 				found = true
 				break
 			}
@@ -372,6 +373,18 @@ func scaleApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 			}
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		// update Application table
+
+		selector := bson.M{"_id": bson.ObjectIdHex(id), "service.name": req.ServiceName}
+
+		updator := bson.M{"$set": bson.M{"service.$.replicacount": req.ReplicaCount}}
+
+		if err := colApplication.Update(selector, updator); err != nil {
+			HttpError(w, fmt.Sprintf("更新Applicatiion失败，error:%s", err.Error()), http.StatusInternalServerError)
+			return
+
 		}
 
 		if err := application.ScaleApplication(ctx, app, pool, map[string]int{
@@ -410,7 +423,7 @@ func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	template := &types.Template{}
 
 	utils.GetMgoCollections(ctx, w, []string{"application", "pool", "template"}, func(cs map[string]*mgo.Collection) {
-		colApplication, _ := cs["app"]
+		colApplication, _ := cs["application"]
 
 		if err := colApplication.FindId(bson.ObjectIdHex(id)).One(app); err != nil {
 			if err == mgo.ErrNotFound {

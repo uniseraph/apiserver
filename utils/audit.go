@@ -14,7 +14,7 @@ import (
 /*
 	生成登录SSH用的临时唯一Token
 */
-func CreateSSHSession(ctx context.Context, cname string, cid string, aid string, sname string, user *types.User, pool *types.PoolInfo) (token string, err error) {
+func CreateSSHSession(ctx context.Context, cname string, cid string, scid string, aid string, sname string, user *types.User, pool *types.PoolInfo) (token string, err error) {
 	redis, err := GetRedisClient(ctx)
 	if err != nil {
 		return "", err
@@ -31,6 +31,7 @@ func CreateSSHSession(ctx context.Context, cname string, cid string, aid string,
 	rdsContent := map[string]interface{}{
 		"cname": cname,
 		"cid":   cid,
+		"scid":  scid,
 		"uid":   user.Id.Hex(),
 		"uname": user.Name,
 		"pname": pool.Name,

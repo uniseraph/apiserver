@@ -394,7 +394,7 @@
 
           api.UpdateEnvDir(this.SelectedDir).then(data => {
             this.UpdateDirDlg = false;
-            this.init();
+            this.init(data.Id);
           });
         });
       },

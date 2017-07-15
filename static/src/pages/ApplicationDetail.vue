@@ -171,10 +171,13 @@
                     @input="rules.Services[item.Id].ReplicaCount = rules0.Services.ReplicaCount"
                   ></v-text-field>
                 </v-flex>
-                <v-flex xs2>
+                <v-flex xs2 v-if="!Scaling">
                   <v-btn outline small class="green--text green--lighten-2" @click.native="updateReplicaCount(item)">
                       修改
                   </v-btn>
+                </v-flex>
+                <v-flex xs2 v-if="Scaling">
+                  <v-progress-linear v-bind:indeterminate="true"></v-progress-linear>
                 </v-flex>
                 <v-flex xs2>
                 </v-flex>
@@ -467,6 +470,8 @@
         AuthorizeToTeam: null,
         AuthorizeToUser: null,
 
+        Scaling: false,
+
         rules: {
           Services: []
         },
@@ -564,12 +569,16 @@
 
       updateReplicaCount(s) {
         ui.showAlertAt('Service_' + s.Id);
+        this.Scaling = true;
         api.ScaleService({
           Id: this.Id,
           ServiceName: s.Name,
           ReplicaCount: s.ReplicaCount
         }).then(data => {
           ui.alert('容器个数更新成功', 'success');
+          this.Scaling = false;
+        }, err => {
+          this.Scaling = false;
         })
       },
 

@@ -27,8 +27,9 @@ type ContainerAuditService struct {
 }
 
 type ContainerAuditContainer struct {
-	Id   bson.ObjectId "_id"
-	Name string
+	Id               bson.ObjectId "_id"
+	SwarmContainerId string
+	Name             string
 }
 
 //容器审计的跟踪模型

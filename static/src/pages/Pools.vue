@@ -118,7 +118,6 @@
         no-data-text=""
       >
         <template slot="items" scope="props">
-          <td>{{ props.item.Id }}</td>
           <td><router-link :to="'/pools/' + props.item.Id">{{ props.item.Name }}</router-link></td>
           <td>{{ props.item.EnvTreeName }}</td>
           <td>{{ props.item.Driver }}</td>
@@ -133,6 +132,9 @@
             {{ props.item.Disk }}
           </td>
           <td>
+            <v-btn outline small icon class="green green--text" @click.native="refreshPool(props.item)" title="删除集群">
+              <v-icon>refresh</v-icon>
+            </v-btn>
             <v-btn outline small icon class="orange orange--text" @click.native="confirmBeforeRemove(props.item)" title="删除集群">
               <v-icon>close</v-icon>
             </v-btn>
@@ -152,7 +154,6 @@
     data() {
       return {
         headers: [
-          { text: 'ID', sortable: false, left: true },
           { text: '名称', sortable: false, left: true },
           { text: '参数目录', sortable: false, left: true },
           { text: '驱动类型', sortable: false, left: true },
@@ -257,6 +258,12 @@
       removePool() {
         this.RemoveConfirmDlg = false;
         api.RemovePool(this.SelectedPool.Id).then(data => {
+          this.init();
+        })
+      },
+
+      refreshPool(pool) {
+        api.RefreshPool(pool.Id).then(data => {
           this.init();
         })
       }
