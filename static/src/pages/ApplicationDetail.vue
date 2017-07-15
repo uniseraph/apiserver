@@ -513,11 +513,11 @@
           this.volumnIdStart = 0;
           this.labelIdStart = 0;
 
-          this.Id = data.Id;
-          this.Title = data.Title;
-          this.Name = data.Name;
-          this.Version = data.Version;
-          this.Description = data.Description;
+          this.Id = data.Application.Id;
+          this.Title = data.Application.Title;
+          this.Name = data.Application.Name;
+          this.Version = data.Application.Version;
+          this.Description = data.Application.Description;
 
           let rules = {
             Title: this.rules0.Title,
@@ -526,10 +526,11 @@
             Services: []
           };
 
-          if (!data.Services) {
-            data.Services = [];
+          let services = data.Application.Services;
+          if (!services) {
+            services = [];
           } else {
-            for (let st of data.Services) {
+            for (let st of services) {
               st.index = st.Id = this.svcIdStart++;
               st.hidden = true;
 
@@ -542,7 +543,7 @@
           }
 
           this.rules = rules;
-          this.Services = data.Services;
+          this.Services = services;
 
           this.AuthorizedTeamList = data.Teams ? data.Teams : [];
           this.AuthorizedUserList = data.Users ? data.Users : [];
@@ -601,7 +602,7 @@
 
       removeTeam(team) {
         ui.showAlertAt('Authorization');
-        api.RemoveUserFromApplication({ Id: this.Id, TeamId: team.Id }).then(data => {
+        api.RemoveTeamFromApplication({ Id: this.Id, TeamId: team.Id }).then(data => {
             this.init();
           })
       },

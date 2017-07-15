@@ -58,7 +58,7 @@
           <td>{{ props.item.UpdatedTime | formatDateTime }}</td>
           <td>{{ props.item.UpdaterName }}</td>
           <td>
-            <v-btn v-if="props.item.Status==='running'" outline small icon class="red red--text" @click.native="stopApplicatoin(props.item)" title="停止应用">
+            <v-btn v-if="props.item.Status==='running'" outline small icon class="red red--text" @click.native="stopApplication(props.item)" title="停止应用">
               <v-icon>pause</v-icon>
             </v-btn>
             <v-btn v-if="props.item.Status==='stopped'" outline small icon class="blue blue--text" @click.native="startApplication(props.item)" title="启动应用">

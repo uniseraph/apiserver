@@ -190,11 +190,11 @@
     methods: {
       init() {
         api.Application(this.Id).then(data => {
-          this.Id = data.Id;
-          this.Title = data.Title;
-          this.Name = data.Name;
+          this.Id = data.Application.Id;
+          this.Title = data.Application.Title;
+          this.Name = data.Application.Name;
           this.Version = data.Version;
-          this.Description = data.Description;
+          this.Description = data.Application.Description;
 
           this.getDataFromApi();
         });

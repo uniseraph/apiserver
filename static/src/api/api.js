@@ -48,7 +48,11 @@ export default {
     },
 
     Login(params) {
-        return fetch('/users/' + encodeURIComponent(params.Name) + '/login?Pass=' + encodeURIComponent(params.Pass), params);
+        return fetch('/session/' + encodeURIComponent(params.Name) + '/login?Pass=' + encodeURIComponent(params.Pass), params);
+    },
+
+    Logout() {
+        return fetch('/session/logout');
     },
 
     Pools(params) {
@@ -284,7 +288,7 @@ export default {
         return fetch('/applications/' + params.Id + '/add-team?TeamId=' + params.TeamId);
     },
 
-    RemoveUserToApplication(params) {
+    RemoveTeamFromApplication(params) {
         return fetch('/applications/' + params.Id + '/remove-team?TeamId=' + params.TeamId);
     },
 
@@ -292,7 +296,7 @@ export default {
         return fetch('/applications/' + params.Id + '/add-user?UserId=' + params.UserId);
     },
 
-    RemoveUserToApplication(params) {
+    RemoveUserFromApplication(params) {
         return fetch('/applications/' + params.Id + '/remove-user?UserId=' + params.UserId);
     },
 

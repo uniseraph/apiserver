@@ -97,6 +97,7 @@
             <v-flex v-if="Submitting" xs12 mt-4 class="text-md-center">
               <v-progress-linear v-bind:indeterminate="true"></v-progress-linear>
             </v-flex>
+          </v-layout>
         </v-container>
       </div>
     </div>
