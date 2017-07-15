@@ -93,6 +93,7 @@ var routes = map[string]map[string]*MyHandler{
 		"/pools/{id:.*}/add-user":    &MyHandler{h: addPoolMember, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/pools/{id:.*}/remove-user": &MyHandler{h: removePoolMember, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/pools/{id:.*}/update":      &MyHandler{h: updatePool, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
+		"/pools/{id:.*}/remove":      &MyHandler{h: deletePool, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 
 		"/users/{name:.*}/login":   &MyHandler{h: postSessionCreate},
 		"/users/current":           &MyHandler{h: getUserCurrent, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
