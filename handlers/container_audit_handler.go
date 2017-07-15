@@ -432,6 +432,21 @@ func createAuditLog(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			}
 		}
 
+		var output string
+		//处理输入字符串特别长的情况
+		if len(req.Output) > 8000 {
+			//不考虑中文字符被截断的情况
+			//顶多被前后各截断1个汉字
+			//没必要转换成rune的slice然后再处理，性能开销的性价比不高
+
+			//取前4k字符
+			prefixStr := req.Output[:4000]
+			//取后4k字符
+			suffixStr := req.Output[(len(req.Output) - 4000):]
+
+			output = prefixStr + "\n......\n" + suffixStr
+		}
+
 		audit := types.ContainerAuditLog{
 			Id:        bson.NewObjectId(),
 			Ip:        req.Ip,
@@ -440,7 +455,7 @@ func createAuditLog(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			Detail: types.ContainerAuditLogOperationDetail{
 				Command:   cmd,
 				Arguments: args,
-				Stdout:    req.Output,
+				Stdout:    output,
 			},
 
 			CreatedTime: time.Now().Unix(),

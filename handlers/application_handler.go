@@ -597,24 +597,96 @@ func startApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 }
 
+type ApplicationInspectResponseUser struct {
+	Id   string
+	Name string
+}
+
+type ApplicationInspectResponseTeam struct {
+	Id   string
+	Name string
+}
+
+type ApplicationInspectResponse struct {
+	Application types.Application
+	Users       []ApplicationInspectResponseUser
+	Teams       []ApplicationInspectResponseTeam
+}
+
 func getApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-
 	id := mux.Vars(r)["id"]
-	utils.GetMgoCollections(ctx, w, []string{"application"}, func(cs map[string]*mgo.Collection) {
 
-		resp := &types.Application{}
+	utils.GetMgoCollections(ctx, w, []string{"application", "team", "user"}, func(cs map[string]*mgo.Collection) {
+		app := types.Application{}
+		if err := cs["pool"].Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&app); err != nil {
 
-		if err := cs["application"].FindId(bson.ObjectIdHex(id)).One(resp); err != nil {
 			if err == mgo.ErrNotFound {
-				HttpError(w, "没有这样的应用", http.StatusNotFound)
+				// 对错误类型进行区分，有可能只是没有这个application，不应该用500错误
+				HttpError(w, err.Error(), http.StatusNotFound)
 				return
 			}
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		HttpOK(w, resp)
-	})
 
+		var selector bson.M
+
+		//查找该app所在的Team
+		teams := make([]types.Team, 0, 10)
+		selector = bson.M{
+			"applicationids": bson.M{
+				"$in": bson.ObjectIdHex(id),
+			},
+		}
+		if err := cs["team"].Find(selector).All(&teams); err != nil {
+
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		//查找该app所在的User
+		users := make([]types.User, 0, 10)
+		selector = bson.M{
+			"applicationids": bson.M{
+				"$in": bson.ObjectIdHex(id),
+			},
+		}
+		if err := cs["user"].Find(selector).All(&users); err != nil {
+
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		//整理数据格式
+		rlt := ApplicationInspectResponse{}
+		rlt.Application = app
+		rlt.Teams = make([]ApplicationInspectResponseTeam, 0, len(teams))
+		for _, t := range teams {
+			rt := ApplicationInspectResponseTeam{
+				Id:   t.Id.Hex(),
+				Name: t.Name,
+			}
+			rlt.Teams = append(rlt.Teams, rt)
+		}
+		rlt.Users = make([]ApplicationInspectResponseUser, 0, len(users))
+		for _, u := range users {
+			ru := ApplicationInspectResponseUser{
+				Id:   u.Id.Hex(),
+				Name: u.Name,
+			}
+			rlt.Users = append(rlt.Users, ru)
+		}
+
+		HttpOK(w, rlt)
+	})
 }
 
 func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
