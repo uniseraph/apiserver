@@ -65,7 +65,7 @@ func RemoveSSHSession(ctx context.Context, token string) (err error) {
 
 //格式化返回的SSH连接字符串
 func GenerateSSHToken(token string, pool *types.PoolInfo) (ssh string) {
-	return fmt.Sprintf("ssh -p %s %s@%s", pool.TunneldPort, token, pool.TunneldAddr)
+	return fmt.Sprintf("ssh -p %d %s@%s", pool.TunneldPort, token, pool.TunneldAddr)
 }
 
 //从SSH字符串中，解析出Redis中的KEY

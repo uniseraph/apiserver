@@ -531,7 +531,7 @@ func getTreeValues(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		//如果有name参数
 		//则按照前缀匹配进行正则查找
 		if len(req.Name) > 0 {
-			data["name"] = bson.RegEx{fmt.Sprintf("%s*", req.Name), ""}
+			data["name"] = bson.M{"$regex": bson.RegEx{Pattern: fmt.Sprintf("^%s", req.Name), Options: "i"}}
 		}
 
 		//查询所有条件匹配参数值的总数
@@ -758,7 +758,6 @@ func getTreeValueDetails(ctx context.Context, w http.ResponseWriter, r *http.Req
 }
 
 //创建一个参数名称
-//TODO
 //参数名称在一个树中唯一
 //要对Mongo建唯一性索引
 //要处理唯一性索引的错误，提示用户不该输入冲突的Name
