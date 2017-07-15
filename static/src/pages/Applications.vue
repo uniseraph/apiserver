@@ -114,15 +114,10 @@
     },
 
     watch: {
-        pagination: {
-          handler(v, o) {
-            if (v.rowsPerPage != o.rowsPerPage || v.page != o.page || v.sortBy != o.sortBy || v.descending != o.descending) {
-              this.getDataFromApi();
-            }
-          },
-
-          deep: true
-        }
+      'pagination.rowsPerPage': 'paginationChanged',
+      'pagination.page': 'paginationChanged',
+      'pagination.sortBy': 'paginationChanged',
+      'pagination.descending': 'paginationChanged'
     },
 
     mounted() {
@@ -139,6 +134,12 @@
 
           this.getDataFromApi();
         })  
+      },
+
+      paginationChanged(v, o) {
+        if (v != o) {
+          this.getDataFromApi();
+        }
       },
 
       poolChanged(id) {
