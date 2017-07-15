@@ -674,13 +674,13 @@ func stopApplication(ctx context.Context, w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		services := make([]string, len(app.Services))
+		services := make([]string,0, len(app.Services))
 
 		for i, _ := range app.Services {
 			services = append(services, app.Services[i].Name)
 		}
 
-		logrus.WithFields(logrus.Fields{"services":services}).Debug("stop these servicee")
+		logrus.WithFields(logrus.Fields{"services":services}).Debug("stop these services")
 
 		if err := application.StopApplication(ctx, app, pool, services); err != nil {
 			HttpError(w, "停止应用失败："+err.Error(), http.StatusInternalServerError)
@@ -713,7 +713,7 @@ func restartApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 func startApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	id := mux.Vars(r)["id"]
-	utils.GetMgoCollections(ctx, w, []string{"application"}, func(cs map[string]*mgo.Collection) {
+	utils.GetMgoCollections(ctx, w, []string{"application","pool"}, func(cs map[string]*mgo.Collection) {
 
 		app := &types.Application{}
 
@@ -739,7 +739,7 @@ func startApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 			return
 		}
 
-		services := make([]string, len(app.Services))
+		services := make([]string, 0,len(app.Services))
 
 		for i, _ := range app.Services {
 			services = append(services, app.Services[i].Name)
