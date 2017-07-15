@@ -478,12 +478,16 @@ func scaleApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		}
 
 		// update Application table
+		//selector := bson.M{"_id":bson.ObjectIdHex(id) , "services.name":req.ServiceName}
+		//
+		//if err := colApplication.Update( selector   ,
+		//			bson.M{"services.$.replicacount":req.ReplicaCount}); err != nil {
+		//	HttpError(w, fmt.Sprintf("更新Applicatiion失败，error:%s", err.Error()), http.StatusInternalServerError)
+		//	return
+		//
+		//}
 
-		//selector := bson.M{"_id": bson.ObjectIdHex(id), "service.name": req.ServiceName}
-
-		updator :=   bson.M{"service.name":req.ServiceName, "service.$.replicacount": req.ReplicaCount}
-
-		if err := colApplication.UpdateId(bson.ObjectIdHex(id) , updator); err != nil {
+		if err := colApplication.Update( bson.M{"_id":bson.ObjectIdHex(id)}   , app); err != nil {
 			HttpError(w, fmt.Sprintf("更新Applicatiion失败，error:%s", err.Error()), http.StatusInternalServerError)
 			return
 
@@ -676,6 +680,8 @@ func stopApplication(ctx context.Context, w http.ResponseWriter, r *http.Request
 			services = append(services, app.Services[i].Name)
 		}
 
+		logrus.WithFields(logrus.Fields{"services":services}).Debug("stop these servicee")
+
 		if err := application.StopApplication(ctx, app, pool, services); err != nil {
 			HttpError(w, "停止应用失败："+err.Error(), http.StatusInternalServerError)
 			return
@@ -851,7 +857,7 @@ func getApplication(ctx context.Context, w http.ResponseWriter, r *http.Request)
 }
 
 type ApplicationRollbackRequest struct {
-	DeploymentId string `json:DeploymentHistoryId",omitempty"`
+	DeploymentHistoryId string
 }
 
 type ApplicationRollbackResponse struct {
@@ -869,7 +875,7 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 		HttpError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	id := mux.Vars(r)["id"]
+	//id := mux.Vars(r)["id"]
 
 	deployment := &types.Deployment{}
 	pool := &types.PoolInfo{}
@@ -880,9 +886,9 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 		colDeployment, _ := cs["deployment"]
 		colPool, _ := cs["pool"]
 
-		if err := colDeployment.FindId(bson.ObjectIdHex(req.DeploymentId)).One(deployment); err != nil {
+		if err := colDeployment.FindId(bson.ObjectIdHex(req.DeploymentHistoryId)).One(deployment); err != nil {
 			if err == mgo.ErrNotFound {
-				HttpError(w, fmt.Sprintf("no such a deployment:%s", id), http.StatusNotFound)
+				HttpError(w, fmt.Sprintf("no such a deployment:%s", req.DeploymentHistoryId), http.StatusNotFound)
 				return
 			}
 

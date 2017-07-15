@@ -434,6 +434,8 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 	//docker inspect 查容器的具体信息
 	flushContainerInfo(ctx, container)
 
+
+
 	if err := mgoSession.DB(mgoDB).C("container").Insert(container); err != nil {
 
 		logrus.WithFields(logrus.Fields{"container": container, "error": err}).Debug("postContainersCreate::after insert container table error")

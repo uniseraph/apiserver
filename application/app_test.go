@@ -39,7 +39,7 @@ func TestCreateApplication(t *testing.T) {
 		},
 	}
 	pool1 := &types.PoolInfo{
-		ProxyEndpoint: "tcp://127.0.0.1:58589",
+		ProxyEndpoint: "tcp://127.0.0.1:53351",
 		DriverOpts: types.DriverOpts{
 			APIVersion: "v1.23",
 		},
@@ -83,6 +83,15 @@ func TestCreateApplication(t *testing.T) {
 	}
 
 	result, err := application.ListContainers(ctx,app1, pool1, []string{"nginx"})
+	if err != nil {
+		t.Error(err.Error())
+		return
+	} else {
+		t.Log(result)
+	}
+
+
+	 err = application.StopApplication(ctx,app1,pool1,[]string{"nginx"})
 	if err != nil {
 		t.Error(err.Error())
 		return

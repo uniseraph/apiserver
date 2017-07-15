@@ -152,7 +152,7 @@ type Service struct {
 }
 
 type Port struct {
-	SourcePort     int
+	SourcePort     int     `json:",string"`
 	LoadBalancerId string
 }
 type Env struct {
