@@ -226,7 +226,7 @@ func getApplicationHistory(ctx context.Context, w http.ResponseWriter, r *http.R
 	//TODO 权限控制
 	result := ApplicationHisotryResponse{}
 
-	deployments := make([]*types.Deployment, 100)
+	deployments := make([]*types.Deployment,0, 100)
 
 	utils.GetMgoCollections(ctx, w, []string{"deployment"}, func(cs map[string]*mgo.Collection) {
 
@@ -479,11 +479,11 @@ func scaleApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 		// update Application table
 
-		selector := bson.M{"_id": bson.ObjectIdHex(id), "service.name": req.ServiceName}
+		//selector := bson.M{"_id": bson.ObjectIdHex(id), "service.name": req.ServiceName}
 
-		updator := bson.M{"$set": bson.M{"service.$.replicacount": req.ReplicaCount}}
+		updator :=   bson.M{"service.name":req.ServiceName, "service.$.replicacount": req.ReplicaCount}
 
-		if err := colApplication.Update(selector, updator); err != nil {
+		if err := colApplication.UpdateId(bson.ObjectIdHex(id) , updator); err != nil {
 			HttpError(w, fmt.Sprintf("更新Applicatiion失败，error:%s", err.Error()), http.StatusInternalServerError)
 			return
 
