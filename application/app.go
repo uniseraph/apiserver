@@ -34,6 +34,10 @@ func UpApplication(ctx context.Context, app *types.Application, pool *types.Pool
 	if err != nil {
 		return err
 	}
+
+
+
+
 	return nil
 
 }

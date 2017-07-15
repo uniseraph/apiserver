@@ -151,8 +151,7 @@ var routes = map[string]map[string]*MyHandler{
 		"/audit/log/update": &MyHandler{h: updateAuditLog, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/audit/list":       &MyHandler{h: getAuditList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 
-		"/containers/list": &MyHandler{h: getContainerList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-
+		"/containers/list":                         &MyHandler{h: getContainerList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 		"/applications/list":                       &MyHandler{h: getApplicationList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 		"/applications/{id:.*}/inspect":            &MyHandler{h: getApplication, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 		"/applications/{id:.*}/detail":             &MyHandler{h: getApplication, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
@@ -170,6 +169,7 @@ var routes = map[string]map[string]*MyHandler{
 		"/applications/{id:.*}/remove-user":        &MyHandler{h: removeApplicationMember, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/applications/{id:.*}/containers/list":    &MyHandler{h: getContainerList, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 		"/applications/containers/{id:.*}/restart": &MyHandler{h: restartContainer, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/applications/{id:.*}/remove":             &MyHandler{h: removeApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 
 		"/templates/list":            &MyHandler{h: getTemplateList},
 		"/templates/{id:.*}/inspect": &MyHandler{h: getTemplate},
