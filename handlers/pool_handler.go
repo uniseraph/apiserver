@@ -54,9 +54,7 @@ func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		//查找该pool所在的Team
 		teams := make([]types.Team, 0, 10)
 		selector = bson.M{
-			"poolids": bson.M{
-				"$in": []bson.ObjectId{bson.ObjectIdHex(id)},
-			},
+			"poolids": bson.ObjectIdHex(id),
 		}
 		if err := cs["team"].Find(selector).All(&teams); err != nil {
 
@@ -71,9 +69,7 @@ func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		//查找该pool所在的User
 		users := make([]types.User, 0, 10)
 		selector = bson.M{
-			"poolids": bson.M{
-				"$in": bson.ObjectIdHex(id),
-			},
+			"poolids": bson.ObjectIdHex(id),
 		}
 		if err := cs["user"].Find(selector).All(&users); err != nil {
 
