@@ -823,8 +823,20 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		//TODO
-		result := ApplicationRollbackResponse{}
+		currentUser, _ := utils.GetCurrentUser(ctx)
+		result := ApplicationRollbackResponse{
+			Id:                    app.Id.Hex(),
+			PoolId:                pool.Id.Hex(),
+			ApplicationTemplateId: app.TemplateId,
+			Title:       app.Title,
+			Name:        app.Name,
+			Version:     app.Version,
+			Status:      "running",
+			Description: app.Description,
+			UpdatorId:   currentUser.Id.Hex(),
+			UpdatorName: currentUser.Name,
+			UpdatedTime: time.Now().Unix(),
+		}
 		HttpOK(w, result)
 	})
 
