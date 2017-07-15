@@ -183,6 +183,100 @@ func mergeServices(ctx context.Context, services []types.Service, pool *types.Po
 
 }
 
+type ApplicationHistoryRequest struct {
+	PageRequest
+}
+
+type ApplicationHistory struct {
+	Id            string
+	ApplicationId string
+	Version       string
+
+	OperationType string
+	CreatorId     string
+	Creator       string
+	CreatedTime   int64
+}
+
+type ApplicationHisotryResponse struct {
+	PageResponse
+	Data []*ApplicationHistory
+}
+
+func getApplicationHistory(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+	req := &ApplicationHistoryRequest{}
+
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	id := mux.Vars(r)["id"]
+
+	if req.Page == 0 {
+		HttpError(w, "从第一页开始", http.StatusBadRequest)
+		return
+	}
+
+	if req.PageSize == 0 {
+		req.PageSize = 20
+	}
+
+	//TODO 权限控制
+	result := ApplicationHisotryResponse{}
+
+	deployments := make([]*types.Deployment, 100)
+
+	utils.GetMgoCollections(ctx, w, []string{"deployment"}, func(cs map[string]*mgo.Collection) {
+
+		colDeployment, _ := cs["deployment"]
+
+		selector := bson.M{"applicationid": bson.ObjectIdHex(id)}
+
+		total, err := colDeployment.Find(selector).Count()
+		if err != nil {
+			HttpError(w, fmt.Sprintf("查询记录数出错，%s", err.Error()), http.StatusInternalServerError)
+			return
+		}
+
+		logrus.Debugf("getApplication::符合条件的deployment有%d个", total)
+
+		if err := colDeployment.Find(selector).Sort("createdtime").Limit(req.PageSize).Skip(req.PageSize * (req.Page - 1)).All(deployments); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		currentUser, _ := utils.GetCurrentUser(ctx)
+
+		result.Total = total
+		result.Keyword = req.Keyword
+		result.Page = req.Page
+		result.PageSize = req.PageSize
+		result.PageCount = total / result.PageSize
+
+		result.Data = make([]*ApplicationHistory, len(deployments))
+
+		for i, _ := range deployments {
+			result.Data[i] = &ApplicationHistory{
+				Id:            deployments[i].Id.Hex(),
+				ApplicationId: deployments[i].ApplicationId,
+				Version:       deployments[i].App.Version,
+
+				OperationType: deployments[i].OperationType,
+				CreatorId:     currentUser.Id.Hex(),
+				Creator:       currentUser.Name,
+				CreatedTime:   time.Now().Unix(),
+			}
+
+		}
+
+		HttpOK(w, result)
+
+	})
+
+}
+
 //PoolId -- 集群ID
 //Keyword -- Title或Name前缀搜索，可以为空
 //PageSize -- 每页显示多少条
@@ -199,9 +293,6 @@ type ApplicationListResponse struct {
 	Data []*types.Application
 }
 
-func getApplicationHistory(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-
-}
 func getApplicationList(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	req := &ApplicationListRequest{}
