@@ -152,6 +152,9 @@ func cleanUpDatabase() {
 		{"mongo", "zanecloud --eval \"db.env_tree_node_param_value.remove({})\""},
 		{"mongo", "zanecloud --eval \"db.env_tree_node_param_key.remove({})\""},
 		{"mongo", "zanecloud --eval \"db.template.remove({})\""},
+		{"mongo", "zanecloud --eval \"db.application.remove({})\""},
+		{"mongo", "zanecloud --eval \"db.deployment.remove({})\""},
+
 	}
 
 	for _, arr := range cmds {

@@ -28,7 +28,7 @@ import (
 */
 
 type CreateSSHSessionResponse struct {
-	Token string
+	Command string
 }
 
 func createSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -138,7 +138,7 @@ func createSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 		ssh := utils.GenerateSSHToken(token, pool)
 		rsp := CreateSSHSessionResponse{
-			Token: ssh,
+			Command: ssh,
 		}
 		HttpOK(w, rsp)
 
@@ -488,8 +488,8 @@ func updateAuditLog(ctx context.Context, w http.ResponseWriter, r *http.Request)
 */
 
 type GetAuditListRequest struct {
-	StartTime     string
-	EndTime       string
+	StartTime     string `json:",int"`
+	EndTime       string `json:",int"`
 	UserId        string
 	IP            string
 	Operation     string

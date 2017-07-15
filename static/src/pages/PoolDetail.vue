@@ -287,16 +287,16 @@
     methods: {
       init() {
         api.Pool(this.Id).then(data => {
-          this.Id = data.Id;
-          this.Name = data.Name;
-          this.EnvTreeId = data.EnvTreeId;
-          this.EnvTreeName = data.EnvTreeName;
-          this.Driver = data.Driver;
-          this.DriverOpts = data.DriverOpts;
-          this.Nodes = data.Nodes;
-          this.CPUs = data.CPUs;
-          this.Memory = data.Memory;
-          this.Disk = data.Disk;
+          this.Id = data.Pool.Id;
+          this.Name = data.Pool.Name;
+          this.EnvTreeId = data.Pool.EnvTreeId;
+          this.EnvTreeName = data.Pool.EnvTreeName;
+          this.Driver = data.Pool.Driver;
+          this.DriverOpts = data.Pool.DriverOpts;
+          this.Nodes = data.Pool.Nodes;
+          this.CPUs = data.Pool.CPUs;
+          this.Memory = data.Pool.Memory;
+          this.Disk = data.Pool.Disk;
           this.AuthorizedTeamList = data.Teams ? data.Teams : [];
           this.AuthorizedUserList = data.Users ? data.Users : [];
           this.AuthorizeToTeam = null;
@@ -348,7 +348,7 @@
       },
 
       removeTeam(team) {
-        api.RemoveUserFromPool({ Id: this.Id, TeamId: team.Id }).then(data => {
+        api.RemoveTeamFromPool({ Id: this.Id, TeamId: team.Id }).then(data => {
             this.init();
           })
       },
