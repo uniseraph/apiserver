@@ -25,7 +25,7 @@ func CreateSSHSession(ctx context.Context, cname string, cid string, scid string
 		return "", err
 	}
 	//去掉uuid的横线
-	r := strings.NewReplacer("-", "_")
+	r := strings.NewReplacer("-", "")
 	rdsKey := r.Replace(sessionUUID.String())
 
 	rdsContent := map[string]interface{}{

@@ -11,7 +11,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
-	"strconv"
+	//"strconv"
 	"strings"
 	"time"
 )
@@ -202,6 +202,7 @@ func validateSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Requ
 				return
 			}
 		})
+		HttpError(w, "验证登录失败，Token已失效。", http.StatusInternalServerError)
 		return
 	}
 
@@ -488,8 +489,8 @@ func updateAuditLog(ctx context.Context, w http.ResponseWriter, r *http.Request)
 */
 
 type GetAuditListRequest struct {
-	StartTime     string `json:",int"`
-	EndTime       string `json:",int"`
+	StartTime     int64 `json:",int"`
+	EndTime       int64 `json:",int"`
 	UserId        string
 	IP            string
 	Operation     string
@@ -548,25 +549,36 @@ func getAuditList(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	selector := bson.M{}
 
 	//设定时间查询条件
-	if len(req.StartTime) > 0 || len(req.EndTime) > 0 {
+	//if len(req.StartTime) > 0 || len(req.EndTime) > 0 {
+	if req.StartTime > 0 || req.EndTime > 0 {
 		createdtime := bson.M{}
 
-		if len(req.StartTime) > 0 {
-			i, err := strconv.ParseInt(req.StartTime, 10, 64)
-			if err != nil {
-				panic(err)
-			}
-			tm := time.Unix(i, 0)
+		if req.StartTime > 0 {
+			tm := time.Unix(req.StartTime, 0)
 			createdtime["$gte"] = tm
 		}
-		if len(req.EndTime) > 0 {
-			i, err := strconv.ParseInt(req.EndTime, 10, 64)
-			if err != nil {
-				panic(err)
-			}
-			tm := time.Unix(i, 0)
+
+		if req.EndTime > 0 {
+			tm := time.Unix(req.EndTime, 0)
 			createdtime["$lt"] = tm
 		}
+
+		//if len(req.StartTime) > 0 {
+		//	i, err := strconv.ParseInt(req.StartTime, 10, 64)
+		//	if err != nil {
+		//		panic(err)
+		//	}
+		//	tm := time.Unix(i, 0)
+		//	createdtime["$gte"] = tm
+		//}
+		//if len(req.EndTime) > 0 {
+		//	i, err := strconv.ParseInt(req.EndTime, 10, 64)
+		//	if err != nil {
+		//		panic(err)
+		//	}
+		//	tm := time.Unix(i, 0)
+		//	createdtime["$lt"] = tm
+		//}
 
 		selector["createdtime"] = createdtime
 	}

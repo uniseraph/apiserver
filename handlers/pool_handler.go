@@ -699,7 +699,7 @@ func updatePool(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		data := bson.M{}
 		data["name"] = req.Name
 
-		if err := cs["pool"].UpdateId(bson.ObjectIdHex(id), data); err != nil {
+		if err := cs["pool"].UpdateId(bson.ObjectIdHex(id), bson.M{"$set": data}); err != nil {
 			if err == mgo.ErrNotFound {
 				HttpError(w, err.Error(), http.StatusNotFound)
 				return

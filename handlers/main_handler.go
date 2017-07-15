@@ -69,9 +69,9 @@ var routes = map[string]map[string]*MyHandler{
 		*/
 
 		"/audit/ssh":        &MyHandler{h: createSSHSession, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/audit/login":      &MyHandler{h: validateSSHSession, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/audit/log":        &MyHandler{h: createAuditLog, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/audit/log/update": &MyHandler{h: updateAuditLog, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/audit/login":      &MyHandler{h: validateSSHSession},
+		"/audit/log":        &MyHandler{h: createAuditLog},
+		"/audit/log/update": &MyHandler{h: updateAuditLog},
 		"/audit/list":       &MyHandler{h: getAuditList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 
 		/*
@@ -148,9 +148,9 @@ var routes = map[string]map[string]*MyHandler{
 		*/
 
 		"/audit/ssh":        &MyHandler{h: createSSHSession, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/audit/login":      &MyHandler{h: validateSSHSession, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/audit/log":        &MyHandler{h: createAuditLog, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
-		"/audit/log/update": &MyHandler{h: updateAuditLog, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/audit/login":      &MyHandler{h: validateSSHSession},
+		"/audit/log":        &MyHandler{h: createAuditLog},
+		"/audit/log/update": &MyHandler{h: updateAuditLog},
 		"/audit/list":       &MyHandler{h: getAuditList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 
 		"/containers/list":                         &MyHandler{h: getContainerList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
