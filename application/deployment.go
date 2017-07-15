@@ -20,6 +20,7 @@ func AddDeploymentLog(ctx context.Context, app *types.Application, pool *types.P
 		PoolId:             pool.Id.Hex(),
 		CreatedTime:        time.Now().Unix(),
 		CreatorId:          user.Id.Hex(),
+		App: app,
 		Opts:               opts,
 	}
 
@@ -28,7 +29,6 @@ func AddDeploymentLog(ctx context.Context, app *types.Application, pool *types.P
 
 		if err := colDeployment.Insert(deployment); err != nil {
 			return err
-
 		}
 		return nil
 	}

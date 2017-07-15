@@ -111,8 +111,16 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	if err := application.ScaleApplication(ctx, app, pool, m); err != nil {
-		//	//TODO 需要删除所有已创建成功的容器？？？
+		//TODO 需要删除所有已创建成功的容器？？？
 
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	currentUser, _ := utils.GetCurrentUser(ctx)
+
+	if err := application.AddDeploymentLog(ctx, app, pool, currentUser, types.DEPLOYMENT_OPERATION_CREATE, nil); err != nil {
+		logrus.WithFields(logrus.Fields{"app": app, "pool": pool, "user": currentUser, "err": err.Error()}).Debug("create app success, save to db err")
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -435,14 +443,64 @@ func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			return
 		}
 
+		if err := application.AddDeploymentLog(ctx, app, pool, currentUser, types.DEPLOYMENT_OPERATION_UPGRADE, nil); err != nil {
+			logrus.WithFields(logrus.Fields{"app": app, "pool": pool, "user": currentUser, "err": err.Error()}).Debug("create app success, save to db err")
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		HttpOK(w, "")
 	})
 
 }
+func removeApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+	utils.GetMgoCollections(ctx, w, []string{"application", "pool"}, func(cs map[string]*mgo.Collection) {
 
+		app := &types.Application{}
+		colApplication, _ := cs["application"]
+		if err := colApplication.FindId(bson.ObjectIdHex(id)).One(app); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, "没有这样的应用", http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if app.Status != "stopped" {
+			HttpError(w, "只能删除stopped状态的应用", http.StatusInternalServerError)
+			return
+		}
+
+		pool := &types.PoolInfo{}
+		colPool, _ := cs["pool"]
+		if err := colPool.FindId(bson.ObjectIdHex(app.PoolId)).One(pool); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, "没有这样的集群Id:"+app.PoolId, http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err := application.DeleteApplication(ctx, app, pool); err != nil {
+			HttpError(w, "删除应用失败："+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err := colApplication.RemoveId(bson.ObjectIdHex(id)); err != nil {
+			HttpError(w, "删除应用记录失败："+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, "")
+
+	})
+}
 func stopApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	utils.GetMgoCollections(ctx, w, []string{"application"}, func(cs map[string]*mgo.Collection) {
+	utils.GetMgoCollections(ctx, w, []string{"application", "pool"}, func(cs map[string]*mgo.Collection) {
 
 		app := &types.Application{}
 
@@ -580,6 +638,75 @@ func getApplication(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 }
 
+type ApplicationRollbackRequest struct {
+	DeploymentId string `json:DeploymentHistoryId",omitempty"`
+}
+
+type ApplicationRollbackResponse struct {
+	Id                                                                string
+	PoolId                                                            string
+	ApplicationTemplateId                                             string
+	Title, Name, Version, Description, Status, UpdatorId, UpdatorName string
+	UpdatedTime                                                       int64
+}
+
 func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+	req := &ApplicationRollbackRequest{}
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	id := mux.Vars(r)["id"]
+
+	deployment := &types.Deployment{}
+	pool := &types.PoolInfo{}
+
+	currentUser, _ := utils.GetCurrentUser(ctx)
+	utils.GetMgoCollections(ctx, w, []string{"deployment", "pool"}, func(cs map[string]*mgo.Collection) {
+
+		colDeployment, _ := cs["deployment"]
+		colPool, _ := cs["pool"]
+
+		if err := colDeployment.FindId(bson.ObjectIdHex(id)).One(deployment); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, fmt.Sprintf("no such a deployment:%s", id), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+
+			return
+		}
+
+		app := deployment.App
+
+		if err := colPool.FindId(bson.ObjectIdHex(deployment.PoolId)).One(pool); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, fmt.Sprintf("no such a poolId:%s", deployment.PoolId), http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err := application.UpApplication(ctx, app, pool); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err := application.AddDeploymentLog(ctx, app, pool, currentUser, types.DEPLOYMENT_OPERATION_ROLLBACK, nil); err != nil {
+			logrus.WithFields(logrus.Fields{"app": app, "pool": pool, "user": currentUser, "err": err.Error()}).
+				Debug("rollback app success, save to db err")
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		//TODO
+		result := ApplicationRollbackResponse{
+
+		}
+		HttpOK(w, result)
+	})
 
 }
