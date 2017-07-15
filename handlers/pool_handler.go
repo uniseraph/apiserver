@@ -17,45 +17,96 @@ import (
 	"time"
 )
 
+type PoolInspectResponseUser struct {
+	Id   string
+	Name string
+}
+
+type PoolInspectResponseTeam struct {
+	Id   string
+	Name string
+}
+
 type PoolInspectResponse struct {
-	types.PoolInfo
-	//EnvTreeName string
+	Pool  types.PoolInfo
+	Users []PoolInspectResponseUser
+	Teams []PoolInspectResponseTeam
 }
 
 func getPoolJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
-	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	utils.GetMgoCollections(ctx, w, []string{"pool", "team", "user"}, func(cs map[string]*mgo.Collection) {
+		pool := types.PoolInfo{}
+		if err := cs["pool"].Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&pool); err != nil {
 
-	if err != nil {
-		//走不到这里的,ctx中必然有mgoSesson
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	defer mgoSession.Close()
-
-	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
-
-	c := mgoSession.DB(mgoDB).C("pool")
-
-	result := types.PoolInfo{}
-	if err := c.Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&result); err != nil {
-
-		if err == mgo.ErrNotFound {
-			// 对错误类型进行区分，有可能只是没有这个pool，不应该用500错误
-			HttpError(w, err.Error(), http.StatusNotFound)
+			if err == mgo.ErrNotFound {
+				// 对错误类型进行区分，有可能只是没有这个pool，不应该用500错误
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 
-	//TODO
+		var selector bson.M
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+		//查找该pool所在的Team
+		teams := make([]types.Team, 0, 10)
+		selector = bson.M{
+			"poolids": bson.M{
+				"$in": bson.ObjectIdHex(id),
+			},
+		}
+		if err := cs["team"].Find(selector).All(&teams); err != nil {
 
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		//查找该pool所在的User
+		users := make([]types.User, 0, 10)
+		selector = bson.M{
+			"poolids": bson.M{
+				"$in": bson.ObjectIdHex(id),
+			},
+		}
+		if err := cs["user"].Find(selector).All(&users); err != nil {
+
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		//整理数据格式
+		rlt := PoolInspectResponse{}
+		rlt.Pool = pool
+		rlt.Teams = make([]PoolInspectResponseTeam, 0, len(teams))
+		for _, t := range teams {
+			rt := PoolInspectResponseTeam{
+				Id:   t.Id.Hex(),
+				Name: t.Name,
+			}
+			rlt.Teams = append(rlt.Teams, rt)
+		}
+		rlt.Users = make([]PoolInspectResponseUser, 0, len(users))
+		for _, u := range users {
+			ru := PoolInspectResponseUser{
+				Id:   u.Id.Hex(),
+				Name: u.Name,
+			}
+			rlt.Users = append(rlt.Users, ru)
+		}
+
+		HttpOK(w, rlt)
+	})
 }
 
 type PoolsRegisterRequest struct {
@@ -73,27 +124,74 @@ type PoolsRegisterResponse struct {
 }
 
 func getPoolsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	utils.GetMgoCollections(ctx, w, []string{"pool", "team"}, func(cs map[string]*mgo.Collection) {
+		poolSelector := bson.M{}
+		poolIds := make([]bson.ObjectId, 0, 20)
 
-	if err != nil {
-		//走不到这里的,ctx中必然有mgoSesson
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer mgoSession.Close()
+		user, err := utils.GetCurrentUser(ctx)
+		if err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
+		/*
+			验证用户是否有权访问集群
+		*/
 
-	c := mgoSession.DB(mgoDB).C("pool")
+		//检查当前用户是否有权限操作该容器
+		if user.RoleSet&types.ROLESET_SYSADMIN == types.ROLESET_SYSADMIN {
+			//如果用户是系统管理员
+			//则不需要校验用户对该机器的权限
+			goto AUTHORIZED
+		}
 
-	result := make([]types.PoolInfo, 20)
-	if err := c.Find(bson.M{}).All(&result); err != nil {
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+		//已经给当前用户授权过的集群，可以查看
+		poolIds = append(poolIds, user.PoolIds...)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+		//如果该用户加入过某些团队
+		//则该团队能查看的pool
+		//该用户也可以查看
+		//则验证通过
+		if len(user.TeamIds) > 0 {
+			teams := make([]types.Team, 0, 10)
+			selector := bson.M{
+				"_id": bson.M{
+					"$in": user.TeamIds,
+				},
+			}
+			//查找该用户所在Team
+			if err := cs["team"].Find(selector).All(&teams); err != nil {
+				if err == mgo.ErrNotFound {
+					HttpError(w, "not found params", http.StatusNotFound)
+					return
+				}
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			//如果用户所在的某个TEAM
+			//拥有对该集群的授权
+			//则验证通过
+			for _, team := range teams {
+				poolIds = append(poolIds, team.PoolIds...)
+			}
+		}
+
+		poolSelector["_id"] = bson.M{
+			"$in": poolIds,
+		}
+
+	AUTHORIZED:
+
+		pools := make([]*types.PoolInfo, 0, 20)
+		if err := cs["pool"].Find(poolSelector).All(&pools); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, pools)
+
+	})
 
 }
 

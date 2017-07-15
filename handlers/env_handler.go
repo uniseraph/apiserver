@@ -816,38 +816,53 @@ func createValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		}
 		//查找KEY是否存在
 		//如果不存在则创建一条新的参数KEY
-		err := cs["env_tree_node_param_key"].Find(query).One(&key)
-		if err == mgo.ErrNotFound {
-			//创建KEY实例
-			key = &types.EnvTreeNodeParamKey{
-				Id:          bson.NewObjectId(),
-				Name:        req.Name,
-				Default:     req.Value,
-				Dir:         dir.Id,
-				Tree:        tree.Id,
-				Description: req.Description,
-				CreatedTime: time.Now().Unix(),
-				UpdatedTime: time.Now().Unix(),
-			}
-			if err := cs["env_tree_node_param_key"].Insert(key); err != nil {
+		c, err := cs["env_tree_node_param_key"].Find(query).Count()
+		if err != nil {
+			if err == mgo.ErrNotFound {
+				goto CREATEENVKEY
+			} else {
 				HttpError(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			data := bson.M{"keys": key.Id}
-			selector := bson.M{"_id": dir.Id}
+		}
+		//c>0
+		//说明有冲突，该数下面有同名的KEY存在
+		if c > 0 {
+			HttpError(w, "同一颗参数目录树下面，不可以有同名的节点存在。", http.StatusInternalServerError)
+			return
+		}
 
-			//将此KEY插入dir目录节点的参数数组中
-			//$addToSet会将array当做set使用
-			//去重keys，避免重复插入相同数据
-			if err := cs["env_tree_node_dir"].Update(selector, bson.M{"$addToSet": data}); err != nil {
-				if err == mgo.ErrNotFound {
-					HttpError(w, err.Error(), http.StatusNotFound)
-					return
-				}
+	CREATEENVKEY:
 
-				HttpError(w, err.Error(), http.StatusInternalServerError)
+		//创建KEY实例
+		key = &types.EnvTreeNodeParamKey{
+			Id:          bson.NewObjectId(),
+			Name:        req.Name,
+			Default:     req.Value,
+			Dir:         dir.Id,
+			Tree:        tree.Id,
+			Description: req.Description,
+			CreatedTime: time.Now().Unix(),
+			UpdatedTime: time.Now().Unix(),
+		}
+		if err := cs["env_tree_node_param_key"].Insert(key); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		data := bson.M{"keys": key.Id}
+		selector := bson.M{"_id": dir.Id}
+
+		//将此KEY插入dir目录节点的参数数组中
+		//$addToSet会将array当做set使用
+		//去重keys，避免重复插入相同数据
+		if err := cs["env_tree_node_dir"].Update(selector, bson.M{"$addToSet": data}); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
 				return
 			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		//KEY创建成功
 
