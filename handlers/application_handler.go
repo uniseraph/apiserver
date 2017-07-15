@@ -194,7 +194,7 @@ type ApplicationHistory struct {
 
 	OperationType string
 	CreatorId     string
-	Creator       string
+	CreatorName       string
 	CreatedTime   int64
 }
 
@@ -265,7 +265,7 @@ func getApplicationHistory(ctx context.Context, w http.ResponseWriter, r *http.R
 
 				OperationType: deployments[i].OperationType,
 				CreatorId:     currentUser.Id.Hex(),
-				Creator:       currentUser.Name,
+				CreatorName:   currentUser.Name,
 				CreatedTime:   time.Now().Unix(),
 			}
 
@@ -880,7 +880,7 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 		colDeployment, _ := cs["deployment"]
 		colPool, _ := cs["pool"]
 
-		if err := colDeployment.FindId(bson.ObjectIdHex(id)).One(deployment); err != nil {
+		if err := colDeployment.FindId(bson.ObjectIdHex(req.DeploymentId)).One(deployment); err != nil {
 			if err == mgo.ErrNotFound {
 				HttpError(w, fmt.Sprintf("no such a deployment:%s", id), http.StatusNotFound)
 				return

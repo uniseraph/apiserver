@@ -10,7 +10,7 @@ type Container struct {
 	Id              bson.ObjectId "_id"
 	ContainerId     string        //这是docker／swarm生成的id
 	Name            string
-	PoolName        string
+	//PoolName        string
 	PoolId          string
 	Service         string
 	Project         string
