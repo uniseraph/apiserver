@@ -656,3 +656,111 @@ func removePoolMember(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		HttpOK(w, nil)
 	})
 }
+
+/*
+	更新Pool信息
+*/
+
+type PoolUpdateRequest struct {
+	Name string
+}
+
+func updatePool(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+
+	if len(id) <= 0 {
+		HttpError(w, "Application Id could not be empty", http.StatusBadRequest)
+		return
+	}
+
+	req := &PoolUpdateRequest{}
+
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	/*
+		校验入参合法性
+		如果一个需要更新的入参都没有
+		则不必执行
+	*/
+
+	//校验条件是
+	//各个属性至少要有一个是有值的
+	//!(len(req.Name) > 0 || len(req.Name) > 0)
+	if !(len(req.Name) > 0) {
+		HttpError(w, "至少有一个参数需要更新，不能没有需要更新的参数", http.StatusBadRequest)
+		return
+	}
+
+	utils.GetMgoCollections(ctx, w, []string{"pool"}, func(cs map[string]*mgo.Collection) {
+		//需要更新的属性一条条加进去
+		data := bson.M{}
+		data["name"] = req.Name
+
+		if err := cs["pool"].UpdateId(bson.ObjectIdHex(id), data); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
+}
+
+/*
+	删除Pool
+	删除时先检查本Pool是否还有应用，如果有应用应拒绝删除。
+	删除Pool时，应同步删除本Pool相关的Pool EnvValue。
+*/
+
+func deletePool(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+
+	if len(id) <= 0 {
+		HttpError(w, "Application Id could not be empty", http.StatusBadRequest)
+		return
+	}
+
+	utils.GetMgoCollections(ctx, w, []string{"pool", "application", "env_tree_node_param_value"}, func(cs map[string]*mgo.Collection) {
+		var selector bson.M
+
+		selector = bson.M{
+			"poolid": bson.ObjectIdHex(id),
+		}
+
+		//检查是否还有应用
+		if c, err := cs["application"].Find(selector).Count(); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else if c > 0 {
+			//说明还有应用
+			HttpError(w, "该集群还有应用存在，请先删除应用再删除集群", http.StatusInternalServerError)
+			return
+		}
+
+		//删除集群相应的EnvValue
+		selector = bson.M{
+			"pool": bson.ObjectIdHex(id),
+		}
+
+		if info, err := cs["env_tree_node_param_value"].RemoveAll(selector); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else {
+			logrus.Infof("Delete Pool[%v] related envs: %v", id, info)
+		}
+
+		//删除集群
+
+		if err := cs["pool"].RemoveId(bson.ObjectIdHex(id)); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, "删除集群成功")
+	})
+}
