@@ -15,9 +15,9 @@ const (
 	ROLESET_APPADMIN = 1 << 1 //应用管理员
 	ROLESET_SYSADMIN = 1 << 2 //系统管理员
 
-	DEPLOYMENT_OPERATION_CREATE ="create"
-	DEPLOYMENT_OPERATION_UPGRADE ="upgrade"
-	DEPLOYMENT_OPERATION_ROLLBACK ="rollback"
+	DEPLOYMENT_OPERATION_CREATE   = "create"
+	DEPLOYMENT_OPERATION_UPGRADE  = "upgrade"
+	DEPLOYMENT_OPERATION_ROLLBACK = "rollback"
 )
 
 type APIServerConfig struct {
@@ -56,6 +56,7 @@ type PoolInfo struct {
 	DriverOpts       DriverOpts
 	EnvTreeId        string
 	EnvTreeName      string
+	NodeCount        int
 	TunneldAddr      string `json:",omitempty"`
 	TunneldPort      int
 	Labels           []string `json:",omitempty"`
@@ -63,7 +64,6 @@ type PoolInfo struct {
 	UpdatedTime      int64
 	CreatedTime      int64
 }
-
 
 type Roleset uint64
 
@@ -152,7 +152,7 @@ type Service struct {
 }
 
 type Port struct {
-	SourcePort     int     `json:",string"`
+	SourcePort     int `json:",string"`
 	LoadBalancerId string
 }
 type Env struct {
@@ -203,13 +203,10 @@ type Application struct {
 	UpdatedTime int64  `json:",omitempty"`
 }
 
-
 type DeploymentOpts map[string]interface{}
 
-
-
 type Deployment struct {
-	Id                 bson.ObjectId  "_id"
+	Id                 bson.ObjectId "_id"
 	ApplicationId      string
 	ApplicationVersion string
 	OperationType      string
@@ -220,6 +217,7 @@ type Deployment struct {
 	App                *Application
 	Opts               DeploymentOpts
 }
+
 //copy自 consul/api/agent.go 避免引入consul/api及其依赖的库
 type AgentService struct {
 	ID                string

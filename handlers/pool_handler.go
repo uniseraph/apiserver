@@ -261,6 +261,7 @@ func postPoolsFlush(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	result.PoolInfo.Strategy = strategy
 	result.PoolInfo.Filters = filters
+	result.PoolInfo.NodeCount = len(nodes)
 	result.Nodes = nodes
 
 	if err := getTunneldInfo(ctx, &result.PoolInfo); err != nil {
@@ -272,10 +273,9 @@ func postPoolsFlush(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	//httpJsonResponse(w,result)
 
-	if err := colPool.UpdateId(bson.ObjectIdHex(id), bson.M{"$set":
-	bson.M{"labels": result.PoolInfo.Labels,
+	if err := colPool.UpdateId(bson.ObjectIdHex(id), bson.M{"$set": bson.M{"labels": result.PoolInfo.Labels,
 		"cpus":              clusterInfo.NCPU,
-		"memory":          clusterInfo.MemTotal,
+		"memory":            clusterInfo.MemTotal,
 		"clusterstore":      clusterInfo.ClusterStore,
 		"clusteradvertise":  clusterInfo.ClusterAdvertise,
 		"containers":        clusterInfo.Containers,
@@ -287,7 +287,7 @@ func postPoolsFlush(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		"filters":           filters,
 		"tunneldaddr":       result.PoolInfo.TunneldAddr,
 		"tunneldport":       result.PoolInfo.TunneldPort,
-		"nodecount": len(nodes),
+		"nodecount":         len(nodes),
 	}}); err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
