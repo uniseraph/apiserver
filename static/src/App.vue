@@ -1,7 +1,7 @@
 <template>
   <v-app light :class="{ 'login-ui': token && token.Id == null }">
-    <div v-if="token && token.Id == null" class="text-xs-center login-box" primary>
-      <v-layout row wrap>
+    <div v-if="token && token.Id == null" class="text-xs-center login-content" primary>
+      <v-layout row wrap class="login-box">
         <v-flex xs4 offset-xs4>
           <img src="/public/logo.png"></img>
         </v-flex>
@@ -335,9 +335,13 @@
     width: 100%
     height: 100%
 
-  .login-box
+  .login-content
     position: relative
     top: 20%
+
+  .login-box
+    position: relative
+    z-index: 999
 
   .login-footer
     width: 100%
@@ -347,4 +351,5 @@
     left: 0
     background: url("/public/loginbottom.png") no-repeat
     background-size: 100% 205px
+    z-index: 1
 </style>
