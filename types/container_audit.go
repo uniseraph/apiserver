@@ -68,7 +68,7 @@ type ContainerAuditLogOperationDetail struct {
 type ContainerAuditLog struct {
 	Id bson.ObjectId "_id"
 	//客户端IP
-	Ip string
+	IP string
 	//跟踪ID，用于某次会话的统计，就是TOKEN
 	Token string
 

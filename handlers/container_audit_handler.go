@@ -151,7 +151,7 @@ func createSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 type ValidateSSHSessionRequest struct {
 	Token     string
-	User      string
+	IP        string
 	Timestamp string
 }
 
@@ -169,7 +169,7 @@ func validateSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if len(req.Token) <= 0 || len(req.User) <= 0 || len(req.Timestamp) <= 0 {
+	if len(req.Token) <= 0 || len(req.IP) <= 0 || len(req.Timestamp) <= 0 {
 		HttpError(w, "request with invalidate params.", http.StatusBadRequest)
 		return
 	}
@@ -181,7 +181,7 @@ func validateSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	log := types.ContainerAuditLog{
 		Id:     bson.NewObjectId(),
 		Token:  req.Token,
-		Ip:     req.User,
+		IP:     req.IP,
 		Detail: types.ContainerAuditLogOperationDetail{},
 	}
 
@@ -349,6 +349,7 @@ func validateSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Requ
 func validateSSHSessionFailedLog(cs map[string]*mgo.Collection, msg string, log types.ContainerAuditLog) (err error) {
 	log.Detail.Reason = msg
 	log.Operation = "LoginFailed"
+	log.CreatedTime = time.Now().Unix()
 	if err := cs["container_audit_log"].Insert(log); err != nil {
 		return err
 	}
@@ -359,6 +360,7 @@ func validateSSHSessionFailedLog(cs map[string]*mgo.Collection, msg string, log 
 //将登录的输入和成功结果入库
 func validateSSHSessionSuccessLog(cs map[string]*mgo.Collection, log types.ContainerAuditLog) (err error) {
 	log.Operation = "Logined"
+	log.CreatedTime = time.Now().Unix()
 	if err := cs["container_audit_log"].Insert(log); err != nil {
 		return err
 	}
@@ -379,7 +381,7 @@ func validateSSHSessionSuccessLog(cs map[string]*mgo.Collection, log types.Conta
 
 type CreateAuditLogRequest struct {
 	Token     string
-	Ip        string
+	IP        string
 	Command   string
 	Output    string
 	Timestamp string
@@ -397,7 +399,7 @@ func createAuditLog(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if len(req.Token) <= 0 || len(req.Ip) <= 0 || len(req.Command) <= 0 {
+	if len(req.Token) <= 0 || len(req.IP) <= 0 || len(req.Command) <= 0 {
 		HttpError(w, "request with invalidate params.", http.StatusBadRequest)
 		return
 	}
@@ -452,7 +454,7 @@ func createAuditLog(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 		audit := types.ContainerAuditLog{
 			Id:        bson.NewObjectId(),
-			Ip:        req.Ip,
+			IP:        req.IP,
 			Token:     req.Token,
 			Operation: "ExecCmd",
 			Detail: types.ContainerAuditLogOperationDetail{
@@ -464,7 +466,7 @@ func createAuditLog(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			CreatedTime: time.Now().Unix(),
 		}
 
-		if err := cs["container_audit"].Insert(audit); err != nil {
+		if err := cs["container_audit_log"].Insert(audit); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -519,13 +521,9 @@ type GetAuditListResponseData struct {
 	/*
 		从ContainerAuditLog模型中获取
 	*/
-	Ip        string
-	Cmd       string
-	Arguments []string
-	Stderr    string
-	Stdout    string
-	Stdin     string
-	ExitCode  int8
+	IP        string
+	Operation string
+	Detail    types.ContainerAuditLogOperationDetail
 
 	CreatedTime int64 `json:",omitempty"`
 }
@@ -563,23 +561,6 @@ func getAuditList(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 			createdtime["$lt"] = tm
 		}
 
-		//if len(req.StartTime) > 0 {
-		//	i, err := strconv.ParseInt(req.StartTime, 10, 64)
-		//	if err != nil {
-		//		panic(err)
-		//	}
-		//	tm := time.Unix(i, 0)
-		//	createdtime["$gte"] = tm
-		//}
-		//if len(req.EndTime) > 0 {
-		//	i, err := strconv.ParseInt(req.EndTime, 10, 64)
-		//	if err != nil {
-		//		panic(err)
-		//	}
-		//	tm := time.Unix(i, 0)
-		//	createdtime["$lt"] = tm
-		//}
-
 		selector["createdtime"] = createdtime
 	}
 
@@ -602,6 +583,10 @@ func getAuditList(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	if len(req.ContainerId) > 0 {
 		selector["containerid"] = bson.ObjectIdHex(req.ContainerId)
+	}
+
+	if len(req.Operation) > 0 {
+		selector["operation"] = req.Operation
 	}
 
 	page = req.Page - 1
@@ -693,13 +678,9 @@ func getAuditList(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 				ContainerId:   t.ContainerId.Hex(),
 				Container:     t.Container,
 
-				Ip:        log.Ip,
-				Cmd:       log.Detail.Command,
-				Arguments: log.Detail.Arguments,
-				Stdout:    log.Detail.Stdout,
-				Stderr:    log.Detail.Stderr,
-				Stdin:     log.Detail.Stdin,
-				ExitCode:  log.Detail.ExitCode,
+				IP:        log.IP,
+				Operation: log.Operation,
+				Detail:    log.Detail,
 
 				CreatedTime: log.CreatedTime,
 			}
