@@ -15,6 +15,9 @@ mongo zanecloud --eval "db.container.createIndex({name:1,poolid:1}, {unique:true
 mongo zanecloud --eval "db.container.createIndex({containerid:1,poolid:1}, {unique:true})"
 mongo zanecloud --eval "db.container.createIndex({poolid:1})"
 mongo zanecloud --eval "db.container.createIndex({applicationid:1})"
+mongo zanecloud --eval "db.container_audit_log.createIndex({operation:1})"
+mongo zanecloud --eval "db.container_audit_log.createIndex({token:1})"
+mongo zanecloud --eval "db.container_audit_trace.createIndex({token:1})"
 
 #准备加盐计算
 name=root
