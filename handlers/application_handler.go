@@ -692,7 +692,7 @@ func getApplication(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	utils.GetMgoCollections(ctx, w, []string{"application", "team", "user","pool"}, func(cs map[string]*mgo.Collection) {
 		app := types.Application{}
-		if err := cs["pool"].Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&app); err != nil {
+		if err := cs["application"].Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&app); err != nil {
 
 			if err == mgo.ErrNotFound {
 				// 对错误类型进行区分，有可能只是没有这个application，不应该用500错误
@@ -828,9 +828,7 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 		}
 
 		//TODO
-		result := ApplicationRollbackResponse{
-
-		}
+		result := ApplicationRollbackResponse{}
 		HttpOK(w, result)
 	})
 
