@@ -9,7 +9,7 @@ axios.defaults.timeout = 40000;
 axios.defaults.baseURL = 'http://localhost:8080/api';
 
 // 仅测试用
-//*
+/*
 axios.defaults.baseURL = 'http://localhost:8080/public/mock';
 axios.interceptors.request.use((config) => {
     if(config.method === 'post'){
