@@ -451,6 +451,25 @@ func postUserJoin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 
+	/*
+		系统审计
+	*/
+
+	opUser, _ := utils.GetCurrentUser(ctx)
+	logData := map[string]interface{}{
+		"Team": map[string]string{
+			"Id":   team.Id.Hex(),
+			"Name": team.Name,
+		},
+		"User": map[string]string{
+			"Id":   user.Id.Hex(),
+			"Name": user.Name,
+		},
+	}
+	if opUser != nil {
+		_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeTeam, types.SystemAuditModuleOperationTypeTeamAddUser, "", "", logData)
+	}
+
 }
 
 // /users/{id:.*}/quit?TeamId=xxx
@@ -525,6 +544,24 @@ func postUserQuit(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 
+	/*
+		系统审计
+	*/
+
+	opUser, _ := utils.GetCurrentUser(ctx)
+	logData := map[string]interface{}{
+		"Team": map[string]string{
+			"Id":   team.Id.Hex(),
+			"Name": team.Name,
+		},
+		"User": map[string]string{
+			"Id":   user.Id.Hex(),
+			"Name": user.Name,
+		},
+	}
+	if opUser != nil {
+		_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeTeam, types.SystemAuditModuleOperationTypeTeamRemoveUser, "", "", logData)
+	}
 }
 
 //"/users/{id:.*}/update":    &MyHandler{h: postUserUpdate, opChecker: checkUserPermission,roleset: types.ROLESET_SYSADMIN | types.ROLESET_NORMAL},
