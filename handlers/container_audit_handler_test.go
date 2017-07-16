@@ -1,18 +1,8 @@
 package handlers_test
 
 import (
-	"encoding/json"
-	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/handlers"
-	//"github.com/zanecloud/apiserver/types"
-	//"gopkg.in/mgo.v2/bson"
-	"io/ioutil"
-	"net/http"
-	"strings"
 	"testing"
-	//"gopkg.in/mgo.v2"
 )
 
 func TestContainerAudit(t *testing.T) {
@@ -122,85 +112,3 @@ func TestJSONUnmarshal(t *testing.T) {
 //	}
 //
 //}
-
-/*
-	测试辅助方法
-*/
-
-func postTestRequest(urlPath string, data interface{}, instance interface{}) (err error) {
-	buf, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://localhost:8080/api/%s", urlPath), strings.NewReader(string(buf)))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	for _, cookie := range cookies {
-		req.AddCookie(cookie)
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Debugf("login read body err:%s", err.Error())
-		return err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return errors.New(string(body))
-	}
-
-	if err := json.Unmarshal(body, instance); err != nil {
-		return err
-	}
-
-	return nil
-
-}
-
-func getTestRequest(urlPath string, instance interface{}) (err error) {
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://localhost:8080/api/%s", urlPath), strings.NewReader(""))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	for _, cookie := range cookies {
-		req.AddCookie(cookie)
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Debugf("login read body err:%s", err.Error())
-		return err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return errors.New(string(body))
-	}
-
-	if err := json.Unmarshal(body, instance); err != nil {
-		return err
-	}
-
-	return nil
-}
