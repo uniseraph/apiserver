@@ -188,7 +188,7 @@
           this.Id = data.Application.Id;
           this.Title = data.Application.Title;
           this.Name = data.Application.Name;
-          this.Version = data.Version;
+          this.Version = data.Application.Version;
           this.Description = data.Application.Description;
 
           this.getDataFromApi();
