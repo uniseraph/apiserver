@@ -535,7 +535,7 @@ type GetAuditListResponse struct {
 	Data      []GetAuditListResponseData
 }
 
-func getAuditList(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func getContainerAuditList(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	req := GetAuditListRequest{}
 	var page, pageSize int
 
