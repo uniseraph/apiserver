@@ -81,6 +81,7 @@ func TestUser(t *testing.T) {
 			t.Error("Team count is not correct!")
 		}
 
+		fmt.Printf("Team: %#v", teams)
 		tx := teams[0]
 		teamId = tx.Id.Hex()
 		if err := joinTeam(userId, teamId); err != nil {

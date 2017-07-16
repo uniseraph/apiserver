@@ -223,6 +223,11 @@ func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	resp := &UsersCreateResponse{Id: user.Id.Hex()}
 	json.NewEncoder(w).Encode(resp)
+
+	/*
+		系统审计
+	*/
+	_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, user.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeTeamCreate, "", "", map[string]interface{}{"User": user})
 }
 
 type UserResetPassRequest struct {
@@ -348,6 +353,12 @@ func postUserRemove(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	c := mgoSession.DB(mgoDB).C("user")
 
+	/*
+		系统审计
+	*/
+	deletedUser := &types.User{}
+	_ = c.FindId(bson.ObjectIdHex(id)).One(deletedUser)
+
 	if err := c.Remove(bson.M{"_id": bson.ObjectIdHex(id)}); err != nil {
 		if err == mgo.ErrNotFound {
 			HttpError(w, "no such a user", http.StatusNotFound)
@@ -361,6 +372,11 @@ func postUserRemove(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "{%q:%q}", "Id", id)
 
+	/*
+		系统审计
+	*/
+	opUser, _ := utils.GetCurrentUser(ctx)
+	_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeUserDelete, "", "", map[string]interface{}{"User": deletedUser})
 }
 
 // /users/{id:.*}/join?TeamId=xxx"
@@ -585,6 +601,16 @@ func postUserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	w.WriteHeader(http.StatusOK)
 
+	/*
+		系统审计
+	*/
+
+	oldUser, _ := utils.GetCurrentUser(ctx)
+	newUer := &types.User{}
+	opUser, _ := utils.GetCurrentUser(ctx)
+	c.FindId(bson.ObjectIdHex(id)).One(newUer)
+
+	_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeUserUpdate, "", "", map[string]interface{}{"OldUser": oldUser, "NewUser": newUer})
 }
 
 type UserPoolsResponse struct {

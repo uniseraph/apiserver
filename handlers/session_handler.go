@@ -55,6 +55,12 @@ func postSessionCreate(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	logrus.Debugf("getUserLogin::get the user %#v", user)
 	//校验用户输入的密码，与该ID的用户模型中Pass是否匹配
 	if ok, err := utils.ValidatePassword(user, pass); ok != true || err != nil {
+		/*
+			系统审计
+		*/
+		opUser := user
+		_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeUserLoginFailed, "", "", map[string]interface{}{"Name": name})
+
 		HttpError(w, "pass is error", http.StatusForbidden)
 		return
 	}
@@ -105,6 +111,11 @@ func postSessionCreate(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		Role: uint64(user.RoleSet),
 	}
 	HttpOK(w, result)
+	/*
+		系统审计
+	*/
+	opUser := user
+	_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeUserLoginFailed, "", "", map[string]interface{}{"Name": name})
 }
 
 //当前用户登出接口
