@@ -21,5 +21,5 @@ func ValidatePassword(user types.User, pass string) (ok bool, err error) {
 
 	ok = Md5(fmt.Sprintf("%s:%s", pass, user.Salt)) == user.Pass
 	logrus.Debugf("getUserLogin::get the user %#v, password is %s, rlt:%d", user, pass, ok)
-	return
+	return ok, nil
 }

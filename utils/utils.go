@@ -105,9 +105,9 @@ func GetMgoCollections(ctx context.Context, w http.ResponseWriter, names []strin
 	cb(cs)
 }
 
-type execCallback func(cs map[string]*mgo.Collection)error
+type execCallback func(cs map[string]*mgo.Collection) error
 
-func ExecMgoCollections(ctx context.Context,  names []string, cb execCallback) error{
+func ExecMgoCollections(ctx context.Context, names []string, cb execCallback) error {
 	mgoSession, err := GetMgoSessionClone(ctx)
 	if err != nil {
 		//走不到这里的,ctx中必然有mgoSesson
