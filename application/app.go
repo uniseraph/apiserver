@@ -19,19 +19,20 @@ import (
 )
 
 //需要根据pool的驱动不同，调用不同的接口创建容器／应用，暂时只管swarm/compose
-func UpApplication(ctx context.Context, app *types.Application, pool *types.PoolInfo, recreate bool) error {
+func UpApplication(ctx context.Context, app *types.Application, pool *types.PoolInfo) error {
 
 	p, err := buildProject(app, pool)
 	if err != nil {
-		return nil
+		return err
 	}
 	err = p.Up(ctx, options.Up{
-		options.Create{ForceRecreate: recreate,
+		options.Create{ForceRecreate: false,
 			NoBuild:    true,
 			ForceBuild: false},
 	})
 
 	if err != nil {
+		logrus.WithFields(logrus.Fields{"err": err}).Debug("up application err")
 		return err
 	}
 
@@ -147,9 +148,10 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 func StartApplication(ctx context.Context, app *types.Application, pool *types.PoolInfo, services []string) error {
 	p, err := buildProject(app, pool)
 	if err != nil {
-		return nil
+		return err
 	}
 	if err := p.Start(ctx, services...); err != nil {
+		logrus.WithFields(logrus.Fields{"err": err}).Debug("start application err")
 		return err
 	}
 	return nil
@@ -158,10 +160,11 @@ func StartApplication(ctx context.Context, app *types.Application, pool *types.P
 func ScaleApplication(ctx context.Context, app *types.Application, pool *types.PoolInfo, services map[string]int) error {
 	p, err := buildProject(app, pool)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	if err := p.Scale(ctx, 30, services); err != nil {
+		logrus.WithFields(logrus.Fields{"err": err}).Debug("scale application err")
 		return err
 	}
 	return nil
@@ -175,6 +178,7 @@ func ListContainers(ctx context.Context, app *types.Application, pool *types.Poo
 
 	result, err := p.Containers(ctx, project.Filter{project.AnyState}, services...)
 	if err != nil {
+		logrus.WithFields(logrus.Fields{"err": err}).Debug("list application err")
 		return nil, err
 	}
 	return result, nil
@@ -188,6 +192,7 @@ func StopApplication(ctx context.Context, app *types.Application, pool *types.Po
 	}
 
 	if err := p.Stop(ctx, 30, services...); err != nil {
+		logrus.WithFields(logrus.Fields{"err": err}).Debug("stop application err")
 		return err
 	}
 
@@ -202,6 +207,7 @@ func DeleteApplication(ctx context.Context, app *types.Application, pool *types.
 	}
 
 	if err := p.Delete(ctx, options.Delete{false, true}); err != nil {
+		logrus.WithFields(logrus.Fields{"err": err}).Debug("delete application err")
 		return err
 	}
 
