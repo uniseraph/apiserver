@@ -487,17 +487,17 @@ func scaleApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		//
 		//}
 
-		if err := colApplication.Update(bson.M{"_id": bson.ObjectIdHex(id)}, app); err != nil {
-			HttpError(w, fmt.Sprintf("更新Applicatiion失败，error:%s", err.Error()), http.StatusInternalServerError)
-			return
-
-		}
-
 		if err := application.ScaleApplication(ctx, app, pool, map[string]int{
 			req.ServiceName: req.ReplicaCount,
 		}); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		if err := colApplication.Update(bson.M{"_id": bson.ObjectIdHex(id)}, app); err != nil {
+			HttpError(w, fmt.Sprintf("scale应用成功，更新数据库失败，error:%s", err.Error()), http.StatusInternalServerError)
+			return
+
 		}
 
 		HttpOK(w, "")
