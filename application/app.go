@@ -8,25 +8,25 @@ import (
 	"github.com/zanecloud/apiserver/types"
 
 	"context"
+	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/libcompose/config"
 	"github.com/docker/libcompose/project/options"
 	composeyml "github.com/docker/libcompose/yaml"
+	"github.com/zanecloud/apiserver/proxy/swarm"
 	"gopkg.in/yaml.v2"
 	"strconv"
-	"fmt"
-	"github.com/zanecloud/apiserver/proxy/swarm"
 )
 
 //需要根据pool的驱动不同，调用不同的接口创建容器／应用，暂时只管swarm/compose
-func UpApplication(ctx context.Context, app *types.Application, pool *types.PoolInfo) error {
+func UpApplication(ctx context.Context, app *types.Application, pool *types.PoolInfo, recreate bool) error {
 
 	p, err := buildProject(app, pool)
 	if err != nil {
 		return nil
 	}
 	err = p.Up(ctx, options.Up{
-		options.Create{ForceRecreate: false,
+		options.Create{ForceRecreate: recreate,
 			NoBuild:    true,
 			ForceBuild: false},
 	})
@@ -34,9 +34,6 @@ func UpApplication(ctx context.Context, app *types.Application, pool *types.Pool
 	if err != nil {
 		return err
 	}
-
-
-
 
 	return nil
 
@@ -75,7 +72,7 @@ func buildProject(app *types.Application, pool *types.PoolInfo) (p project.APIPr
 	return p, nil
 }
 func buildDefaultNetwork() map[string]*config.NetworkConfig {
-	result := make( map[string]*config.NetworkConfig)
+	result := make(map[string]*config.NetworkConfig)
 
 	//result["default"]=&config.NetworkConfig{
 	//	Driver: "bridge",
@@ -83,7 +80,6 @@ func buildDefaultNetwork() map[string]*config.NetworkConfig {
 
 	return result
 }
-
 
 func buildDefaultVolumes() map[string]*config.VolumeConfig {
 	return make(map[string]*config.VolumeConfig)
@@ -121,18 +117,17 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 		}
 
 		composeService.Labels = map[string]string{}
-		for i , _ := range appService.Labels {
+		for i, _ := range appService.Labels {
 			composeService.Labels[appService.Labels[i].Name] = appService.Labels[i].Value
 		}
 		composeService.Labels[swarm.LABEL_APPLICATION_ID] = app.Id.Hex()
 		//TODO 加上cpuset的label
 
-		composeService.Environment = make([]string, 0,len(appService.Envs))
-		for i , _ := range appService.Envs {
+		composeService.Environment = make([]string, 0, len(appService.Envs))
+		for i, _ := range appService.Envs {
 
-			composeService.Environment=append(composeService.Environment,  fmt.Sprintf("%s=%s",appService.Envs[i].Name,appService.Envs[i].Value))
+			composeService.Environment = append(composeService.Environment, fmt.Sprintf("%s=%s", appService.Envs[i].Name, appService.Envs[i].Value))
 		}
-
 
 		ec.Services[appService.Name] = composeService
 

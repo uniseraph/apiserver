@@ -194,7 +194,7 @@ type ApplicationHistory struct {
 
 	OperationType string
 	CreatorId     string
-	CreatorName       string
+	CreatorName   string
 	CreatedTime   int64
 }
 
@@ -226,7 +226,7 @@ func getApplicationHistory(ctx context.Context, w http.ResponseWriter, r *http.R
 	//TODO 权限控制
 	result := &ApplicationHisotryResponse{}
 
-	deployments := make([]*types.Deployment,0, 100)
+	deployments := make([]*types.Deployment, 0, 100)
 
 	utils.GetMgoCollections(ctx, w, []string{"deployment"}, func(cs map[string]*mgo.Collection) {
 
@@ -266,7 +266,7 @@ func getApplicationHistory(ctx context.Context, w http.ResponseWriter, r *http.R
 				OperationType: deployments[i].OperationType,
 				CreatorId:     currentUser.Id.Hex(),
 				CreatorName:   currentUser.Name,
-				CreatedTime:   time.Now().Unix(),
+				CreatedTime:   deployments[i].App.CreatedTime,
 			}
 
 		}
@@ -487,7 +487,7 @@ func scaleApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		//
 		//}
 
-		if err := colApplication.Update( bson.M{"_id":bson.ObjectIdHex(id)}   , app); err != nil {
+		if err := colApplication.Update(bson.M{"_id": bson.ObjectIdHex(id)}, app); err != nil {
 			HttpError(w, fmt.Sprintf("更新Applicatiion失败，error:%s", err.Error()), http.StatusInternalServerError)
 			return
 
@@ -586,7 +586,7 @@ func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		if err := application.UpApplication(ctx, app, pool); err != nil {
+		if err := application.UpApplication(ctx, app, pool, true); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -674,13 +674,13 @@ func stopApplication(ctx context.Context, w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		services := make([]string,0, len(app.Services))
+		services := make([]string, 0, len(app.Services))
 
 		for i, _ := range app.Services {
 			services = append(services, app.Services[i].Name)
 		}
 
-		logrus.WithFields(logrus.Fields{"services":services}).Debug("stop these services")
+		logrus.WithFields(logrus.Fields{"services": services}).Debug("stop these services")
 
 		if err := application.StopApplication(ctx, app, pool, services); err != nil {
 			HttpError(w, "停止应用失败："+err.Error(), http.StatusInternalServerError)
@@ -713,7 +713,7 @@ func restartApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 func startApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	id := mux.Vars(r)["id"]
-	utils.GetMgoCollections(ctx, w, []string{"application","pool"}, func(cs map[string]*mgo.Collection) {
+	utils.GetMgoCollections(ctx, w, []string{"application", "pool"}, func(cs map[string]*mgo.Collection) {
 
 		app := &types.Application{}
 
@@ -739,7 +739,7 @@ func startApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 			return
 		}
 
-		services := make([]string, 0,len(app.Services))
+		services := make([]string, 0, len(app.Services))
 
 		for i, _ := range app.Services {
 			services = append(services, app.Services[i].Name)
@@ -908,7 +908,7 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		if err := application.UpApplication(ctx, app, pool); err != nil {
+		if err := application.UpApplication(ctx, app, pool, true); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
