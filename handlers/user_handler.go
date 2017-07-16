@@ -572,7 +572,13 @@ func postUserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	data["roleset"] = req.Roleset
 
 	if req.Pass != "" {
-		data["pass"] = utils.Md5(req.Pass)
+		//为用户密码加盐
+		salt := utils.RandomStr(16)
+		//生成加密后的密码，数据库中不保存明文密码
+		encryptedPassword := utils.Md5(fmt.Sprint("%s:%s", req.Pass, salt))
+
+		data["pass"] = encryptedPassword
+		data["salt"] = salt
 	}
 
 	if req.Tel != "" {
