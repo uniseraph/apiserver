@@ -76,7 +76,10 @@
       <div>
         <v-card v-for="(item, index) in Services" :key="item.Id" class="mb-2">
           <v-card-title>
-            服务{{ index + 1 }}: {{ item.Title }}
+            服务{{ index + 1 }}: {{ item.Title }}&nbsp;&nbsp;&nbsp;&nbsp;
+            <span style="text-decoration:italic;color:#9F9F9F;">
+              域名: {{ item.Name }}.{{ Name }}.${DOMAIN_SUFFIX}
+            </span>
             <v-spacer></v-spacer>
             <v-btn v-if="item.hidden" outline small icon class="blue blue--text mr-2" @click.native="hideService(item, false)" title="展开">
               <v-icon>arrow_drop_down</v-icon>
