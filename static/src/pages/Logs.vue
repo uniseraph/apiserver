@@ -181,7 +181,11 @@
           <td>{{ props.item.IP }}</td>
           <td>{{ moduleName(props.item.Module) }}</td>
           <td>{{ props.item.Pool.Name }}</td>
-          <td>{{ props.item.Application.Title }} ({{ props.item.Application.Name }} {{ props.item.Application.Version }})</td>
+          <td>
+            <span v-if="props.item.Application">
+              {{ props.item.Application.Title }} ({{ props.item.Application.Name }} {{ props.item.Application.Version }})
+            </span>
+          </td>
           <td>
             {{ operationName(props.item.Module, props.item.Operation) }}
             <v-btn outline small class="green green--text" @click.native="displayDetail(props.item)">

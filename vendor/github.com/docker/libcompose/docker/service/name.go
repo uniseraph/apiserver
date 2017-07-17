@@ -10,6 +10,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/docker/libcompose/labels"
+	"strings"
 )
 
 const format = "%s_%s_%d"
@@ -89,4 +90,24 @@ func (i *defaultNamer) Next() (string, int) {
 
 func (s *singleNamer) Next() (string, int) {
 	return s.name, 1
+}
+
+type recreateNamer struct {
+	name string
+}
+
+func NewRecreateNamer(name string) Namer {
+	return &recreateNamer{name}
+}
+
+func (r *recreateNamer) Next() (string, int) {
+	name := strings.Split(r.name, "_")
+	if name[len(name)-1] != "" {
+		num, err := strconv.Atoi(name[len(name)-1])
+		if err != nil {
+			return r.name, 1
+		}
+		return r.name, num
+	}
+	return r.name, 1
 }

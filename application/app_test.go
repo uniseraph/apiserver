@@ -1,18 +1,15 @@
 package application_test
 
 import (
+	"context"
+	"github.com/Sirupsen/logrus"
 	"github.com/zanecloud/apiserver/application"
 	"github.com/zanecloud/apiserver/types"
-	"testing"
-	"context"
 	"os"
-	"github.com/Sirupsen/logrus"
+	"testing"
 )
 
-
 func TestCreateApplication(t *testing.T) {
-
-
 
 	logrus.SetOutput(os.Stderr)
 	level, err := logrus.ParseLevel("info")
@@ -23,23 +20,23 @@ func TestCreateApplication(t *testing.T) {
 
 	app1 := &types.Application{
 		Name: "testx",
-		Id:"applicationidxxxxx000",
+		Id:   "applicationidxxxxx000",
 		Services: []types.Service{
 			types.Service{
-				ImageName: "docker.io/nginx",
+				ImageName: "nginx",
 				ImageTag:  "1.8",
 				Restart:   "always",
 				Name:      "nginx",
-				Ports:     []types.Port{{80,"lbidxxxx"}},
-				Envs:      []types.Env{ {types.Label{Name:"env1",Value:"env1"}} ,
-					                {types.Label{Name:"env2",Value:"env2"}} },
-				Labels:    []types.Label{ {Name:"key1",Value:"value1"} ,
-							  {Name:"key2",Value:"value2"}   },
+				Ports:     []types.Port{{80, "lbidxxxx"}},
+				Envs: []types.Env{{types.Label{Name: "env1", Value: "env1"}},
+					{types.Label{Name: "env2", Value: "env2"}}},
+				Labels: []types.Label{{Name: "key1", Value: "value1"},
+					{Name: "key2", Value: "value2"}},
 			},
 		},
 	}
 	pool1 := &types.PoolInfo{
-		ProxyEndpoint: "tcp://127.0.0.1:53351",
+		ProxyEndpoint: "tcp://127.0.0.1:54963",
 		DriverOpts: types.DriverOpts{
 			APIVersion: "v1.23",
 		},
@@ -47,7 +44,7 @@ func TestCreateApplication(t *testing.T) {
 
 	ctx := context.Background()
 
-	err = application.UpApplication(ctx,app1, pool1)
+	err = application.UpgradeApplication(ctx, app1, pool1)
 
 	if err != nil {
 		t.Error(err)
@@ -58,7 +55,7 @@ func TestCreateApplication(t *testing.T) {
 
 	}
 
-	err = application.StartApplication(ctx,app1, pool1, []string{"nginx"})
+	err = application.StartApplication(ctx, app1, pool1, []string{"nginx"})
 	if err != nil {
 		t.Error(err)
 		return
@@ -66,23 +63,31 @@ func TestCreateApplication(t *testing.T) {
 		t.Log("start the app success!")
 	}
 
-	err = application.ScaleApplication(ctx,app1, pool1, map[string]int{"nginx": 3})
+	err = application.ScaleApplication(ctx, app1, pool1, map[string]int{"nginx": 3})
 	if err != nil {
 		t.Error(err)
 		return
 	} else {
-		t.Log("scale the app success!")
+		t.Log("scale the app to 3 success!")
 	}
 
-	err = application.ScaleApplication(ctx,app1, pool1, map[string]int{"nginx": 6})
+	err = application.ScaleApplication(ctx, app1, pool1, map[string]int{"nginx": 4})
 	if err != nil {
 		t.Error(err)
 		return
 	} else {
-		t.Log("scale the app success!")
+		t.Log("scale the app to 4 uccess!")
 	}
 
-	result, err := application.ListContainers(ctx,app1, pool1, []string{"nginx"})
+	err = application.ScaleApplication(ctx, app1, pool1, map[string]int{"nginx": 6})
+	if err != nil {
+		t.Error(err)
+		return
+	} else {
+		t.Log("scale the app to 6success!")
+	}
+
+	result, err := application.ListContainers(ctx, app1, pool1, []string{"nginx"})
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -90,8 +95,15 @@ func TestCreateApplication(t *testing.T) {
 		t.Log(result)
 	}
 
+	err = application.StopApplication(ctx, app1, pool1, []string{"nginx"})
+	if err != nil {
+		t.Error(err.Error())
+		return
+	} else {
+		t.Log(result)
+	}
 
-	 err = application.StopApplication(ctx,app1,pool1,[]string{"nginx"})
+	err = application.DeleteApplication(ctx, app1, pool1)
 	if err != nil {
 		t.Error(err.Error())
 		return
