@@ -100,20 +100,20 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if err := colApplication.Insert(app); err != nil {
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	m := make(map[string]int)
 	for _, service := range app.Services {
 		m[service.Name] = service.ReplicaCount
 	}
 
+	if err := colApplication.Insert(app); err != nil {
+		HttpError(w, "保存应用信息失败："+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	if err := application.ScaleApplication(ctx, app, pool, m); err != nil {
 		//TODO 需要删除所有已创建成功的容器？？？
 
-		HttpError(w, err.Error(), http.StatusInternalServerError)
+		HttpError(w, "发布应用失败"+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -547,6 +547,8 @@ func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			return
 		}
 
+		logrus.WithFields(logrus.Fields{"app": app}).Debugf("current app ...")
+
 		colTemplate, _ := cs["template"]
 		if err := colTemplate.FindId(bson.ObjectIdHex(req.ApplicationTemplateId)).One(template); err != nil {
 			if err == mgo.ErrNotFound {
@@ -556,6 +558,8 @@ func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		logrus.WithFields(logrus.Fields{"template": template}).Debugf("current template ...")
 
 		if app.Name != template.Name {
 			HttpError(w, "升级应用时，应用Id必须一致！", http.StatusBadRequest)
@@ -581,29 +585,36 @@ func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		app.Status = "running"
 
 		//merge  template 中的label和环境变量
-		services, err := mergeServices(ctx, template.Services, pool)
+		ms, err := mergeServices(ctx, template.Services, pool)
 		if err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		//TODO 不能直接使用merger后的service，因为merge只盖label，不改RCount，需要使用app自己的ReplicaCount
-		//	scaleMap := make(map[string]int)
+		logrus.WithFields(logrus.Fields{"ms": ms}).Debugf("after merged , ms is  ...")
 
+		scaleMap := make(map[string]int)
 		for i, _ := range app.Services {
-			app.Services[i].Labels = services[i].Labels
-			app.Services[i].Envs = services[i].Envs
-
-			//		scaleMap[app.Services[i].Name] = app.Services[i].ReplicaCount
+			scaleMap[app.Services[i].Name] = app.Services[i].ReplicaCount
 		}
 
+		app.Services = ms
+
+		for i, _ := range app.Services {
+			if count, ok := scaleMap[app.Services[i].Name]; ok {
+				app.Services[i].ReplicaCount = count
+			}
+		}
+
+		logrus.WithFields(logrus.Fields{"app": app}).Debugf("after get ms , app is ...")
+
 		if err := colApplication.UpdateId(bson.ObjectIdHex(id), app); err != nil {
-			HttpError(w, err.Error(), http.StatusInternalServerError)
+			HttpError(w, "保存应用信息失败:"+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		if err := application.UpgradeApplication(ctx, app, pool); err != nil {
-			HttpError(w, err.Error(), http.StatusInternalServerError)
+			HttpError(w, "升级失败:"+err.Error(), http.StatusInternalServerError)
 			return
 		}
 

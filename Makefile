@@ -21,10 +21,6 @@ init:
 apiserver:clean
 	CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}" -o ${TARGET}
 
-apicli:
-	@rm -rf apicli
-	CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}"  -o ${CLI_TARGET}  client/client.go
-
 portal:
 	cd static && npm install && npm run build && cd ..
 
@@ -44,8 +40,13 @@ shell:
 run:apiserver
 	MONGO_URLS=127.0.0.1 MONGO_DB=zanecloud  ROOT_DIR=./static ./apiserver -l debug start
 
-compose:
-	docker-compose up -d
+release:portal apiserver
+	rm -rf release && mkdir -p release
+	cp -r static/public     release/
+	cp -r static/dist       release/
+	cp static/index.html release/
+	cp apiserver release/
+	tar zcvf apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz release
 
 clean:
 	rm -rf apiserver

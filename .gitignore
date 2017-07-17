@@ -27,3 +27,5 @@ apiserver.iml
 client/client
 static/package-lock.json
 debug
+release
+apiserver-*.tar.gz
