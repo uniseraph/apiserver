@@ -44,6 +44,7 @@ release:portal build
 	rm -rf release && mkdir -p release
 	cp -r static/public     release/
 	cp -r static/dist       release/
+	cp scripts/init.sh     release/
 	cp static/index.html release/
 	cp apiserver release/
 	tar zcvf apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz release
