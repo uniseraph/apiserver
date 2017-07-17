@@ -40,7 +40,7 @@ shell:
 run:apiserver
 	MONGO_URLS=127.0.0.1 MONGO_DB=zanecloud  ROOT_DIR=./static ./apiserver -l debug start
 
-release:portal apiserver
+release:portal build
 	rm -rf release && mkdir -p release
 	cp -r static/public     release/
 	cp -r static/dist       release/

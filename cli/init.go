@@ -4,8 +4,10 @@ import (
 	"github.com/codegangsta/cli"
 	"fmt"
 	"github.com/zanecloud/apiserver/utils"
-	"os/exec"
 	"github.com/Sirupsen/logrus"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
+	"github.com/zanecloud/apiserver/types"
 )
 
 const initCommandName = "init"
@@ -20,9 +22,19 @@ func initCommand(c *cli.Context) {
 	//#生成加盐后的密码
 	encryptedPassword := utils.Md5(content)
 
-	cmd := "mongo"
-	args := fmt.Sprintf("zanecloud --eval \"db.user.insertOne({name:'%s',pass:'%s',salt: '%s',roleset:4})\"", name, encryptedPassword, salt)
-	_, err := exec.Command("sh", "-c", fmt.Sprintf("%s %s", cmd, args)).Output()
+
+
+	MgoDB:=     c.String(utils.KEY_MGO_DB)
+	MgoURLs:=   c.String(utils.KEY_MGO_URLS)
+
+	session, err := mgo.Dial(MgoURLs)
+	if err != nil {
+		logrus.Errorf("initCommand::dial mongodb %s  error: %s", MgoURLs, err.Error())
+		return
+	}
+	defer  session.Close()
+
+	err = session.DB(MgoDB).C("user").Insert(bson.M{"name":name,"pass":encryptedPassword,"salt":salt,"roleset":types.ROLESET_SYSADMIN})
 	if err != nil {
 		logrus.Fatal(err)
 	}
