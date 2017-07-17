@@ -227,7 +227,7 @@ func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 	/*
 		系统审计
 	*/
-	_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, user.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeTeamCreate, "", "", map[string]interface{}{"User": user})
+	_ = utils.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, user.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeCreate, "", "", map[string]interface{}{"User": user})
 }
 
 type UserResetPassRequest struct {
@@ -376,7 +376,7 @@ func postUserRemove(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		系统审计
 	*/
 	opUser, _ := utils.GetCurrentUser(ctx)
-	_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeUserDelete, "", "", map[string]interface{}{"User": deletedUser})
+	_ = utils.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeDelete, "", "", map[string]interface{}{"User": deletedUser})
 }
 
 // /users/{id:.*}/join?TeamId=xxx"
@@ -467,7 +467,7 @@ func postUserJoin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	if opUser != nil {
-		_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeTeam, types.SystemAuditModuleOperationTypeTeamAddUser, "", "", logData)
+		_ = utils.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeTeam, types.SystemAuditModuleOperationTypeAddUser, "", "", logData)
 	}
 
 }
@@ -560,7 +560,7 @@ func postUserQuit(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	if opUser != nil {
-		_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeTeam, types.SystemAuditModuleOperationTypeTeamRemoveUser, "", "", logData)
+		_ = utils.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeTeam, types.SystemAuditModuleOperationTypeRemoveUser, "", "", logData)
 	}
 }
 
@@ -653,7 +653,7 @@ func postUserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	opUser, _ := utils.GetCurrentUser(ctx)
 	c.FindId(bson.ObjectIdHex(id)).One(newUer)
 
-	_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeUserUpdate, "", "", map[string]interface{}{"OldUser": oldUser, "NewUser": newUer})
+	_ = utils.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeUpdate, "", "", map[string]interface{}{"OldUser": oldUser, "NewUser": newUer})
 }
 
 type UserPoolsResponse struct {

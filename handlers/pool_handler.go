@@ -450,8 +450,12 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(result)
-	//fmt.Fprintf(w, "{%q:%q}", "Name", name)
 
+	/*
+		系统审计
+	*/
+
+	utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypePool, types.SystemAuditModuleOperationTypeCreate, poolInfo.Id.Hex(), "", map[string]interface{}{"Pool": poolInfo})
 }
 
 /*
@@ -697,6 +701,21 @@ func updatePool(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.GetMgoCollections(ctx, w, []string{"pool"}, func(cs map[string]*mgo.Collection) {
+		/*
+			系统审计
+		*/
+		oldPool := &types.PoolInfo{}
+
+		if err := cs["pool"].FindId(bson.ObjectIdHex(id)).One(oldPool); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		//需要更新的属性一条条加进去
 		data := bson.M{}
 		data["name"] = req.Name
@@ -710,6 +729,28 @@ func updatePool(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		/*
+			系统审计
+		*/
+
+		newPool := &types.PoolInfo{}
+		if err := cs["pool"].FindId(bson.ObjectIdHex(id)).One(newPool); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		/*
+			系统审计
+		*/
+
+		logData := map[string]interface{}{"NewPool": newPool, "OldPool": oldPool}
+		utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypePool, types.SystemAuditModuleOperationTypeUpdate, newPool.Id.Hex(), "", logData)
 	})
 }
 
@@ -728,6 +769,15 @@ func deletePool(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.GetMgoCollections(ctx, w, []string{"pool", "application", "env_tree_node_param_value"}, func(cs map[string]*mgo.Collection) {
+		/*
+			系统审计
+		*/
+		pool := &types.PoolInfo{}
+		if err := cs["pool"].FindId(bson.ObjectIdHex(id)).One(pool); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		var selector bson.M
 
 		selector = bson.M{
@@ -764,5 +814,13 @@ func deletePool(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		}
 
 		HttpOK(w, "删除集群成功")
+
+		/*
+			系统审计
+		*/
+
+		logData := map[string]interface{}{"Pool": pool}
+		utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypePool, types.SystemAuditModuleOperationTypeDelete, pool.Id.Hex(), "", logData)
+
 	})
 }

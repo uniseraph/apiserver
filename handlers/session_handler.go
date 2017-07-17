@@ -59,7 +59,7 @@ func postSessionCreate(ctx context.Context, w http.ResponseWriter, r *http.Reque
 			系统审计
 		*/
 		opUser := user
-		_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeUserLoginFailed, "", "", map[string]interface{}{"Name": name})
+		_ = utils.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeLoginFailed, "", "", map[string]interface{}{"Name": name})
 
 		HttpError(w, "pass is error", http.StatusForbidden)
 		return
@@ -115,7 +115,7 @@ func postSessionCreate(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		系统审计
 	*/
 	opUser := user
-	_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeUserLoginFailed, "", "", map[string]interface{}{"Name": name})
+	_ = utils.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeLogined, "", "", map[string]interface{}{"Name": name})
 }
 
 //当前用户登出接口
