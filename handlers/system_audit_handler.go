@@ -64,11 +64,11 @@ type GetSystemAuditListResponseData struct {
 	RequestURI    string
 	CreatedTime   int64 `json:",omitempty"`
 	UserId        string
-	User          *GetSystemAuditListResponseUserData
+	User          *GetSystemAuditListResponseUserData `json:",omitempty"`
 	PoolId        string
-	Pool          *GetSystemAuditListResponsePoolData
+	Pool          *GetSystemAuditListResponsePoolData `json:",omitempty"`
 	ApplicationId string
-	Application   *GetSystemAuditListResponseApplicationData
+	Application   *GetSystemAuditListResponseApplicationData `json:",omitempty"`
 	IP            string
 	Module        types.SystemAuditModuleType
 	Operation     types.SystemAuditModuleOperationType

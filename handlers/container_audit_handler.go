@@ -509,11 +509,11 @@ type GetAuditListResponseData struct {
 	*/
 	Id            string
 	UserId        string
-	User          *types.ContainerAuditUser
+	User          *types.ContainerAuditUser `json:",omitempty"`
 	PoolId        string
-	Pool          *types.ContainerAuditPool
+	Pool          *types.ContainerAuditPool `json:",omitempty"`
 	ApplicationId string
-	Application   *types.ContainerAuditApplication
+	Application   *types.ContainerAuditApplication `json:",omitempty"`
 	Service       types.ContainerAuditService
 	ContainerId   string
 	Container     types.ContainerAuditContainer
