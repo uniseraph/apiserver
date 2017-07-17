@@ -11,25 +11,25 @@
           <v-container fluid>
             <v-layout row wrap>
               <v-flex xs2>
-                <v-subheader>名称</v-subheader>
+                <v-subheader>名称<span class="required-star">*</span></v-subheader>
               </v-flex>
               <v-flex xs3>
                 <v-text-field
                   v-model="Name"
+                  ref="Name"
                   required
-                  single-line
+                  :rules="rules.Name"
+                  @input="rules.Name = rules0.Name"
                 ></v-text-field>
               </v-flex>
               <v-flex xs2>
               </v-flex>
               <v-flex xs2>
-                <v-subheader>描述</v-subheader>
+                <v-subheader>说明</v-subheader>
               </v-flex>
               <v-flex xs3>
                 <v-text-field
                   v-model="Description"
-                  required
-                  single-line
                 ></v-text-field>
               </v-flex>
               <v-flex xs12 mt-4 class="text-xs-center">
@@ -48,14 +48,13 @@
           团队成员
           <v-spacer></v-spacer>
           <v-select
-              v-bind:items="UsersNotInTeam"
+              :items="UsersNotInTeam"
               label="请选择"
               item-text="Name"
               item-value="Id"
               v-model="UserToJoin"
               dark
               max-height="auto"
-              single-line
               autocomplete
             >
           </v-select>
@@ -65,8 +64,8 @@
         </v-card-title>
         <div>
           <v-data-table
-            v-bind:headers="headers"
-            v-bind:items="UsersInTeam"
+            :headers="headers"
+            :items="UsersInTeam"
             hide-actions
             class="elevation-1"
             no-data-text=""
@@ -85,8 +84,8 @@
                 <v-radio label="" v-model="LeaderId" :value="props.item.Id" dark></v-radio>
               </td>
               <td align="right">
-                <v-btn class="orange darken-2 white--text" small @click.native="removeUser(props.item)">
-                  <v-icon light left>close</v-icon>删除
+                <v-btn outline small class="orange orange--text" @click.native="removeUser(props.item)">
+                  <v-icon class="orange--text">close</v-icon>删除
                 </v-btn>
               </td>
             </template>
@@ -98,17 +97,16 @@
 </template>
 
 <script>
-  import router from '../router'
   import api from '../api/api'
   import * as ui from '../util/ui'
 
   export default {
     data() {
       return {
-        Id: '',
+        Id: this.$route.params.id,
         Name: '',
         Description: '',
-        LeaderId: null,
+        LeaderId: false,
         headers: [
           { text: 'ID', sortable: false, left: true },
           { text: '用户名', sortable: false, left: true },
@@ -119,15 +117,27 @@
         ],
         UsersInTeam: [],
         UsersNotInTeam: [],
-        UserToJoin: null
+        UserToJoin: null,
+
+        rules: {},
+
+        rules0: {
+          Name: [
+            v => (v && v.length > 0 ? true : '请输入团队名称')
+          ]
+        }
       }
     },
 
     watch: {
       LeaderId(newLeaderId, oldLeaderId) {
+        if (oldLeaderId === false) {
+          return;
+        }
+
         api.AppointLeader({
-          Id: this.Id,
-          LeaderId: newLeaderId
+          TeamId: this.Id,
+          UserId: newLeaderId
         }).then(data => {
         })
         .catch(err => {
@@ -142,12 +152,12 @@
 
     methods: {
       init() {
-        api.Team(this.$route.params.id).then(data => {
+        api.Team(this.Id).then(data => {
           this.Id = data.Id;
           this.Name = data.Name;
           this.Description = data.Description;
-          this.LeaderId = data.Leader.Id;
-          this.UsersInTeam = data.UsersInTeam;
+          this.LeaderId = data.Leader ? data.Leader.Id : null;
+          this.UsersInTeam = data.Users;
           this.UserToJoin = null,
 
           api.Users().then(data => {
@@ -157,29 +167,36 @@
       },
 
       goback() {
-        router.go(-1);
+        this.$router.go(-1);
       },
 
       save() {
-        api.UpdateTeam({
-          Id: this.Id,
-          Name: this.Name,
-          Description: this.Description
-        }).then(data => {
-          ui.alert('团队资料修改成功', 'success');
-        })
+        this.rules = this.rules0;
+        this.$nextTick(_ => {
+          if (!this.validateForm()) {
+            return;
+          }
+
+          api.UpdateTeam({
+            Id: this.Id,
+            Name: this.Name,
+            Description: this.Description
+          }).then(data => {
+            ui.alert('团队资料修改成功', 'success');
+          });
+        });
       },
 
       addUser() {
         if (this.UserToJoin) {
-          api.JoinTeam({ Id: this.Id, UserId: this.UserToJoin }).then(data => {
+          api.JoinTeam({ TeamId: this.Id, UserId: this.UserToJoin }).then(data => {
             this.init();
           })
         }
       },
 
       removeUser(user) {
-        api.QuitTeam({ Id: this.Id, UserId: user.Id }).then(data => {
+        api.QuitTeam({ TeamId: this.Id, UserId: user.Id }).then(data => {
             this.init();
           })
       }

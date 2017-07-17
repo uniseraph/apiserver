@@ -1,0 +1,4 @@
+[
+{ "Id": "1", "Name": "Pool1", "Driver": "swarm", "DriverOpts": { "Version": "v1.0", "EndPoint": "10.0.0.1:3211", "APIVersion": "v1.23" }, "EnvTreeId": "1", "EnvTree": { "Id": "1", "Name": "Hadoop集群参数" }, "Nodes": 10, "CPUs": 160, "Memory": 640, "Disk": 10240 },
+{ "Id": "2", "Name": "Pool2", "Driver": "swarm", "DriverOpts": { "Version": "v1.0", "EndPoint": "10.0.0.1:3211", "APIVersion": "v1.23" }, "EnvTreeId": "1", "EnvTree": { "Id": "1", "Name": "Hadoop集群参数" }, "Nodes": 20, "CPUs": 320, "Memory": 1280, "Disk": 20480 }
+]

@@ -23,5 +23,7 @@ apicli
 apiserver.iml
 *.exe
 .DS_Store
+.vscode
 client/client
 static/package-lock.json
+debug

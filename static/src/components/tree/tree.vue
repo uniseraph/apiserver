@@ -1,6 +1,6 @@
 <template>
 <div class="halo-tree">
- <tree-node :treeData='treeData' :options="options" @handlecheckedChange="handlecheckedChange"></tree-node>
+ <tree-node :nodeData="treeData.nodeData" :options="options" @handleCheckedChange="handleCheckedChange"></tree-node>
 </div>
 </template>
 <script>
@@ -8,41 +8,41 @@
   import TreeStore from './tree-store'
   export default {
     name: 'tree',
-    props: {
-      treeData: [Array],
-      options: [Object]
-    },
-    data () {
+    props: [ 'treeData', 'options' ],
+
+    data() {
       return {
         search: null
       }
     },
-    created () {
+
+    created() {
       this.isTree = true
-      this.store = new TreeStore({
-        root: (this.treeData || []).slice(0),
-        last: null
-      })
+      this.refresh()
     },
+
     watch: {
-      search: function (val) {
+      search(val) {
         this.store.filterNodes(val, this.options.search)
       },
-      treeData: function(data){
-        this.store.root = data;
-        return data
+
+      treeData(val) {
+        this.refresh()
       }
     },
+
     methods: {
-      handlecheckedChange (node) {
-        if(this.options.halfCheckedStatus){
+      handleCheckedChange(node) {
+        if (this.options.halfCheckedStatus) {
           this.store.changeCheckHalfStatus(node)
-        }else{
-        this.store.changeCheckStatus(node)
+        } else {
+          this.store.changeCheckStatus(node)
         }
-        this.$emit('handlecheckedChange', node)
+
+        this.$emit('handleCheckedChange', node)
       },
-      getSelectedNodes () {
+
+      getSelectedNodes() {
         const allnodes = this.store.datas
         let selectedNodes = []
         for (let [, node] of allnodes) {
@@ -50,9 +50,11 @@
             selectedNodes.push(node)
           }
         }
+
         return selectedNodes
       },
-      getSelectedNodeIds () {
+
+      getSelectedNodeIds() {
         const allnodes = this.store.datas
         let selectedNodeIds = []
         for (let [, node] of allnodes) {
@@ -60,10 +62,88 @@
             selectedNodeIds.push(node.id)
           }
         }
+
         return selectedNodeIds
+      },
+
+      getState() {
+        let state = {};
+        const traverseNodes = (root) => {
+            for (let node of root) {
+                let s = {
+                  open: node.open,
+                  visible: node.visible,
+                  checked: false // node.checked 先只支持单选
+                };
+
+                state[node.id] = s;
+                if (node.children && node.children.length > 0) traverseNodes(node.children)
+            }
+        };
+
+        traverseNodes(this.treeData.nodeData);
+        return state;
+      },
+
+      createTreeData(nodeData, state, currNodeId) {
+        let currNode = null;
+        const traverseNodes = (root) => {
+            for (let node of root) {
+                let s = state[node.id];
+                if (s) {
+                  node.open = s.open;
+                  node.visible = s.visible;
+                  node.checked = s.checked;
+                }
+
+                if (currNodeId && node.id == currNodeId) {
+                  currNode = node;
+                }
+
+                if (node.children && node.children.length > 0) {
+                  traverseNodes(node.children)
+                }
+            }
+        };
+
+        traverseNodes(nodeData);
+
+        if (currNode != null) {
+          currNode.checked = true;
+          let node = currNode.parentNode;
+          while (node) {
+            node.open = true;
+            node = node.parentNode;
+          }
+        }
+
+        return { nodeData: nodeData, currentNodeId: currNodeId };
+      },
+
+      getNodeById(id) {
+        let lastNode = null;
+        const traverseNodes = (root) => {
+            for (let node of root) {
+                if (id && node.id == id) {
+                  lastNode = node;
+                  return;
+                }
+
+                if (node.children && node.children.length > 0) traverseNodes(node.children)
+            }
+        };
+
+        traverseNodes(this.treeData.nodeData);
+        return lastNode;
+      },
+
+      refresh() {
+        let lastNode = this.getNodeById(this.treeData.currentNodeId);
+        this.store = new TreeStore({ root: this.treeData.nodeData, last: lastNode });
       }
     },
-    components: {TreeNode}
+
+    components: { TreeNode }
   }
 </script>
 <style scoped>

@@ -130,7 +130,7 @@ only convenient, but also optimizes request matching. You can create
 subrouters combining any attribute matchers accepted by a route.
 
 Subrouters can be used to create domain or path "namespaces": you define
-subrouters in a central place and then parts of the app can register its
+subrouters in a central place and then parts of the application can register its
 paths relatively to a given subrouter.
 
 There's one more thing about subroutes. When a subrouter has a path prefix,

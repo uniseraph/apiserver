@@ -1,13 +1,14 @@
 { 
 	"Id": "1", 
 	"Name": "Pool1", 
-	"Driver": "Swarm",
-	"Network": "Flannel", 
-	"EndPoint": "10.0.0.1:3211", 
+	"EnvTreeId": "1",
+	"EnvTree": { "Id": "1", "Name": "Hadoop集群参数" }, 
+	"Driver": "swarm",
+	"DriverOpts": { "Version": "v1.0", "EndPoint": "10.0.0.1:3211", "APIVersion": "v1.23" },
 	"Nodes": 10,
-	"Cpus": 160,
-	"Memories": 640,
-	"Disks": 10240,
+	"CPUs": 160,
+	"Memory": 640,
+	"Disk": 10240,
 	"Teams": [
 		{ "Id": "1", "Name": "Team1" },
 		{ "Id": "3", "Name": "Team3" }

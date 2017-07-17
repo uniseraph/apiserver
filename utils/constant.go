@@ -3,9 +3,10 @@ package utils
 import (
 	"context"
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/docker/client"
 	"github.com/go-redis/redis"
 	"github.com/pkg/errors"
-	store "github.com/zanecloud/apiserver/types"
+	"github.com/zanecloud/apiserver/types"
 	"gopkg.in/mgo.v2"
 )
 
@@ -25,10 +26,10 @@ const KEY_LISTENER_ADDR = "addr"
 const KEY_LISTENER_PORT = "port"
 const KEY_APISERVER_CONFIG = "apiserver.config"
 const KEY_CURRENT_USER = "user.self"
-const KEY_ROOT_DIR= "root.dir"
+const KEY_ROOT_DIR = "root.dir"
 
-func GetAPIServerConfig(ctx context.Context) *store.APIServerConfig {
-	config, ok := ctx.Value(KEY_APISERVER_CONFIG).(*store.APIServerConfig)
+func GetAPIServerConfig(ctx context.Context) *types.APIServerConfig {
+	config, ok := ctx.Value(KEY_APISERVER_CONFIG).(*types.APIServerConfig)
 	if !ok {
 		logrus.Errorf("can't get APIServerConfig by %s", KEY_APISERVER_CONFIG)
 		panic("can't get APIServerConfig")
@@ -37,15 +38,15 @@ func GetAPIServerConfig(ctx context.Context) *store.APIServerConfig {
 	return config
 }
 
-func PutAPIServerConfig(ctx context.Context, config *store.APIServerConfig) context.Context {
+func PutAPIServerConfig(ctx context.Context, config *types.APIServerConfig) context.Context {
 	return context.WithValue(ctx, KEY_APISERVER_CONFIG, config)
 }
 
-func PutCurrentUser(ctx context.Context, user *store.User) context.Context {
+func PutCurrentUser(ctx context.Context, user *types.User) context.Context {
 	return context.WithValue(ctx, KEY_CURRENT_USER, user)
 }
-func GetCurrentUser(ctx context.Context) (*store.User, error) {
-	user, ok := ctx.Value(KEY_CURRENT_USER).(*store.User)
+func GetCurrentUser(ctx context.Context) (*types.User, error) {
+	user, ok := ctx.Value(KEY_CURRENT_USER).(*types.User)
 	if !ok {
 		logrus.Errorf("can't get current user  by %s", KEY_CURRENT_USER)
 		return nil, errors.New("can't get current user")
@@ -73,6 +74,16 @@ func GetMgoSessionClone(ctx context.Context) (*mgo.Session, error) {
 	}
 
 	return session.Clone(), nil
+}
+
+// 大家公用一个dockerclient，不需要关闭
+func GetPoolClient(ctx context.Context) (*client.Client, error) {
+	cli, ok := ctx.Value(KEY_POOL_CLIENT).(*client.Client)
+	if !ok {
+		return nil, errors.New("can't get the pool client")
+	}
+
+	return cli, nil
 }
 
 func PutMgoSession(ctx context.Context, mgoSession *mgo.Session) context.Context {

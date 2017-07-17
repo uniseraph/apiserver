@@ -6,61 +6,129 @@
           <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
           &nbsp;&nbsp;集群列表&nbsp;&nbsp;/&nbsp;&nbsp;{{ Name }}
           <v-spacer></v-spacer>
+          <v-btn class="green darken-2 white--text" small @click.native="refreshPool()">
+            <v-icon light left>refresh</v-icon>同步集群状态
+          </v-btn>
         </v-card-title>
         <div>
           <v-container fluid>
             <v-layout row wrap>
               <v-flex xs2>
+                <v-subheader>名称<span class="required-star">*</span></v-subheader>
+              </v-flex>
+              <v-flex xs3>
+                <v-text-field
+                  v-model="Name"
+                  ref="all_Name"
+                  required
+                  :rules="rules.Name"
+                  @input="rules.Name = rules0.Name"
+                ></v-text-field>
+              </v-flex>
+              <v-flex xs2>
+              </v-flex>
+              <v-flex xs2>
+                <v-subheader>参数目录</v-subheader>
+              </v-flex>
+              <v-flex xs3>
+                <v-text-field
+                  v-model="EnvTreeName"
+                  readonly
+                ></v-text-field>
+                <!--v-select
+                  :items="EnvTreeList"
+                  item-text="Name"
+                  item-value="Id"
+                  v-model="EnvTreeId"
+                  label="请选择"
+                  dark
+                ></v-select-->
+              </v-flex>
+              <v-flex xs2>
                 <v-subheader>驱动类型</v-subheader>
               </v-flex>
               <v-flex xs3>
-                <v-select
-                  v-bind:items="DriverList"
+                <v-text-field
                   v-model="Driver"
+                  readonly
+                ></v-text-field>
+                <!--v-select
+                  :items="DriverList"
+                  v-model="Driver"
+                  ref="all_Driver"
                   label="请选择"
                   dark
-                  single-line
-                  auto
                   required
-                ></v-select>
+                  :rules="rules.Driver"
+                ></v-select-->
               </v-flex>
               <v-flex xs2>
               </v-flex>
-              <v-flex xs2>
-                <v-subheader>网络类型</v-subheader>
+              <v-flex v-if="Driver == 'swarm'" xs2>
+                <v-subheader>驱动版本</v-subheader>
               </v-flex>
-              <v-flex xs3>
-                <v-select
-                  v-bind:items="NetworkList"
-                  v-model="Network"
+              <v-flex v-if="Driver == 'swarm'" xs3>
+                <v-text-field
+                  v-model="DriverOpts.Version"
+                  readonly
+                ></v-text-field>
+                <!--v-select
+                  :items="SwarmVersionList"
+                  v-model="DriverOpts.Version"
+                  ref="swarm_Version"
                   label="请选择"
                   dark
-                  single-line
-                  auto
                   required
-                ></v-select>
+                  :rules="rules.DriverOpts.swarm.Version"
+                ></v-select-->
               </v-flex>
-              <v-flex xs2>
+              <v-flex v-if="Driver == 'swarm'" xs2>
                 <v-subheader>API地址</v-subheader>
               </v-flex>
-              <v-flex xs10>
+              <v-flex v-if="Driver == 'swarm'" xs3>
                 <v-text-field
-                  v-model="EndPoint"
-                  required
-                  single-line
+                  v-model="DriverOpts.EndPoint"
+                  readonly
                 ></v-text-field>
+                <!--v-text-field
+                  v-model="DriverOpts.EndPoint"
+                  ref="swarm_EndPoint"
+                  required
+                  :rules="rules.DriverOpts.swarm.EndPoint"
+                  @input="rules.DriverOpts.swarm.EndPoint = rules0.DriverOpts.swarm.EndPoint"
+                ></v-text-field-->
+              </v-flex>
+              <v-flex v-if="Driver == 'swarm'" xs2>
+              </v-flex>
+              <v-flex v-if="Driver == 'swarm'" xs2>
+                <v-subheader>API版本</v-subheader>
+              </v-flex>
+              <v-flex v-if="Driver == 'swarm'" xs3>
+                <v-text-field
+                  v-model="DriverOpts.APIVersion"
+                  readonly
+                ></v-text-field>
+                <!--v-select
+                  :items="SwarmAPIVersionList"
+                  v-model="DriverOpts.APIVersion"
+                  ref="swarm_APIVersion"
+                  label="请选择"
+                  dark
+                  required
+                  :rules="rules.DriverOpts.swarm.APIVersion"
+                ></v-select-->
               </v-flex>
               <v-flex xs3>
-                <v-subheader>节点个数：{{ Nodes }}</v-subheader>
+                <v-subheader>节点个数：{{ NodeCount }}</v-subheader>
               </v-flex>
               <v-flex xs3>
-                <v-subheader>CPU：{{ Cpus }}</v-subheader>
+                <v-subheader>CPU：{{ CPUs }}</v-subheader>
               </v-flex>
               <v-flex xs3>
-                <v-subheader>内存 (GB)：{{ Memories }}</v-subheader>
+                <v-subheader>内存 (GB)：{{ Memory | dividedBy1024 | dividedBy1024 | dividedBy1024 }}</v-subheader>
               </v-flex>
               <v-flex xs3>
-                <v-subheader>磁盘 (GB)：{{ Disks }}</v-subheader>
+                <v-subheader>磁盘 (GB)：{{ Disk }}</v-subheader>
               </v-flex>
               <v-flex xs12 mt-4 class="text-xs-center">
                 <v-btn class="orange darken-2 white--text" @click.native="save">
@@ -80,14 +148,13 @@
               授权团队
               <v-spacer></v-spacer>
               <v-select
-                  v-bind:items="UnauthorizedTeamList"
+                  :items="UnauthorizedTeamList"
                   label="请选择"
                   item-text="Name"
                   item-value="Id"
                   v-model="AuthorizeToTeam"
                   dark
                   max-height="auto"
-                  single-line
                   autocomplete
                 >
               </v-select>
@@ -97,7 +164,7 @@
             </v-card-title>
             <div class="auth-teams">
               <v-data-table
-                v-bind:items="AuthorizedTeamList"
+                :items="AuthorizedTeamList"
                 hide-actions
                 class="elevation-1"
                 no-data-text=""
@@ -105,8 +172,8 @@
                 <template slot="items" scope="props">
                   <td>{{ props.item.Name }}</td>
                   <td align="right">
-                    <v-btn class="orange darken-2 white--text" small @click.native="removeTeam(props.item)">
-                      <v-icon light left>close</v-icon>删除
+                    <v-btn outline small class="orange orange--text"  @click.native="removeTeam(props.item)">
+                      <v-icon class="orange--text">close</v-icon>删除
                     </v-btn>
                   </td>
                 </template>
@@ -120,24 +187,23 @@
               授权用户
               <v-spacer></v-spacer>
               <v-select
-                  v-bind:items="UnauthorizedUserList"
+                  :items="UnauthorizedUserList"
                   label="请选择"
                   item-text="Name"
                   item-value="Id"
                   v-model="AuthorizeToUser"
                   dark
                   max-height="auto"
-                  single-line
                   autocomplete
                 >
               </v-select>
-              <v-btn floating small primary @click.native="addTeam">
+              <v-btn floating small primary @click.native="addUser">
                 <v-icon light>add</v-icon>
               </v-btn>
             </v-card-title>
             <div class="auth-users">
               <v-data-table
-                v-bind:items="AuthorizedUserList"
+                :items="AuthorizedUserList"
                 hide-actions
                 class="elevation-1"
                 no-data-text=""
@@ -145,8 +211,8 @@
                 <template slot="items" scope="props">
                   <td>{{ props.item.Name }}</td>
                   <td align="right">
-                    <v-btn class="orange darken-2 white--text" small @click.native="removeUser(props.item)">
-                      <v-icon light left>close</v-icon>删除
+                    <v-btn outline small class="orange orange--text" @click.native="removeUser(props.item)">
+                      <v-icon class="orange--text">close</v-icon>删除
                     </v-btn>
                   </td>
                 </template>
@@ -160,30 +226,60 @@
 </template>
 
 <script>
-  import router from '../router'
   import api from '../api/api'
   import * as ui from '../util/ui'
 
   export default {
     data() {
       return {
-        Id: '',
+        Id: this.$route.params.id,
         Name: '',
-        Driver: '',
-        Network: '',
-        EndPoint: '',
-        Nodes: 0,
-        Cpus: 0,
-        Memories: 0,
-        Disks: 0,
-        DriverList: [ 'Swarm', 'Kubernetes' ],
-        NetworkList: [ 'Flannel', 'VxLAN' ],
+        EnvTreeId: null,
+        EnvTree: {},
+        Driver: 'swarm',
+        DriverOpts: { Version: 'v1.0', EndPoint: '', APIVersion: 'v1.23' },
+        NodeCount: 0,
+        CPUs: 0,
+        Memory: 0,
+        Disk: 0,
+
+        EnvTreeList: [],
+        DriverList: [ 'swarm' ],
+        SwarmVersionList: [ 'v1.0' ],
+        SwarmAPIVersionList: [ 'v1.23' ],
+
         AuthorizedTeamList: [],
         AuthorizedUserList: [],
         UnauthorizedTeamList: [],
         UnauthorizedUserList: [],
         AuthorizeToTeam: null,
-        AuthorizeToUser: null
+        AuthorizeToUser: null,
+
+        rules: { 
+          DriverOpts: { swarm: {} } 
+        },
+
+        rules0: {
+          Name: [
+            v => (v && v.length > 0 ? true : '请输入集群名称')
+          ],
+          Driver: [
+            v => (v && v.length > 0 ? true : '请选择驱动类型')
+          ],
+          DriverOpts: {
+            swarm: {
+              Version: [
+                v => (v && v.length > 0 ? true : '请选择集群驱动版本')
+              ],
+              EndPoint: [
+                v => (v && v.length > 0 ? true : '请输入集群API地址')
+              ],
+              APIVersion: [
+                v => (v && v.length > 0 ? true : '请选择集群API版本')
+              ]
+            }
+          }
+        }
       }
     },
 
@@ -193,20 +289,25 @@
 
     methods: {
       init() {
-        api.Pool(this.$route.params.id).then(data => {
-          this.Id = data.Id;
-          this.Name = data.Name;
-          this.Driver = data.Driver;
-          this.Network = data.Network;
-          this.EndPoint = data.EndPoint;
-          this.Nodes = data.Nodes;
-          this.Cpus = data.Cpus;
-          this.Memories = data.Memories;
-          this.Disks = data.Disks;
-          this.AuthorizedTeamList = data.Teams;
-          this.AuthorizedUserList = data.Users;
+        api.Pool(this.Id).then(data => {
+          this.Id = data.Pool.Id;
+          this.Name = data.Pool.Name;
+          this.EnvTreeId = data.Pool.EnvTreeId;
+          this.EnvTreeName = data.Pool.EnvTreeName;
+          this.Driver = data.Pool.Driver;
+          this.DriverOpts = data.Pool.DriverOpts;
+          this.NodeCount = data.Pool.NodeCount;
+          this.CPUs = data.Pool.CPUs;
+          this.Memory = data.Pool.Memory;
+          this.Disk = data.Pool.Disk;
+          this.AuthorizedTeamList = data.Teams ? data.Teams : [];
+          this.AuthorizedUserList = data.Users ? data.Users : [];
           this.AuthorizeToTeam = null;
           this.AuthorizeToUser = null;
+
+          api.EnvTrees().then(data => {
+            this.EnvTreeList = data;
+          })
 
           api.Teams().then(data => {
             this.UnauthorizedTeamList = filterArray(data, this.AuthorizedTeamList, 'Id');
@@ -219,18 +320,26 @@
       },
 
       goback() {
-        router.go(-1);
+        this.$router.go(-1);
       },
 
       save() {
-        api.UpdatePool({
-          Id: this.Id,
-          Name: this.Name,
-          Driver: this.Driver,
-          Network: this.Network
-        }).then(data => {
-          ui.alert('集群资料修改成功', 'success');
-        })
+        this.rules = this.rules0;
+        this.$nextTick(_ => {
+          if (!this.validateForm('all_') || !this.validateForm(this.Driver + '_')) {
+            return;
+          }
+
+          api.UpdatePool({
+            Id: this.Id,
+            Name: this.Name,
+            EnvTreeId: this.EnvTreeId,
+            Driver: this.Driver,
+            DriverOpts: this.DriverOpts
+          }).then(data => {
+            ui.alert('集群资料修改成功', 'success');
+          });
+        });
       },
 
       addTeam() {
@@ -242,7 +351,7 @@
       },
 
       removeTeam(team) {
-        api.RemoveUserFromPool({ Id: this.Id, TeamId: team.Id }).then(data => {
+        api.RemoveTeamFromPool({ Id: this.Id, TeamId: team.Id }).then(data => {
             this.init();
           })
       },
@@ -259,6 +368,13 @@
         api.RemoveUserFromPool({ Id: this.Id, UserId: user.Id }).then(data => {
             this.init();
           })
+      },
+
+      refreshPool() {
+        api.RefreshPool(this.Id).then(data => {
+          ui.alert('集群状态同步完成', 'success');
+          this.init();
+        })
       }
     }
   }

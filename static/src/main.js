@@ -12,19 +12,31 @@ Vue.use(common)
 Vue.use(constants)
 
 Vue.filter('formatDate', function(value) {
-	if (!value) {
+	if (!value || value.length == 0) {
 		return '';
 	}
 
-    return new Date(value).toLocaleDateString();
+    return new Date(value * 1000).toLocaleDateString();
 });
 
 Vue.filter('formatDateTime', function(value) {
-	if (!value) {
+	if (!value || value.length == 0) {
 		return '';
 	}
 	
-    return new Date(value).toLocaleString();
+    return new Date(value * 1000).toLocaleString();
+});
+
+Vue.filter('dividedBy1024', function(value) {
+	if (!value || value.length == 0) {
+		return '';
+	}
+
+	if (typeof value !== 'number') {
+		value = parseInt(value.toString());
+	}
+	
+    return Math.floor(value / 1024);
 });
 
 new Vue({

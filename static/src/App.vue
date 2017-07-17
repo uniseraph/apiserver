@@ -1,19 +1,13 @@
 <template>
-  <v-app light>
-    <div v-if="token && token.Id == null" class="text-xs-center" primary>
-      <v-layout row wrap style="margin-top:100px;">
+  <v-app light :class="{ 'login-ui': token && token.Id == null }">
+    <div v-if="token && token.Id == null" class="text-xs-center login-content" primary>
+      <v-layout row wrap class="login-box">
         <v-flex xs4 offset-xs4>
-          <v-alert 
-            v-bind:success="alertType==='success'" 
-            v-bind:info="alertType==='info'" 
-            v-bind:warning="alertType==='warning'" 
-            v-bind:error="alertType==='error'" 
-            v-model="showAlert" 
-            dismissible>{{ alertMsg }}</v-alert>
+          <img src="/public/logo.png"></img>
         </v-flex>
         <v-flex xs4>
         </v-flex>
-        <v-flex xs4 offset-xs4>
+        <v-flex xs4 offset-xs4 class="mt-4">
           <v-card>
             <v-card-title class="text-xs-center" style="font-size:24px;display:block;">
               登录
@@ -26,9 +20,12 @@
                   </v-flex>
                   <v-flex xs8>
                     <v-text-field
-                      v-model="Name"
-                      required
+                      v-model="Login.Name"
+                      ref="Login_Name"
                       single-line
+                      required
+                      :rules="rules.Login.Name"
+                      @input="rules.Login.Name = rules0.Login.Name"
                     ></v-text-field>
                   </v-flex>
                   <v-flex xs4>
@@ -36,10 +33,14 @@
                   </v-flex>
                   <v-flex xs8>
                     <v-text-field
-                      v-model="Password"
-                      required
+                      v-model="Login.Password"
+                      ref="Login_Password"
                       single-line
+                      required
                       type="password"
+                      :rules="rules.Login.Password"
+                      @input="rules.Login.Password = rules0.Login.Password"
+                      @keydown.enter.native="login"
                     ></v-text-field>
                   </v-flex>
                   <v-flex xs4>
@@ -54,7 +55,23 @@
             </div>
           </v-card>
         </v-flex>
+        <v-flex xs4>
+        </v-flex>
+        <v-flex xs4 offset-xs4>
+          <v-alert 
+            v-if="alertArea==='global'"
+            v-bind:success="alertType==='success'" 
+            v-bind:info="alertType==='info'" 
+            v-bind:warning="alertType==='warning'" 
+            v-bind:error="alertType==='error'" 
+            v-model="alertMsg" 
+            dismissible>{{ alertMsg }}</v-alert>
+        </v-flex>
+        <v-flex xs4>
+        </v-flex>
       </v-layout>
+      <div class="login-footer">
+      </div>
     </div>
     <div v-if="token && token.Id != null">
       <v-navigation-drawer
@@ -95,7 +112,7 @@
             </v-list-tile>
           </v-list-item>
           <v-list-item>
-            <v-list-tile ripple to="/envs" router>
+            <v-list-tile ripple to="/env/trees" router>
               <v-list-tile-avatar>
                 <v-icon light>local_parking</v-icon>
               </v-list-tile-avatar>
@@ -105,7 +122,7 @@
             </v-list-tile>
           </v-list-item>
           <v-list-item>
-            <v-list-tile ripple to="/compose" router>
+            <v-list-tile ripple to="/templates" router>
               <v-list-tile-avatar>
                 <v-icon light>share</v-icon>
               </v-list-tile-avatar>
@@ -115,7 +132,7 @@
             </v-list-tile>
           </v-list-item>
           <v-list-item>
-            <v-list-tile ripple to="/apps" router>
+            <v-list-tile ripple to="/applications" router>
               <v-list-tile-avatar>
                 <v-icon light>brightness_auto</v-icon>
               </v-list-tile-avatar>
@@ -194,6 +211,10 @@
         </v-toolbar-side-icon>
         <v-toolbar-title>峥云网络</v-toolbar-title>
         <v-spacer></v-spacer>
+        <v-subheader light>{{ token.Name }}</v-subheader>
+        <v-btn light icon @click.native="logout" title="退出">
+          <v-icon>exit_to_app</v-icon>
+        </v-btn>
       </v-toolbar>
       <main>
         <v-container fluid>
@@ -201,11 +222,12 @@
             <v-layout column>
               <v-flex xs12>
                 <v-alert 
+                  v-if="alertArea==='global'"
                   v-bind:success="alertType==='success'" 
                   v-bind:info="alertType==='info'" 
                   v-bind:warning="alertType==='warning'" 
                   v-bind:error="alertType==='error'" 
-                  v-model="showAlert" 
+                  v-model="alertMsg" 
                   dismissible>{{ alertMsg }}</v-alert>
               </v-flex>
               <v-flex xs12>
@@ -215,9 +237,6 @@
           </v-slide-y-transition>
         </v-container>
       </main>
-      <!--v-footer :fixed="fixed">
-        <span>&copy; 2017</span>
-      </v-footer-->
     </div>
   </v-app>
 </template>
@@ -234,14 +253,31 @@
         drawer: true,
         fixed: false,
         miniVariant: false,
-        Name: '',
-        Password: ''
+
+        Login: {
+          Name: '',
+          Password: ''
+        },
+
+        rules: { Login: {} },
+
+        rules0: {
+          Login: {
+            Name: [
+              v => (v && v.length > 0 ? true : '请输入用户名')
+            ],
+
+            Password: [
+              v => (v && v.length > 0 ? true : '请输入密码')
+            ]
+          }
+        }
       }
     },
 
     computed: {
       ...mapGetters([
-          'showAlert',
+          'alertArea',
           'alertType',
           'alertMsg',
           'token'
@@ -257,20 +293,35 @@
         api.Me().then(data => {
             context.setToken(data);
           }, err => {
-            let res = err.response;
-            if (res != null && res.status == 403) {
-              context.setToken({});
-            }
+            context.setToken({});
           })
       },
 
       login() {
-        api.Login({
-          Name: this.Name,
-          Password: this.Password
-        }).then(data => {
+        this.rules.Login = this.rules0.Login;
+
+        // 前面对rules的赋值必须在next tick才能生效，validateForm才能正常工作
+        this.$nextTick(_ => {
+          if (!this.validateForm('Login_')) {
+            return;
+          }
+
+          api.Login({
+            Name: this.Login.Name,
+            Pass: this.Login.Password
+          }).then(data => {
+            window.location.reload();
+          }, err => {
+            ui.alert('用户名或密码不正确');
+          });
+        });
+      },
+
+      logout() {
+        api.Logout().then(data => {
           window.location.reload();
-        })
+        }, err => {
+        });
       }
     }
   }
@@ -278,4 +329,27 @@
 
 <style lang="stylus">
   @import './stylus/main'
+
+  .login-ui
+    background-color: #2196f3
+    width: 100%
+    height: 100%
+
+  .login-content
+    position: relative
+    top: 20%
+
+  .login-box
+    position: relative
+    z-index: 999
+
+  .login-footer
+    width: 100%
+    height: 205px
+    position: relative
+    bottom: 85px
+    left: 0
+    background: url("/public/loginbottom.png") no-repeat
+    background-size: 100% 205px
+    z-index: 1
 </style>

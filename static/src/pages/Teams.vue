@@ -7,13 +7,32 @@
         <v-dialog v-model="CreateTeamDlg">
           <v-btn class="primary white--text" slot="activator"><v-icon light>add</v-icon>新增团队</v-btn>
           <v-card>
+            <v-alert 
+              v-if="alertArea==='CreateTeamDlg'"
+              v-bind:success="alertType==='success'" 
+              v-bind:info="alertType==='info'" 
+              v-bind:warning="alertType==='warning'" 
+              v-bind:error="alertType==='error'" 
+              v-model="alertMsg" 
+              dismissible>{{ alertMsg }}</v-alert>
             <v-card-row>
               <v-card-title>新增团队</v-card-title>
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="Name" label="名称" required v-model="NewTeam.Name" :rules="rules.NameRules"></v-text-field>
-                <v-text-field label="描述" v-model="NewTeam.Description"></v-text-field>
+                <v-text-field 
+                  v-model="NewTeam.Name"
+                  ref="Name" 
+                  label="名称" 
+                  required
+                  :rules="rules.Name"
+                  @input="rules.Name = rules0.Name"
+                ></v-text-field>
+                <v-text-field 
+                  v-model="NewTeam.Description" 
+                  label="说明" 
+                  class="mt-4"
+                ></v-text-field>
               </v-card-text>
             </v-card-row>
             <v-card-row actions>
@@ -42,15 +61,14 @@
         </v-dialog>
       </v-layout>
       <v-data-table
-        v-bind:headers="headers"
-        v-bind:items="items"
+        :headers="headers"
+        :items="items"
         hide-actions
         class="teams-table elevation-1"
         no-data-text=""
       >
         <template slot="items" scope="props">
-          <td>{{ props.item.Id }}</td>
-          <td><router-link :to="'/team/' + props.item.Id + '/detail'">{{ props.item.Name }}</router-link></td>
+          <td><router-link :to="'/teams/' + props.item.Id">{{ props.item.Name }}</router-link></td>
           <td>{{ props.item.Leader.Name }}</td>
           <td>{{ props.item.Description }}</td>
           <td>{{ props.item.CreatedTime | formatDate }}</td>
@@ -66,6 +84,7 @@
 </template>
 
 <script>
+  import store, { mapGetters } from 'vuex'
   import api from '../api/api'
   import * as ui from '../util/ui'
 
@@ -73,7 +92,6 @@
     data() {
       return {
         headers: [
-          { text: 'ID', sortable: false, left: true },
           { text: '名称', sortable: false, left: true },
           { text: '主管', sortable: false, left: true },
           { text: '说明', sortable: false, left: true },
@@ -81,17 +99,35 @@
           { text: '操作', sortable: false, left: true }
         ],
         items: [],
+
         CreateTeamDlg: false,
         NewTeam: { Name: '', Description: '' },
+
         RemoveConfirmDlg: false,
         SelectedTeam: {},
 
-        rules: {
-          NameRules: [
-            v => (v.length > 0 ? true : '请输入团队名称')
+        rules: {},
+
+        rules0: {
+          Name: [
+            v => (v && v.length > 0 ? true : '请输入团队名称')
           ]
         }
       }
+    },
+
+    computed: {
+      ...mapGetters([
+          'alertArea',
+          'alertType',
+          'alertMsg'
+      ])
+    },
+
+    watch: {
+        CreateTeamDlg(v) {
+          (v ? ui.showAlertAt('CreateTeamDlg') : ui.showAlertAt())
+        }
     },
 
     mounted() {
@@ -106,17 +142,17 @@
       },
 
       createTeam() {
-        for (let f in this.$refs) {
-          let e = this.$refs[f];
-          if (e.errorBucket && e.errorBucket.length > 0) {
+        this.rules = this.rules0;
+        this.$nextTick(_ => {
+          if (!this.validateForm()) {
             return;
           }
-        }
 
-        this.CreateTeamDlg = false;
-        api.CreateTeam(this.NewTeam).then(data => {
-          this.init();
-        })
+          this.CreateTeamDlg = false;
+          api.CreateTeam(this.NewTeam).then(data => {
+            this.init();
+          });
+        });
       },
 
       confirmBeforeRemove(team) {
@@ -126,7 +162,7 @@
 
       removeTeam() {
         this.RemoveConfirmDlg = false;
-        api.RemoveTeam({ Id: this.SelectedTeam.Id }).then(data => {
+        api.RemoveTeam(this.SelectedTeam.Id).then(data => {
           this.init();
         })
       }
@@ -142,4 +178,9 @@
   tr:hover
     .btn
       visibility: visible
+
+.dialog
+  .input-group
+    &__details
+      min-height: 22px
 </style>

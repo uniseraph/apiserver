@@ -7,35 +7,82 @@
         <v-dialog v-model="CreatePoolDlg">
           <v-btn class="primary white--text" slot="activator"><v-icon light>add</v-icon>新增集群</v-btn>
           <v-card>
+            <v-alert 
+              v-if="alertArea==='CreatePoolDlg'"
+              v-bind:success="alertType==='success'" 
+              v-bind:info="alertType==='info'" 
+              v-bind:warning="alertType==='warning'" 
+              v-bind:error="alertType==='error'" 
+              v-model="alertMsg" 
+              dismissible>{{ alertMsg }}</v-alert>
             <v-card-row>
               <v-card-title>新增集群</v-card-title>
             </v-card-row>
             <v-card-row>
               <v-card-text>
-                <v-text-field ref="Name" label="名称" v-model="NewPool.Name" required :rules="rules.Name"></v-text-field>
+                <v-text-field 
+                  v-model="NewPool.Name" 
+                  ref="all_Name" 
+                  label="名称" 
+                  required 
+                  persistent-hint 
+                  :rules="rules.Name"
+                  @input="rules.Name = rules0.Name"
+                ></v-text-field>
                 <v-select
-                  v-bind:items="DriverList"
+                  :items="EnvTreeList"
+                  v-model="NewPool.EnvTreeId"
+                  ref="all_EnvTreeId" 
+                  item-text="Name"
+                  item-value="Id"
+                  label="参数目录"
+                  dark
+                  required
+                  :rules="rules.EnvTreeId"
+                  class="mt-2"
+                ></v-select>
+                <v-select
+                  :items="DriverList"
                   v-model="NewPool.Driver"
-                  ref="Driver"
+                  ref="all_Driver"
                   label="驱动类型"
                   dark
-                  single-line
-                  auto
                   required
                   :rules="rules.Driver"
+                  class="mt-2"
                 ></v-select>
                 <v-select
-                  v-bind:items="NetworkList"
-                  v-model="NewPool.Network"
-                  ref="Network"
-                  label="网络类型"
+                  v-if="NewPool.Driver == 'swarm'"
+                  :items="SwarmVersionList"
+                  v-model="NewPool.DriverOpts.Version"
+                  ref="swarm_Version"
+                  label="驱动版本"
                   dark
-                  single-line
-                  auto
                   required
-                  :rules="rules.Network"
+                  :rules="rules.DriverOpts.swarm.Version"
+                  class="mt-2"
                 ></v-select>
-                <v-text-field ref="EndPoint" label="API地址" v-model="NewPool.EndPoint" required :rules="rules.EndPoint"></v-text-field>
+                <v-text-field 
+                  v-if="NewPool.Driver == 'swarm'"
+                  v-model="NewPool.DriverOpts.EndPoint" 
+                  ref="swarm_EndPoint" 
+                  label="API地址" 
+                  required 
+                  :rules="rules.DriverOpts.swarm.EndPoint"
+                  @input="rules.DriverOpts.swarm.EndPoint = rules0.DriverOpts.swarm.EndPoint"
+                  class="mt-2"
+                ></v-text-field>
+                <v-select
+                  v-if="NewPool.Driver == 'swarm'"
+                  :items="SwarmAPIVersionList"
+                  v-model="NewPool.DriverOpts.APIVersion"
+                  ref="swarm_APIVersion"
+                  label="驱动版本"
+                  dark
+                  required
+                  :rules="rules.DriverOpts.swarm.APIVersion"
+                  class="mt-2"
+                ></v-select>
               </v-card-text>
             </v-card-row>
             <v-card-row actions>
@@ -64,28 +111,30 @@
         </v-dialog>
       </v-layout>
       <v-data-table
-        v-bind:headers="headers"
-        v-bind:items="items"
+        :headers="headers"
+        :items="items"
         hide-actions
         class="pools-table elevation-1"
         no-data-text=""
       >
         <template slot="items" scope="props">
-          <td>{{ props.item.Id }}</td>
-          <td><router-link :to="'/pool/' + props.item.Id + '/detail'">{{ props.item.Name }}</router-link></td>
+          <td><router-link :to="'/pools/' + props.item.Id">{{ props.item.Name }}</router-link></td>
+          <td>{{ props.item.EnvTreeName }}</td>
           <td>{{ props.item.Driver }}</td>
-          <td>{{ props.item.Network }}</td>
-          <td class="text-xs-right">{{ props.item.Nodes }}</td>
+          <td class="text-xs-right">{{ props.item.NodeCount }}</td>
           <td class="text-xs-right">
-            {{ props.item.Cpus }}
+            {{ props.item.CPUs }}
           </td>
           <td class="text-xs-right">
-            {{ props.item.Memories }}
+            {{ props.item.Memory | dividedBy1024 | dividedBy1024 | dividedBy1024 }}
           </td>
           <td class="text-xs-right">
-            {{ props.item.Disks }}
+            {{ props.item.Disk }}
           </td>
           <td>
+            <v-btn outline small icon class="green green--text" @click.native="refreshPool(props.item)" title="同步集群状态">
+              <v-icon>refresh</v-icon>
+            </v-btn>
             <v-btn outline small icon class="orange orange--text" @click.native="confirmBeforeRemove(props.item)" title="删除集群">
               <v-icon>close</v-icon>
             </v-btn>
@@ -97,6 +146,7 @@
 </template>
 
 <script>
+  import store, { mapGetters } from 'vuex'
   import api from '../api/api'
   import * as ui from '../util/ui'
 
@@ -104,10 +154,9 @@
     data() {
       return {
         headers: [
-          { text: 'ID', sortable: false, left: true },
           { text: '名称', sortable: false, left: true },
+          { text: '参数目录', sortable: false, left: true },
           { text: '驱动类型', sortable: false, left: true },
-          { text: '网络类型', sortable: false, left: true },
           { text: '节点', sortable: false },
           { text: 'CPU', sortable: false },
           { text: '内存 (GB)', sortable: false },
@@ -115,24 +164,61 @@
           { text: '操作', sortable: false, left: true }
         ],
         items: [],
-        DriverList: [ 'Swarm', 'Kubernetes' ],
-        NetworkList: [ 'Flannel', 'VxLAN' ],
+
+        EnvTreeList: [],
+        DriverList: [ 'swarm' ],
+        SwarmVersionList: [ 'v1.0' ],
+        SwarmAPIVersionList: [ 'v1.23' ],
+
         CreatePoolDlg: false,
-        NewPool: {},
+        NewPool: { Name: '', EnvTreeId: null, Driver: 'swarm', DriverOpts: { Version: 'v1.0', EndPoint: '', APIVersion: 'v1.23' } },
+
         RemoveConfirmDlg: false,
         SelectedPool: {},
 
-        rules: {
-          NameRules: [
-            v => (v.length > 0 ? true : '请输入集群名称')
+        rules: { 
+          DriverOpts: { swarm: {} } 
+        },
+
+        rules0: {
+          Name: [
+            v => (v && v.length > 0 ? true : '请输入集群名称')
           ],
-          Driver: [],
-          Network: [],
-          EndPoint: [
-            v => (v.length > 0 ? true : '请输入集群API地址')
-          ]
+          EnvTreeId: [
+            v => (v && v.length > 0 ? true : '请选择参数目录')
+          ],
+          Driver: [
+            v => (v && v.length > 0 ? true : '请选择驱动类型')
+          ],
+          DriverOpts: {
+            swarm: {
+              Version: [
+                v => (v && v.length > 0 ? true : '请选择集群驱动版本')
+              ],
+              EndPoint: [
+                v => (v && v.length > 0 ? true : '请输入集群API地址')
+              ],
+              APIVersion: [
+                v => (v && v.length > 0 ? true : '请选择集群API版本')
+              ]
+            }
+          }
         }
       }
+    },
+
+    computed: {
+      ...mapGetters([
+          'alertArea',
+          'alertType',
+          'alertMsg'
+      ])
+    },
+
+    watch: {
+        CreatePoolDlg(v) {
+          (v ? ui.showAlertAt('CreatePoolDlg') : ui.showAlertAt())
+        }
     },
 
     mounted() {
@@ -144,20 +230,24 @@
         api.Pools().then(data => {
           this.items = data;
         })
+
+        api.EnvTrees().then(data => {
+          this.EnvTreeList = data;
+        })
       },
 
       createPool() {
-        for (let f in this.$refs) {
-          let e = this.$refs[f];
-          if (e.errorBucket && e.errorBucket.length > 0) {
+        this.rules = this.rules0;
+          this.$nextTick(_ => {
+          if (!this.validateForm('all_') || !this.validateForm(this.Driver + '_')) {
             return;
           }
-        }
 
-        this.CreatePoolDlg = false;
-        api.CreatePool(this.NewPool).then(data => {
-          this.init();
-        })
+          api.CreatePool(this.NewPool).then(data => {
+            this.CreatePoolDlg = false;
+            this.init();
+          });
+        });
       },
 
       confirmBeforeRemove(pool) {
@@ -167,7 +257,14 @@
 
       removePool() {
         this.RemoveConfirmDlg = false;
-        api.RemovePool({ Id: this.SelectedPool.Id }).then(data => {
+        api.RemovePool(this.SelectedPool.Id).then(data => {
+          this.init();
+        })
+      },
+
+      refreshPool(pool) {
+        api.RefreshPool(pool.Id).then(data => {
+          ui.alert('集群状态同步完成', 'success');
           this.init();
         })
       }

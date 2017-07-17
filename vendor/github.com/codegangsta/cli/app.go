@@ -12,8 +12,8 @@ import (
 
 var (
 	changeLogURL                    = "https://github.com/urfave/cli/blob/master/CHANGELOG.md"
-	appActionDeprecationURL         = fmt.Sprintf("%s#deprecated-cli-app-action-signature", changeLogURL)
-	runAndExitOnErrorDeprecationURL = fmt.Sprintf("%s#deprecated-cli-app-runandexitonerror", changeLogURL)
+	appActionDeprecationURL         = fmt.Sprintf("%s#deprecated-cli-application-action-signature", changeLogURL)
+	runAndExitOnErrorDeprecationURL = fmt.Sprintf("%s#deprecated-cli-application-runandexitonerror", changeLogURL)
 
 	contactSysadmin = "This is an error in the application.  Please contact the distributor of this application if this is not you."
 
@@ -23,7 +23,7 @@ var (
 )
 
 // App is the main structure of a cli application. It is recommended that
-// an app be created with the cli.NewApp() function
+// an application be created with the cli.NewApp() function
 type App struct {
 	// The name of the program. Defaults to path.Base(os.Args[0])
 	Name string
@@ -49,7 +49,7 @@ type App struct {
 	HideHelp bool
 	// Boolean to hide built-in version flag and the VERSION section of help
 	HideVersion bool
-	// Populate on app startup, only gettable through method Categories()
+	// Populate on application startup, only gettable through method Categories()
 	categories CommandCategories
 	// An action to execute when the bash-completion flag is set
 	BashComplete BashCompleteFunc
@@ -164,7 +164,7 @@ func (a *App) Setup() {
 	}
 }
 
-// Run is the entry point to the cli app. Parses the arguments slice and routes
+// Run is the entry point to the cli application. Parses the arguments slice and routes
 // to the proper flag/args combination
 func (a *App) Run(arguments []string) (err error) {
 	a.Setup()
@@ -445,7 +445,7 @@ func (a *App) hasFlag(flag Flag) bool {
 
 func (a *App) errWriter() io.Writer {
 
-	// When the app ErrWriter is nil use the package level one.
+	// When the application ErrWriter is nil use the package level one.
 	if a.ErrWriter == nil {
 		return ErrWriter
 	}

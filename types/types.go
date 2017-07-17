@@ -2,6 +2,7 @@ package types
 
 import (
 	"crypto/tls"
+	"github.com/docker/docker/api/types"
 	"github.com/docker/go-connections/tlsconfig"
 	"gopkg.in/mgo.v2/bson"
 	"math"
@@ -13,6 +14,10 @@ const (
 	ROLESET_NORMAL   = 1      //普通员工
 	ROLESET_APPADMIN = 1 << 1 //应用管理员
 	ROLESET_SYSADMIN = 1 << 2 //系统管理员
+
+	DEPLOYMENT_OPERATION_CREATE   = "create"
+	DEPLOYMENT_OPERATION_UPGRADE  = "upgrade"
+	DEPLOYMENT_OPERATION_ROLLBACK = "rollback"
 )
 
 type APIServerConfig struct {
@@ -40,24 +45,41 @@ type PoolInfo struct {
 	Name   string
 	Status string
 
-	Driver         string
-	DriverOpts     *DriverOpts
-	Labels         map[string]interface{} `json:",omitempty"`
-	ProxyEndpoints []string               `json:",omitempty"`
+	CPUs             int
+	Memory           int64
+	Disk             int64
+	ClusterStore     string
+	ClusterAdvertise string
+	Strategy         string
+	Filters          string
+	Driver           string
+	DriverOpts       DriverOpts
+	EnvTreeId        string
+	EnvTreeName      string
+	NodeCount        int
+	TunneldAddr      string `json:",omitempty"`
+	TunneldPort      int
+	Labels           []string `json:",omitempty"`
+	ProxyEndpoint    string   `json:",omitempty"`
+	UpdatedTime      int64
+	CreatedTime      int64
 }
 
 type Roleset uint64
 
 type User struct {
-	Id   bson.ObjectId "_id"
-	Name string
-	Pass string `json:",omitempty"`
-	//Pass        string
-	RoleSet     Roleset
-	Email       string
-	Tel         string
-	CreatedTime int64  `json:",omitempty"`
-	Comments    string `json:",omitempty"`
+	Id             bson.ObjectId "_id"
+	Name           string
+	Pass           string `json:",omitempty"`
+	Salt           string `json:"-"`
+	RoleSet        Roleset
+	Email          string
+	TeamIds        []bson.ObjectId
+	Tel            string          `json:",omitempty"`
+	CreatedTime    int64           `json:",omitempty"`
+	Comments       string          `json:",omitempty"`
+	PoolIds        []bson.ObjectId //一个用户has many pool
+	ApplicationIds []bson.ObjectId //一个用户has many application
 }
 
 type Leader struct {
@@ -70,9 +92,140 @@ type Team struct {
 	Name        string
 	Description string
 	Leader      Leader
+	//UserIds     []bson.ObjectId
+	Users          []User
+	CreatedTime    int64           `json:",omitempty"`
+	PoolIds        []bson.ObjectId //一个Team has many pool
+	ApplicationIds []bson.ObjectId //一个Team has many application
 }
 
-type TeamUser struct {
-	UserId string
-	TeamId string
+//type TeamUser struct {
+//	UserId string
+//	TeamId string
+//}
+
+//调用docker info，获取swarm集群的信息
+type ClusterInfo struct {
+	types.Info
+	SystemStatus [][]string
+}
+
+type Node struct {
+	//Id             bson.ObjectId "_id"
+	PoolId         string
+	PoolName       string
+	Hostname       string
+	Endpoint       string
+	NodeId         string
+	Status         string
+	Containers     string
+	ReservedCPUs   string
+	ReservedMemory string
+
+	//ContainersRunning int
+	//ContainersPaused  int
+	//ContainersStopped int
+	Labels        map[string]string
+	ServerVersion string
+}
+
+type Service struct {
+	Title        string
+	Name         string
+	ImageName    string
+	ImageTag     string
+	CPU          string
+	ExclusiveCPU bool
+	Memory       string
+	ReplicaCount int `json:",string"`
+	Description  string
+	Restart      string
+	Command      string
+	Envs         []Env
+	Volumns      []Volumne
+	Labels       []Label
+	//Ports        []string
+	Ports      []Port
+	Privileged bool
+	CapAdd     []string
+	CapDrop    []string
+}
+
+type Port struct {
+	SourcePort     int `json:",string"`
+	LoadBalancerId string
+}
+type Env struct {
+	Label
+}
+type Label struct {
+	Name  string
+	Value string
+}
+type Volumne struct {
+	Name          string
+	Driver        string
+	ContainerPath string
+	HostPath      string
+}
+
+type Template struct {
+	Id          bson.ObjectId "_id"
+	Title       string
+	Name        string
+	Version     string
+	Description string
+	Services    []Service
+
+	CreatorId   string `json:",omitempty"`
+	CreatedTime int64  `json:",omitempty"`
+	UpdaterId   string `json:",omitempty"`
+	UpdaterName string `json:",omitempty"`
+	UpdatedTime int64  `json:",omitempty"`
+}
+
+type Application struct {
+	Id          bson.ObjectId "_id"
+	TemplateId  string        `json:ApplicationTemplateId",omitempty"`
+	PoolId      string        `json:",omitempty"`
+	Title       string
+	Name        string
+	Version     string
+	Description string
+	Status      string
+
+	Services []Service
+
+	CreatorId   string `json:",omitempty"`
+	CreatedTime int64  `json:",omitempty"`
+	UpdaterId   string `json:",omitempty"`
+	UpdaterName string `json:",omitempty"`
+	UpdatedTime int64  `json:",omitempty"`
+}
+
+type DeploymentOpts map[string]interface{}
+
+type Deployment struct {
+	Id                 bson.ObjectId "_id"
+	ApplicationId      string
+	ApplicationVersion string
+	OperationType      string
+	Operator           string
+	PoolId             string
+	CreatorId          string
+	CreatedTime        int64
+	App                *Application
+	Opts               DeploymentOpts
+}
+
+//copy自 consul/api/agent.go 避免引入consul/api及其依赖的库
+type AgentService struct {
+	ID                string
+	Service           string
+	Tags              []string
+	Port              int
+	Address           string
+	EnableTagOverride bool
+	CreateIndex       uint64
+	ModifyIndex       uint64
 }

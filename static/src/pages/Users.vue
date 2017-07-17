@@ -25,15 +25,14 @@
         </v-dialog>
       </v-layout>
       <v-data-table
-        v-bind:headers="headers"
-        v-bind:items="items"
+        :headers="headers"
+        :items="items"
         hide-actions
         class="users-table elevation-1"
         no-data-text=""
       >
         <template slot="items" scope="props">
-          <td>{{ props.item.Id }}</td>
-          <td><router-link :to="'/user/' + props.item.Id + '/detail'">{{ props.item.Name }}</router-link></td>
+          <td><router-link :to="'/users/' + props.item.Id">{{ props.item.Name }}</router-link></td>
           <td>{{ props.item.Email }}</td>
           <td>{{ props.item.Tel }}</td>
           <td>
@@ -42,8 +41,8 @@
             <div v-if="props.item.RoleSet == 1">普通用户</div>
           </td>
           <td>{{ props.item.CreatedTime | formatDate }}</td>
-           <td>
-            <router-link :to="'/user/' + props.item.Id + '/password'">
+          <td>
+            <router-link :to="'/users/password/' + props.item.Id">
               <v-btn outline small icon class="green green--text" title="重置密码">
                 <v-icon>lock</v-icon>
               </v-btn>
@@ -66,7 +65,6 @@
     data() {
       return {
         headers: [
-          { text: 'ID', sortable: false, left: true },
           { text: '用户名', sortable: false, left: true },
           { text: '邮箱', sortable: false, left: true },
           { text: '电话', sortable: false, left: true },
@@ -75,6 +73,7 @@
           { text: '操作', sortable: false, left: true }
         ],
         items: [],
+        
         RemoveConfirmDlg: false,
         SelectedUser: {}
       }
@@ -98,7 +97,7 @@
 
       removeUser() {
         this.RemoveConfirmDlg = false;
-        api.RemoveUser({ Id: this.SelectedUser.Id }).then(data => {
+        api.RemoveUser(this.SelectedUser.Id).then(data => {
           this.init();
         })
       }

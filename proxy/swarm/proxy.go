@@ -18,6 +18,7 @@ type Proxy struct {
 	//mgoDB    string
 	//mgoURLs  string
 	endpoint string
+	server   *http.Server
 }
 
 func init() {
@@ -37,13 +38,11 @@ func NewProxy(ctx context.Context, pool *store.PoolInfo) (proxy.Proxy, error) {
 
 func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 
-	ctx := setContext(p)
-
-	h, err := NewHandler(ctx)
+	h, err := NewHandler(p)
 	if err != nil {
 		return err
 	}
-	server := http.Server{
+	p.server = &http.Server{
 		Handler: h,
 	}
 
@@ -51,10 +50,10 @@ func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 
 	logrus.Debugf("proxy.Start:: PoolInfo is %#v", p.PoolInfo)
 
-	if p.PoolInfo.ProxyEndpoints[0] != "" {
-		//有可能apiserver换了一台机器重启，所以proxy的ip会发送变化,这种情况下也没必要保存端口不变
-		//TODO
-		if parts := strings.SplitN(p.PoolInfo.ProxyEndpoints[0], "://", 2); len(parts) == 2 {
+	if p.PoolInfo.ProxyEndpoint != "" {
+		//TODO 有可能apiserver换了一台机器重启，所以proxy的ip会发送变化,这种情况下也没必要保存端口不变
+		//目前保持端口不变
+		if parts := strings.SplitN(p.PoolInfo.ProxyEndpoint, "://", 2); len(parts) == 2 {
 			paddr = parts[1]
 		} else {
 			paddr = parts[0]
@@ -74,26 +73,22 @@ func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 	p.endpoint = listener.Addr().Network() + "://" + listener.Addr().String()
 
 	go func() {
-		if err := server.Serve(listener); err != nil {
+		if err := p.server.Serve(listener); err != nil {
 			logrus.Fatal(err)
 		}
 	}()
 	return nil
 }
-func setContext(p *Proxy) context.Context {
-	ctx := context.WithValue(context.Background(), utils.KEY_PROXY_SELF, p)
-	logrus.Debugf("proxy %s's context is %#v", p.Pool().Name, ctx)
-	//c1 := context.WithValue(ctx, utils.KEY_APISERVER_CONFIG, p.APIServerConfig)
-	c1 := utils.PutAPIServerConfig(ctx, p.APIServerConfig)
-	logrus.Debugf("proxy %s's context is %#v", p.Pool().Name, c1)
-
-	return c1
-}
 
 func (p *Proxy) Stop() error {
 
-	//TODO
+	if err := p.server.Close(); err != nil {
+		logrus.WithFields(logrus.Fields{"err": err.Error()}).Errorf("close the proxy server error")
+		return err
+	}
+
 	return nil
+
 }
 
 func (p *Proxy) Endpoint() string {

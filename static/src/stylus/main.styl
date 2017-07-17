@@ -1,10 +1,18 @@
-@import '../../node_modules/vuetify/src/stylus/main'
+@import './_variables'
+@import '../../node_modules/vuetify/src/stylus/settings/_colors'
+@import '../../node_modules/vuetify/src/stylus/settings/_theme'
+@import '../../node_modules/vuetify/src/stylus/tools/_mixins'
+@import '../../node_modules/vuetify/src/stylus/generic/*'
+@import '../../node_modules/vuetify/src/stylus/elements/*'
+@import '../../node_modules/vuetify/src/stylus/components/*'
+@import '../../node_modules/vuetify/src/stylus/trumps/*'
 
-.navigation-drawer
-	width: 240px
+html {
+	padding-right: 0 !important
+}
 
-.navigation-drawer--mini-variant
-	width: 80px
+.navigation-drawer > .list .list__tile--active .list__tile__title
+	color: #1976d2
 
 .ico_back
 	color: #1976d2
@@ -36,6 +44,9 @@
 				font-size: 14px
 
 .input-group--text-field 
+	&.input-group--error 
+		label
+			color: rgba(0,0,0,0.38)
 	input
 		font-size: 14px
 

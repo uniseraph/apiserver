@@ -30,6 +30,11 @@ services:
        - "MGO_URLS=mongodb"
      links:
        - mongodb
+       - redis
      ports:
        - "8080:8080"
-
+   redis:
+     image: redis
+     restart: always
+     ports:
+      - "16379:6379"

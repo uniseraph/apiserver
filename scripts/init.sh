@@ -7,7 +7,24 @@ mongo zanecloud --eval "db.dropDatabase()"
 mongo zanecloud --eval "db.user.createIndex({name:1}, {unique:true})"
 mongo zanecloud --eval "db.team.createIndex({name:1}, {unique:true})"
 mongo zanecloud --eval "db.pool.createIndex({name:1}, {unique:true})"
-mongo zanecloud --eval "db.container.createIndex({name:1}, {unique:true})"
-mongo zanecloud --eval "db.container.createIndex({id:1}, {unique:true})"
+#TODO name + poolid做唯一性约束
+mongo zanecloud --eval "db.application.createIndex({name:1,poolid:1}, {unique:true})"
+mongo zanecloud --eval "db.env_tree_node_param_key.createIndex({name:1,tree:1}, {unique:true})"
+mongo zanecloud --eval "db.container_audit_trace.createIndex({token:1}, {unique:true})"
+mongo zanecloud --eval "db.container.createIndex({name:1,poolid:1}, {unique:false})"
+mongo zanecloud --eval "db.container.createIndex({containerid:1,poolid:1}, {unique:true})"
+mongo zanecloud --eval "db.container.createIndex({poolid:1})"
+mongo zanecloud --eval "db.container.createIndex({applicationid:1})"
+mongo zanecloud --eval "db.container_audit_log.createIndex({operation:1})"
+mongo zanecloud --eval "db.container_audit_log.createIndex({token:1})"
+mongo zanecloud --eval "db.container_audit_trace.createIndex({token:1})"
 
-mongo zanecloud --eval "db.user.insertOne({name:'root',pass:'hell05a',roleset:4})"
+#准备加盐计算
+name=root
+salt="1234567891234567"
+pass="hell05a"
+content="$pass:$salt"
+#生成加盐后的密码
+encryptedPassword=$(md5 -qs $content)
+
+mongo zanecloud --eval "db.user.insertOne({name:'$name',pass:'$encryptedPassword',salt: '$salt',roleset:4})"

@@ -2,7 +2,7 @@
   <v-card>
     <v-card-title>
       <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
-      &nbsp;&nbsp;用户列表&nbsp;&nbsp;/&nbsp;&nbsp;{{ Name }}
+      &nbsp;&nbsp;用户列表&nbsp;&nbsp;/&nbsp;&nbsp;{{ Id ? Name : '新增用户' }}
       <v-spacer></v-spacer>
     </v-card-title>
     <div>
@@ -15,8 +15,9 @@
             <v-text-field
               ref="Name"
               v-model="Name"
-              single-line
-              :rules="rules.NameRules"
+              required
+              :rules="rules.Name"
+              @input="rules.Name = rules0.Name"
             ></v-text-field>
           </v-flex>
           <v-flex xs2>
@@ -28,8 +29,9 @@
             <v-text-field
               ref="Email"
               v-model="Email"
-              single-line
-              :rules="rules.EmailRules"
+              required
+              :rules="rules.Email"
+              @input="rules.Email = rules0.Email"
             ></v-text-field>
           </v-flex>
           <v-flex xs2>
@@ -39,8 +41,9 @@
             <v-text-field
               ref="Tel"
               v-model="Tel"
-              single-line
-              :rules="rules.TelRules"
+              required
+              :rules="rules.Tel"
+              @input="rules.Tel = rules0.Tel"
             ></v-text-field>
           </v-flex>
           <v-flex xs2>
@@ -60,6 +63,38 @@
             <v-checkbox label="系统管理员" v-model="IsSysAdmin" dark></v-checkbox>
             <v-checkbox label="应用管理员" v-model="IsAppAdmin" dark></v-checkbox>
           </v-flex>
+          <v-flex xs2 v-if="!Id || Id.length == 0">
+            <v-subheader>初始密码<span class="required-star">*</span></v-subheader>
+          </v-flex>
+          <v-flex xs3 v-if="!Id || Id.length == 0">
+            <v-text-field
+              v-model="Password1"
+              ref="Password1"
+              type="password"
+              single-line
+              required
+              :rules="rules.Password1"
+              @input="rules.Password1 = rules0.Password1"
+            ></v-text-field>
+          </v-flex>
+          <v-flex xs7 v-if="!Id || Id.length == 0">
+          </v-flex>
+          <v-flex xs2 v-if="!Id || Id.length == 0">
+            <v-subheader>再输一次<span class="required-star">*</span></v-subheader>
+          </v-flex>
+          <v-flex xs3 v-if="!Id || Id.length == 0">
+            <v-text-field
+              v-model="Password2"
+              ref="Password2"
+              type="password"
+              single-line
+              required
+              :rules="rules.Password2"
+              @input="rules.Password2 = rules0.Password2"
+            ></v-text-field>
+          </v-flex>
+          <v-flex xs7 v-if="!Id || Id.length == 0">
+          </v-flex>
           <v-flex xs12 mt-4 class="text-xs-center">
             <v-btn class="orange darken-2 white--text" @click.native="save">
               <v-icon light left>save</v-icon>保存
@@ -72,33 +107,47 @@
 </template>
 
 <script>
-  import router from '../router'
   import api from '../api/api'
   import * as ui from '../util/ui'
 
   export default {
     data() {
       return {
-        Id: '',
+        Id: null,
         Name: '',
         Email: '',
         Tel: '',
         CreatedTime: 0,
         IsSysAdmin: false,
         IsAppAdmin: false,
+        Password1: '',
+        Password2: '',
 
-        rules: {
-          NameRules: [
-            v => (v.length > 0 ? true : '请输入用户名')
+        rules: {},
+
+        rules0: {
+          Name: [
+            v => (v && v.length > 0 ? true : '请输入用户名')
           ],
-          EmailRules: [
-            v => (v.length > 0 ? (this.isEmail(v) ? true : '邮箱格式不正确') : '请输入邮箱')
+          Email: [
+            v => (v && v.length > 0 ? (this.isEmail(v) ? true : '邮箱格式不正确') : '请输入邮箱')
           ],
-          TelRules: [
-            v => (v.length > 0 ? true : '请输入电话')
+          Tel: [
+            v => (v && v.length > 0 ? true : '请输入电话')
+          ],
+          Password1: [
+            () => (this.Password1.length < 8 ? '密码至少需8位字符' : true)
+          ],
+          Password2: [
+            () => (this.Password1 != this.Password2 ? '两次输入的密码不相同' : true)
           ]
         }
       }
+    },
+
+    // 如果用router.replace做跳转，则需watch route，并且重新获取params中的参数
+    watch: {
+      '$route': 'init'
     },
 
     mounted() {
@@ -107,51 +156,63 @@
 
     methods: {
       init() {
-        api.User(this.$route.params.id).then(data => {
-          this.Id = data.Id;
-          this.Name = data.Name;
-          this.Email = data.Email;
-          this.Tel = data.Tel;
-          this.CreatedTime = data.CreatedTime;
-          this.IsSysAdmin = (data.RoleSet & this.constants.ROLE_SYS_ADMIN) != 0;
-          this.IsAppAdmin = (data.RoleSet & this.constants.ROLE_APP_ADMIN) != 0;
-        })
+        this.Id = this.$route.params ? this.$route.params.id : null;
+        if (this.Id) {
+          api.User(this.Id).then(data => {
+            this.Id = data.Id;
+            this.Name = data.Name;
+            this.Email = data.Email;
+            this.Tel = data.Tel;
+            this.CreatedTime = data.CreatedTime;
+            this.IsSysAdmin = (data.RoleSet & this.constants.ROLE_SYS_ADMIN) != 0;
+            this.IsAppAdmin = (data.RoleSet & this.constants.ROLE_APP_ADMIN) != 0;
+          })
+        }
       },
 
       goback() {
-        router.go(-1);
+        this.$router.go(-1);
       },
 
       save() {
-        for (let f in this.$refs) {
-          let e = this.$refs[f];
-          if (e.errorBucket && e.errorBucket.length > 0) {
-            ui.alert('请正确填写用户资料');
+        this.rules = this.rules0;
+        this.$nextTick(_ => {
+          if (!this.validateForm()) {
             return;
           }
-        }
 
-        let roleSet = this.constants.ROLE_NORMAL_USER;
-        if (this.IsSysAdmin) {
-          roleSet |= this.constants.ROLE_SYS_ADMIN;
-        }
-        if (this.IsAppAdmin) {
-          roleSet |= this.constants.ROLE_APP_ADMIN;
-        }
+          let roleSet = this.constants.ROLE_NORMAL_USER;
+          if (this.IsSysAdmin) {
+            roleSet |= this.constants.ROLE_SYS_ADMIN;
+          }
+          if (this.IsAppAdmin) {
+            roleSet |= this.constants.ROLE_APP_ADMIN;
+          }
 
-        api.UpdateUser({
-          Id: this.Id,
-          Name: this.Name,
-          Email: this.Email,
-          Tel: this.Tel,
-          RoleSet: roleSet
-        }).then(data => {
-          ui.alert('用户资料修改成功', 'success');
-          let that = this;
-          setTimeout(() => {
-            that.goback();
-          }, 1500);
-        })
+          if (this.Id && this.Id.length > 0) {
+            api.UpdateUser({
+              Id: this.Id,
+              Name: this.Name,
+              Email: this.Email,
+              Tel: this.Tel,
+              RoleSet: roleSet
+            }).then(data => {
+              ui.alert('用户资料修改成功', 'success');
+              this.init();
+            });
+          } else {
+            api.CreateUser({
+              Name: this.Name,
+              Email: this.Email,
+              Tel: this.Tel,
+              RoleSet: roleSet,
+              Pass: this.Password1
+            }).then(data => {
+              ui.alert('新增用户成功', 'success');
+              this.$router.replace('/users/' + data.Id);
+            });
+          }
+        });
       }
     }
   }
