@@ -404,7 +404,9 @@ func createAuditLog(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	utils.GetMgoCollections(ctx, w, []string{"container_audit", "container_audit_trace"}, func(cs map[string]*mgo.Collection) {
+	logrus.Infoln(req)
+
+	utils.GetMgoCollections(ctx, w, []string{"container_audit_trace", "container_audit_log"}, func(cs map[string]*mgo.Collection) {
 
 		trace := &types.ContainerAuditTrace{}
 		//验证是否Token的合法性
@@ -464,6 +466,7 @@ func createAuditLog(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 			CreatedTime: time.Now().Unix(),
 		}
+		logrus.Infoln(audit)
 
 		if err := cs["container_audit_log"].Insert(audit); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)

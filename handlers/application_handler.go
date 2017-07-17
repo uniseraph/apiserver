@@ -126,6 +126,16 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	HttpOK(w, app)
+
+	/*
+		系统审计
+	*/
+	logData := &types.Application{}
+	if err := colApplication.FindId(app.Id).One(logData); err != nil {
+		logrus.Errorln(err.Error())
+	} else {
+		utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeCreate, "", app.Id.Hex(), map[string]interface{}{"Application": logData})
+	}
 }
 
 func replaceEnv(ctx context.Context, l *types.Label, pool *types.PoolInfo) error {
@@ -625,6 +635,18 @@ func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		}
 
 		HttpOK(w, "")
+
+		/*
+			系统审计
+		*/
+
+		newApp := &types.Application{}
+		if err := cs["application"].FindId(app.Id).One(newApp); err != nil {
+			logrus.Errorln(err.Error())
+		} else {
+			utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeUpgrade, pool.Id.Hex(), app.Id.Hex(), map[string]interface{}{"OldApplication": app, "NewApplication": newApp})
+		}
+
 	})
 
 }
@@ -671,6 +693,10 @@ func removeApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 		HttpOK(w, "")
 
+		/*
+			系统审计
+		*/
+		utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeDelete, "", app.Id.Hex(), map[string]interface{}{"Application": app})
 	})
 }
 func stopApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -982,6 +1008,17 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 			UpdatedTime: time.Now().Unix(),
 		}
 		HttpOK(w, result)
+
+		/*
+			系统审计
+		*/
+
+		newApp := &types.Application{}
+		if err := cs["application"].FindId(currentApp.Id).One(newApp); err != nil {
+			logrus.Errorln(err.Error())
+		} else {
+			utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeUpgrade, pool.Id.Hex(), app.Id.Hex(), map[string]interface{}{"OldApplication": currentApp, "NewApplication": newApp})
+		}
 	})
 
 }
@@ -1014,16 +1051,14 @@ func addApplicationTeam(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	utils.GetMgoCollections(ctx, w, []string{"team", "application"}, func(cs map[string]*mgo.Collection) {
 		//检查PoolId合法性
-		if c, err := cs["application"].FindId(bson.ObjectIdHex(appId)).Count(); err != nil {
+		app := &types.Application{}
+		if err := cs["application"].FindId(bson.ObjectIdHex(appId)).One(app); err != nil {
 			if err == mgo.ErrNotFound {
 				HttpError(w, err.Error(), http.StatusNotFound)
 				return
 			}
 
 			HttpError(w, err.Error(), http.StatusInternalServerError)
-			return
-		} else if c <= 0 {
-			HttpError(w, "", http.StatusNotFound)
 			return
 		}
 
@@ -1033,6 +1068,27 @@ func addApplicationTeam(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		}
 
 		HttpOK(w, nil)
+
+		/*
+			系统审计
+		*/
+
+		t := &types.Team{}
+		if err := cs["team"].FindId(teamId).One(t); err != nil {
+			logrus.Errorln(err.Error())
+		} else {
+			logData := map[string]interface{}{
+				"Application": map[string]string{
+					"Id":   app.Id.Hex(),
+					"Name": app.Name,
+				},
+				"Team": map[string]string{
+					"Id":   t.Id.Hex(),
+					"Name": t.Name,
+				},
+			}
+			utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeAuthTeam, "", app.Id.Hex(), logData)
+		}
 	})
 
 }
@@ -1065,16 +1121,15 @@ func removeApplicationTeam(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	utils.GetMgoCollections(ctx, w, []string{"team", "application"}, func(cs map[string]*mgo.Collection) {
 		//检查PoolId合法性
-		if c, err := cs["application"].FindId(bson.ObjectIdHex(appId)).Count(); err != nil {
+		app := &types.Application{}
+
+		if err := cs["application"].FindId(bson.ObjectIdHex(appId)).One(app); err != nil {
 			if err == mgo.ErrNotFound {
 				HttpError(w, err.Error(), http.StatusNotFound)
 				return
 			}
 
 			HttpError(w, err.Error(), http.StatusInternalServerError)
-			return
-		} else if c <= 0 {
-			HttpError(w, "", http.StatusNotFound)
 			return
 		}
 
@@ -1084,6 +1139,27 @@ func removeApplicationTeam(ctx context.Context, w http.ResponseWriter, r *http.R
 		}
 
 		HttpOK(w, nil)
+
+		/*
+			系统审计
+		*/
+
+		t := &types.Team{}
+		if err := cs["team"].FindId(teamId).One(t); err != nil {
+			logrus.Errorln(err.Error())
+		} else {
+			logData := map[string]interface{}{
+				"Application": map[string]string{
+					"Id":   app.Id.Hex(),
+					"Name": app.Name,
+				},
+				"Team": map[string]string{
+					"Id":   t.Id.Hex(),
+					"Name": t.Name,
+				},
+			}
+			utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeRevokeTeam, "", app.Id.Hex(), logData)
+		}
 	})
 }
 
@@ -1116,16 +1192,14 @@ func addApplicationMember(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 	utils.GetMgoCollections(ctx, w, []string{"user", "application"}, func(cs map[string]*mgo.Collection) {
 		//检查PoolId合法性
-		if c, err := cs["application"].FindId(bson.ObjectIdHex(appId)).Count(); err != nil {
+		app := &types.Application{}
+		if err := cs["application"].FindId(bson.ObjectIdHex(appId)).One(app); err != nil {
 			if err == mgo.ErrNotFound {
 				HttpError(w, err.Error(), http.StatusNotFound)
 				return
 			}
 
 			HttpError(w, err.Error(), http.StatusInternalServerError)
-			return
-		} else if c <= 0 {
-			HttpError(w, "", http.StatusNotFound)
 			return
 		}
 
@@ -1135,6 +1209,27 @@ func addApplicationMember(ctx context.Context, w http.ResponseWriter, r *http.Re
 		}
 
 		HttpOK(w, nil)
+
+		/*
+			系统审计
+		*/
+
+		u := &types.User{}
+		if err := cs["user"].FindId(userId).One(u); err != nil {
+			logrus.Errorln(err.Error())
+		} else {
+			logData := map[string]interface{}{
+				"Application": map[string]string{
+					"Id":   app.Id.Hex(),
+					"Name": app.Name,
+				},
+				"User": map[string]string{
+					"Id":   u.Id.Hex(),
+					"Name": u.Name,
+				},
+			}
+			utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeAddUser, "", app.Id.Hex(), logData)
+		}
 	})
 }
 
@@ -1167,16 +1262,14 @@ func removeApplicationMember(ctx context.Context, w http.ResponseWriter, r *http
 
 	utils.GetMgoCollections(ctx, w, []string{"user", "application"}, func(cs map[string]*mgo.Collection) {
 		//检查PoolId合法性
-		if c, err := cs["application"].FindId(bson.ObjectIdHex(appId)).Count(); err != nil {
+		app := &types.Application{}
+		if err := cs["application"].FindId(bson.ObjectIdHex(appId)).One(app); err != nil {
 			if err == mgo.ErrNotFound {
 				HttpError(w, err.Error(), http.StatusNotFound)
 				return
 			}
 
 			HttpError(w, err.Error(), http.StatusInternalServerError)
-			return
-		} else if c <= 0 {
-			HttpError(w, "", http.StatusNotFound)
 			return
 		}
 
@@ -1186,5 +1279,26 @@ func removeApplicationMember(ctx context.Context, w http.ResponseWriter, r *http
 		}
 
 		HttpOK(w, nil)
+
+		/*
+			系统审计
+		*/
+
+		u := &types.User{}
+		if err := cs["user"].FindId(userId).One(u); err != nil {
+			logrus.Errorln(err.Error())
+		} else {
+			logData := map[string]interface{}{
+				"Application": map[string]string{
+					"Id":   app.Id.Hex(),
+					"Name": app.Name,
+				},
+				"User": map[string]string{
+					"Id":   u.Id.Hex(),
+					"Name": u.Name,
+				},
+			}
+			utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeAddUser, "", app.Id.Hex(), logData)
+		}
 	})
 }
