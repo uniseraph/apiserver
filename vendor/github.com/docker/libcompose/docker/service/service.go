@@ -239,6 +239,7 @@ func (s *Service) constructContainers(ctx context.Context, count int) ([]*contai
 
 	for i := len(result); i < count; i++ {
 		c, err := s.createContainer(ctx, namer, "", nil, false)
+		logrus.WithFields(logrus.Fields{"c": c, "err": err}).Debugf("create container result.")
 		if err != nil {
 			return nil, err
 		}

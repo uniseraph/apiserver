@@ -21,15 +21,19 @@ axios.interceptors.request.use((config) => {
 });
 //*/
 
-export function fetch(url, params) {
+export function fetch(url, params, silient) {
     return new Promise((resolve, reject) => {
         axios.post(url, params)
             .then(response => {
                 resolve(response.data);
             }, error => {
-                let res = error.response;
-                if (res && res.status != 403) {
-                    ui.alert(res.data);
+                if (!silient) {
+                    let res = error.response;
+                    if (res) {
+                        ui.alert(res.data);
+                    } else {
+                        ui.alert('系统错误: ' + error);
+                    }
                 }
 
                 reject(error);
@@ -44,7 +48,7 @@ export function fetch(url, params) {
 export default {
 
     Me() {
-        return fetch('/users/current');
+        return fetch('/users/current', null, true);
     },
 
     Login(params) {
