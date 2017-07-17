@@ -422,20 +422,20 @@ func createAuditLog(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 		//将调用方上传过来的命令行
 		//解析为命令文件和参数数组
-		cmds := strings.Split(req.Command, " ")
-		var cmd string
-		args := make([]string, 0, 10)
-		for _, c := range cmds {
-			if len(c) > 0 {
-				//如果CMD没有被初始化过
-				if len(cmd) <= 0 {
-					cmd = c
-				} else {
-					//保存到参数
-					args = append(args, c)
-				}
-			}
-		}
+		//cmds := strings.Split(req.Command, " ")
+		//var cmd string
+		//args := make([]string, 0, 10)
+		//for _, c := range cmds {
+		//	if len(c) > 0 {
+		//		//如果CMD没有被初始化过
+		//		if len(cmd) <= 0 {
+		//			cmd = c
+		//		} else {
+		//			//保存到参数
+		//			args = append(args, c)
+		//		}
+		//	}
+		//}
 
 		var output string
 		//处理输入字符串特别长的情况
@@ -459,9 +459,9 @@ func createAuditLog(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			Token:     req.Token,
 			Operation: "ExecCmd",
 			Detail: types.ContainerAuditLogOperationDetail{
-				Command:   cmd,
-				Arguments: args,
-				Stdout:    output,
+				Command: req.Command,
+				//Arguments: args,
+				Stdout: output,
 			},
 
 			CreatedTime: time.Now().Unix(),

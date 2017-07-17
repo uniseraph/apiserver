@@ -56,12 +56,12 @@ type ContainerAuditTrace struct {
 
 type ContainerAuditLogOperationDetail struct {
 	Command   string
-	Arguments []string
-	Stderr    string
-	Stdout    string
-	Stdin     string
-	ExitCode  int8
-	Reason    string // 记录登录失败原因
+	Arguments []string `json:",omitempty"`
+	Stderr    string   `json:",omitempty"`
+	Stdout    string   `json:",omitempty"`
+	Stdin     string   `json:",omitempty"`
+	ExitCode  int8     `json:",omitempty"`
+	Reason    string   `json:",omitempty"` // 记录登录失败原因
 }
 
 //容器审计
