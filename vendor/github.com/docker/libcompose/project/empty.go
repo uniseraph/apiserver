@@ -137,3 +137,13 @@ func (e *EmptyNetworks) Initialize(ctx context.Context) error {
 func (e *EmptyNetworks) Remove(ctx context.Context) error {
 	return nil
 }
+
+// Upgrade implements Service.Up but does nothing.
+func (e *EmptyService) Upgrade(ctx context.Context, options options.Up) error {
+	return nil
+}
+
+// UpgradeCreate implements Service.Create but does nothing.
+func (e *EmptyService) UpgradeCreate(ctx context.Context, options options.Create) error {
+	return nil
+}
