@@ -465,6 +465,7 @@ func createAuditLog(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 			CreatedTime: time.Now().Unix(),
 		}
+		logrus.Infoln(audit)
 
 		if err := cs["container_audit_log"].Insert(audit); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
