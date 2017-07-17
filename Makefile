@@ -41,19 +41,17 @@ run:apiserver
 	MONGO_URLS=127.0.0.1 MONGO_DB=zanecloud  ROOT_DIR=./static ./apiserver -l debug start
 
 release:portal build
-	rm -rf release && mkdir -p release
-	cp -r static/public     release/
-	cp -r static/dist       release/
-	cp scripts/init.sh     release/
-	cp static/index.html release/
-	cp apiserver release/
-	tar zcvf apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz release
+	rm -rf release && mkdir -p release/apiserver
+	cp -r static/public     release/apiserver/
+	cp -r static/dist       release/apiserver/
+	cp scripts/init.sh     release/apiserver/
+	cp static/index.html release/apiserver/
+	cp apiserver release/apiserver/
+	cd release && tar zcvf apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz apiserver && cd ..
+	scp release/apiserver-*.tar.gz  root@47.92.125.36:/root/
 
 clean:
 	rm -rf apiserver
-
-cleancli:
-	rm -rf apicli
 
 test:
 	mongo zanecloud --eval "db.user.remove({'name':'sadan'})"
