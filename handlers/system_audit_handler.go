@@ -290,7 +290,7 @@ func getSystemAuditList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			Total:     total,
 			PageCount: pageCount,
 			PageSize:  len(logs),
-			Page:      page,
+			Page:      req.Page,
 			Data:      data,
 		}
 
