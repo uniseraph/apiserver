@@ -196,15 +196,12 @@ func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	//为用户密码加盐
-	salt := utils.RandomStr(16)
-	//生成加密后的密码，数据库中不保存明文密码
-	encryptedPassword := utils.Md5(fmt.Sprint("%s:%s", req.Pass, salt))
+	enc, salt := utils.EncryptedPassword(req.Pass)
 
 	//创建用户时候，可以分配角色
 	user := &types.User{Name: req.Name,
 		Id:          bson.NewObjectId(),
-		Pass:        encryptedPassword,
+		Pass:        enc,
 		Salt:        salt,
 		Email:       req.Email,
 		Comments:    req.Comments,
@@ -257,7 +254,10 @@ func postUserResetPass(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
 	c := mgoSession.DB(mgoDB).C("user")
 
-	if err := c.Update(bson.M{"_id": bson.ObjectIdHex(id)}, bson.M{"$set": bson.M{"pass": utils.Md5(req.NewPass)}}); err != nil {
+	//重新生成密码和盐
+	enc, salt := utils.EncryptedPassword(req.NewPass)
+
+	if err := c.Update(bson.M{"_id": bson.ObjectIdHex(id)}, bson.M{"$set": bson.M{"pass": enc, "salt": salt}}); err != nil {
 		if err == mgo.ErrNotFound {
 			HttpError(w, err.Error(), http.StatusNotFound)
 			return
@@ -609,12 +609,9 @@ func postUserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	data["roleset"] = req.Roleset
 
 	if req.Pass != "" {
-		//为用户密码加盐
-		salt := utils.RandomStr(16)
-		//生成加密后的密码，数据库中不保存明文密码
-		encryptedPassword := utils.Md5(fmt.Sprint("%s:%s", req.Pass, salt))
+		enc, salt := utils.EncryptedPassword(req.Pass)
 
-		data["pass"] = encryptedPassword
+		data["pass"] = enc
 		data["salt"] = salt
 	}
 
