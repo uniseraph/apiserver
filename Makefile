@@ -45,10 +45,11 @@ release:portal build
 	cp -r static/public     release/apiserver/
 	cp -r static/dist       release/apiserver/
 	cp -r scripts/sbin     release/apiserver/
+	cp -r scripts/systemd     release/apiserver/
 	cp static/index.html release/apiserver/
 	cp apiserver release/apiserver/
 	cd release && tar zcvf apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz apiserver && cd ..
-	scp release/apiserver-*.tar.gz  root@47.92.125.36:/root/
+	scp release/apiserver-*.tar.gz  root@47.92.125.36:/opt/zanecloud
 
 clean:
 	rm -rf apiserver
