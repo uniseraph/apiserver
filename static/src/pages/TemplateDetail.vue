@@ -77,7 +77,7 @@
         <v-card v-for="(item, index) in Services" :key="item.Id" class="mb-2">
           <v-card-title>
             服务{{ index + 1 }}: {{ item.Title }}&nbsp;&nbsp;&nbsp;&nbsp;
-            <span style="text-decoration:italic;color:#9F9F9F;">
+            <span style="color:#9F9F9F;">
               域名: {{ item.Name }}.{{ Name }}.${DOMAIN_SUFFIX}
             </span>
             <v-spacer></v-spacer>
@@ -412,7 +412,7 @@
             </v-container>
           </div>
         </v-card>
-        <div style="text-decoration:italic;color:#9F9F9F;">
+        <div style="color:#9F9F9F;">
           提示：环境变量、端口映射、数据卷以及标签中的值可以引用参数目录中的参数名，例如：一个表示域名的环境变量可以定义为“eureka1.${DOMAIN_SUFFIX}”。
         </div>
       </div>
