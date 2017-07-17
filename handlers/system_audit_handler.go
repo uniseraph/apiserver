@@ -9,7 +9,6 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
-	"time"
 )
 
 type GetSystemAuditListRequest struct {
@@ -94,18 +93,15 @@ func getSystemAuditList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	selector := bson.M{}
 
 	//设定时间查询条件
-	//if len(req.StartTime) > 0 || len(req.EndTime) > 0 {
 	if req.StartTime > 0 || req.EndTime > 0 {
 		createdtime := bson.M{}
 
 		if req.StartTime > 0 {
-			tm := time.Unix(req.StartTime, 0)
-			createdtime["$gte"] = tm
+			createdtime["$gte"] = req.StartTime
 		}
 
 		if req.EndTime > 0 {
-			tm := time.Unix(req.EndTime, 0)
-			createdtime["$lt"] = tm
+			createdtime["$lt"] = req.EndTime
 		}
 
 		selector["createdtime"] = createdtime

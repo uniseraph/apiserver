@@ -406,17 +406,15 @@ func createAuditLog(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	utils.GetMgoCollections(ctx, w, []string{"container_audit", "container_audit_trace"}, func(cs map[string]*mgo.Collection) {
 
+		trace := &types.ContainerAuditTrace{}
 		//验证是否Token的合法性
 		//考虑性能的话，可以不做校验，但会增加垃圾数据
-		if c, err := cs["container_audit_trace"].Find(bson.M{"token": req.Token}).Count(); err != nil {
+		if err := cs["container_audit_trace"].Find(bson.M{"token": req.Token}).One(trace); err != nil {
 			if err == mgo.ErrNotFound {
 				HttpError(w, "no such a trace", http.StatusNotFound)
 				return
 			}
 			HttpError(w, err.Error(), http.StatusNotFound)
-			return
-		} else if c <= 0 {
-			HttpError(w, "no such a trace", http.StatusNotFound)
 			return
 		}
 
@@ -454,6 +452,7 @@ func createAuditLog(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 		audit := types.ContainerAuditLog{
 			Id:        bson.NewObjectId(),
+			UserId:    trace.UserId,
 			IP:        req.IP,
 			Token:     req.Token,
 			Operation: "ExecCmd",
@@ -547,18 +546,15 @@ func getContainerAuditList(ctx context.Context, w http.ResponseWriter, r *http.R
 	selector := bson.M{}
 
 	//设定时间查询条件
-	//if len(req.StartTime) > 0 || len(req.EndTime) > 0 {
 	if req.StartTime > 0 || req.EndTime > 0 {
 		createdtime := bson.M{}
 
 		if req.StartTime > 0 {
-			tm := time.Unix(req.StartTime, 0)
-			createdtime["$gte"] = tm
+			createdtime["$gte"] = req.StartTime
 		}
 
 		if req.EndTime > 0 {
-			tm := time.Unix(req.EndTime, 0)
-			createdtime["$lt"] = tm
+			createdtime["$lt"] = req.EndTime
 		}
 
 		selector["createdtime"] = createdtime
