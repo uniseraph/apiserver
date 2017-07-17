@@ -48,7 +48,7 @@ export function fetch(url, params, silient) {
 export default {
 
     Me() {
-        return fetch('/users/current', true);
+        return fetch('/users/current', null, true);
     },
 
     Login(params) {
