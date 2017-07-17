@@ -64,7 +64,7 @@ export default {
     	},
 
     	OPERATION_MAP: {
-		    User: [
+		  User: [
 	        { Id: 'Create', Name: '新增' },
 	        { Id: 'Update', Name: '修改' },
 	        { Id: 'Delete', Name: '删除' },

@@ -74,6 +74,9 @@
         <v-card v-for="(item, index) in Services" :key="item.Id" class="mb-2">
           <v-card-title>
             服务{{ index + 1 }}: {{ item.Title }}&nbsp;&nbsp;&nbsp;&nbsp;
+            <span style="color:#9F9F9F;">
+              域名: {{ Name }}-{{ item.Name }}.${DOMAIN_SUFFIX}
+            </span>&nbsp;&nbsp;&nbsp;&nbsp;
             [&nbsp;<router-link :to="'/applications/containers/' + Id + '/' + item.Name + '/' + encodeURIComponent(item.Title)" style="text-decoration:none;">容器列表</router-link>&nbsp;]
             <v-spacer></v-spacer>
             <v-btn v-if="item.hidden" outline small icon class="blue blue--text mr-2" @click.native="hideService(item, false)" title="展开">
