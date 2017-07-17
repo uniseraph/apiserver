@@ -243,6 +243,16 @@ func postUserResetPass(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	if req.NewPass == "" {
+		HttpError(w, "NewPass字段不可为空", http.StatusBadRequest)
+		return
+	}
+
+	if req.Id == "" {
+		HttpError(w, "Id字段不可为空", http.StatusBadRequest)
+		return
+	}
+
 	mgoSession, err := utils.GetMgoSessionClone(ctx)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)

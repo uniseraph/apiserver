@@ -509,11 +509,11 @@ type GetAuditListResponseData struct {
 	*/
 	Id            string
 	UserId        string
-	User          types.ContainerAuditUser
+	User          *types.ContainerAuditUser `json:",omitempty"`
 	PoolId        string
-	Pool          types.ContainerAuditPool
+	Pool          *types.ContainerAuditPool `json:",omitempty"`
 	ApplicationId string
-	Application   types.ContainerAuditApplication
+	Application   *types.ContainerAuditApplication `json:",omitempty"`
 	Service       types.ContainerAuditService
 	ContainerId   string
 	Container     types.ContainerAuditContainer
@@ -669,11 +669,11 @@ func getContainerAuditList(ctx context.Context, w http.ResponseWriter, r *http.R
 			d := GetAuditListResponseData{
 				Id:            log.Id.Hex(),
 				UserId:        t.UserId.Hex(),
-				User:          t.User,
+				User:          &t.User,
 				PoolId:        t.PoolId.Hex(),
-				Pool:          t.Pool,
+				Pool:          &t.Pool,
 				ApplicationId: t.ApplicationId.Hex(),
-				Application:   t.Application,
+				Application:   &t.Application,
 				Service:       t.Service,
 				ContainerId:   t.ContainerId.Hex(),
 				Container:     t.Container,
@@ -684,6 +684,19 @@ func getContainerAuditList(ctx context.Context, w http.ResponseWriter, r *http.R
 
 				CreatedTime: log.CreatedTime,
 			}
+			/*
+				User, Pool, Application没有的时候，不要填对象到结果中
+			*/
+			if t.ApplicationId == "" {
+				d.Application = nil
+			}
+			if t.PoolId == "" {
+				d.Pool = nil
+			}
+			if t.UserId == "" {
+				d.User = nil
+			}
+
 			data = append(data, d)
 		}
 
@@ -691,7 +704,7 @@ func getContainerAuditList(ctx context.Context, w http.ResponseWriter, r *http.R
 		rlt := GetAuditListResponse{
 			Total:     total,
 			PageCount: pageCount,
-			PageSize:  pageSize,
+			PageSize:  len(logs),
 			Page:      page,
 			Data:      data,
 		}
