@@ -228,9 +228,10 @@ func getApplicationHistory(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	deployments := make([]*types.Deployment, 0, 100)
 
-	utils.GetMgoCollections(ctx, w, []string{"deployment"}, func(cs map[string]*mgo.Collection) {
+	utils.GetMgoCollections(ctx, w, []string{"deployment", "user"}, func(cs map[string]*mgo.Collection) {
 
 		colDeployment, _ := cs["deployment"]
+		colUser, _ := cs["user"]
 
 		selector := bson.M{"applicationid": id}
 
@@ -247,7 +248,7 @@ func getApplicationHistory(ctx context.Context, w http.ResponseWriter, r *http.R
 			return
 		}
 
-		currentUser, _ := utils.GetCurrentUser(ctx)
+		//currentUser, _ := utils.GetCurrentUser(ctx)
 
 		result.Total = total
 		result.Keyword = req.Keyword
@@ -262,12 +263,18 @@ func getApplicationHistory(ctx context.Context, w http.ResponseWriter, r *http.R
 				Id:            deployments[i].Id.Hex(),
 				ApplicationId: deployments[i].ApplicationId,
 				Version:       deployments[i].App.Version,
-
 				OperationType: deployments[i].OperationType,
-				CreatorId:     currentUser.Id.Hex(),
-				CreatorName:   currentUser.Name,
-				CreatedTime:   deployments[i].App.CreatedTime,
+				CreatorId:     deployments[i].CreatorId,
+				CreatedTime:   deployments[i].CreatedTime,
 			}
+
+			user := &types.User{}
+
+			if err := colUser.FindId(bson.ObjectIdHex(deployments[i].CreatorId)).One(user); err != nil {
+				result.Data[i].CreatorName = deployments[i].CreatorId
+			}
+
+			result.Data[i].CreatorName = user.Name
 
 		}
 
@@ -487,7 +494,7 @@ func scaleApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		//
 		//}
 
-		if err := application.ScaleApplication(ctx, app, pool, map[string]int{
+		if err := application.ScaleApplication(context.Background(), app, pool, map[string]int{
 			req.ServiceName: req.ReplicaCount,
 		}); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
@@ -573,13 +580,22 @@ func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		app.UpdaterName = currentUser.Name
 		app.Status = "running"
 
+		//merge  template 中的label和环境变量
 		services, err := mergeServices(ctx, template.Services, pool)
 		if err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		app.Services = services
+		//TODO 不能直接使用merger后的service，因为merge只盖label，不改RCount，需要使用app自己的ReplicaCount
+		//	scaleMap := make(map[string]int)
+
+		for i, _ := range app.Services {
+			app.Services[i].Labels = services[i].Labels
+			app.Services[i].Envs = services[i].Envs
+
+			//		scaleMap[app.Services[i].Name] = app.Services[i].ReplicaCount
+		}
 
 		if err := colApplication.UpdateId(bson.ObjectIdHex(id), app); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
@@ -875,16 +891,17 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 		HttpError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	//id := mux.Vars(r)["id"]
+	id := mux.Vars(r)["id"]
 
 	deployment := &types.Deployment{}
 	pool := &types.PoolInfo{}
 
 	currentUser, _ := utils.GetCurrentUser(ctx)
-	utils.GetMgoCollections(ctx, w, []string{"deployment", "pool"}, func(cs map[string]*mgo.Collection) {
+	utils.GetMgoCollections(ctx, w, []string{"deployment", "pool", "application"}, func(cs map[string]*mgo.Collection) {
 
 		colDeployment, _ := cs["deployment"]
 		colPool, _ := cs["pool"]
+		colApplication, _ := cs["application"]
 
 		if err := colDeployment.FindId(bson.ObjectIdHex(req.DeploymentHistoryId)).One(deployment); err != nil {
 			if err == mgo.ErrNotFound {
@@ -897,7 +914,21 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return
 		}
 
+		currentApp := &types.Application{}
+		if err := colApplication.FindId(bson.ObjectIdHex(id)).One(currentApp); err != nil {
+			HttpError(w, fmt.Sprintf("no such a application:%s", id), http.StatusBadRequest)
+			return
+		}
+
 		app := deployment.App
+
+		for i, _ := range app.Services {
+
+			app.Services[i].ReplicaCount = currentApp.Services[i].ReplicaCount
+
+		}
+
+		//TODO rollback时候不改变现有服务的ReplicaCount
 
 		if err := colPool.FindId(bson.ObjectIdHex(deployment.PoolId)).One(pool); err != nil {
 			if err == mgo.ErrNotFound {
@@ -909,6 +940,11 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 		}
 
 		if err := application.UpApplication(ctx, app, pool); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err := colApplication.UpdateId(app.Id, app); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
