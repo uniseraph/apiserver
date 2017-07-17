@@ -36,7 +36,7 @@ func CreateSystemAuditLogWithCtx(ctx context.Context, r *http.Request, module ty
 func CreateSystemAuditLog(db *mgo.Database, r *http.Request, userId string, module types.SystemAuditModuleType, operation types.SystemAuditModuleOperationType, poolId string, applicationId string, detail interface{}) (err error) {
 	c := db.C("system_audit_log")
 
-	ip := getIpFromReuqest(r)
+	ip := removePostFromAddr(getIpFromReuqest(r))
 
 	//校验参数合法性
 	if ip == "" {
@@ -97,4 +97,13 @@ func getIpFromReuqest(r *http.Request) string {
 	}
 
 	return ip
+}
+
+func removePostFromAddr(addr string) string {
+	if addr != "" {
+		ips := strings.Split(addr, ":")
+		ip := ips[0]
+		return ip
+	}
+	return ""
 }

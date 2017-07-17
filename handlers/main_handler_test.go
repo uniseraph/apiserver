@@ -143,10 +143,9 @@ func checkActions(actions []string) (*handlers.ActionCheckResponse, error) {
 //避免遗留的测试数据对测试结果造成干扰
 func cleanUpDatabase() {
 	cmds := [...][2]string{
-		{"mongo", "zanecloud --eval \"db.user.remove({'name':'root'})\""},
-		{"mongo", "zanecloud --eval \"db.user.remove({'name':'sadan'})\""},
-		{"mongo", "zanecloud --eval \"db.team.remove({'name':'team1'})\""},
-		{"mongo", "zanecloud --eval \"db.pool.remove({'name':'pool1'})\""},
+		{"mongo", "zanecloud --eval \"db.user.remove({})\""},
+		{"mongo", "zanecloud --eval \"db.team.remove({})\""},
+		{"mongo", "zanecloud --eval \"db.pool.remove({})\""},
 		{"mongo", "zanecloud --eval \"db.env_tree_meta.remove({})\""},
 		{"mongo", "zanecloud --eval \"db.env_tree_node_dir.remove({})\""},
 		{"mongo", "zanecloud --eval \"db.env_tree_node_param_value.remove({})\""},

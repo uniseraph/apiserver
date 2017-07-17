@@ -781,7 +781,7 @@ func deletePool(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		var selector bson.M
 
 		selector = bson.M{
-			"poolid": bson.ObjectIdHex(id),
+			"poolid": id,
 		}
 
 		//检查是否还有应用
