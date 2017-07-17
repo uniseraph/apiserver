@@ -41,15 +41,15 @@ run:apiserver
 	MONGO_URLS=127.0.0.1 MONGO_DB=zanecloud  ROOT_DIR=./static ./apiserver -l debug start
 
 release:portal build
-	rm -rf release && mkdir -p release/apiserver
+	rm -rf release && mkdir -p release/apiserver/bin
 	cp -r static/public     release/apiserver/
 	cp -r static/dist       release/apiserver/
 	cp -r scripts/sbin     release/apiserver/
 	cp -r scripts/systemd     release/apiserver/
 	cp static/index.html release/apiserver/
-	cp apiserver release/apiserver/
+	cp apiserver release/apiserver/bin/
 	cd release && tar zcvf apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz apiserver && cd ..
-	scp release/apiserver-*.tar.gz  root@47.92.125.36:/opt/zanecloud
+	scp release/apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz  root@${TARGET_HOST}:/opt/zanecloud
 
 clean:
 	rm -rf apiserver
