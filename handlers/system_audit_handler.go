@@ -123,11 +123,11 @@ func getSystemAuditList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		selector["ip"] = req.IP
 	}
 
-	if req.Module > 0 {
+	if req.Module != "" {
 		selector["module"] = req.Module
 	}
 
-	if req.Operation > 0 {
+	if req.Operation != "" {
 		selector["operation"] = req.Operation
 	}
 

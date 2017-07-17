@@ -23,3 +23,14 @@ func ValidatePassword(user types.User, pass string) (ok bool, err error) {
 	logrus.Debugf("getUserLogin::get the user %#v, password is %s, rlt:%d", user, pass, ok)
 	return ok, nil
 }
+
+//根据用户输入的密码
+//生成密码密文和盐
+func EncryptedPassword(pass string) (enc string, salt string) {
+	//为用户密码加盐
+	s := RandomStr(16)
+	//生成加密后的密码，数据库中不保存明文密码
+	encryptedPassword := Md5(fmt.Sprintf("%s:%s", pass, s))
+
+	return encryptedPassword, s
+}

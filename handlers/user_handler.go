@@ -196,15 +196,12 @@ func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	//为用户密码加盐
-	salt := utils.RandomStr(16)
-	//生成加密后的密码，数据库中不保存明文密码
-	encryptedPassword := utils.Md5(fmt.Sprint("%s:%s", req.Pass, salt))
+	enc, salt := utils.EncryptedPassword(req.Pass)
 
 	//创建用户时候，可以分配角色
 	user := &types.User{Name: req.Name,
 		Id:          bson.NewObjectId(),
-		Pass:        encryptedPassword,
+		Pass:        enc,
 		Salt:        salt,
 		Email:       req.Email,
 		Comments:    req.Comments,
@@ -227,7 +224,7 @@ func postUsersCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 	/*
 		系统审计
 	*/
-	_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, user.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeTeamCreate, "", "", map[string]interface{}{"User": user})
+	_ = utils.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, user.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeCreate, "", "", map[string]interface{}{"User": user})
 }
 
 type UserResetPassRequest struct {
@@ -257,7 +254,10 @@ func postUserResetPass(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	mgoDB := utils.GetAPIServerConfig(ctx).MgoDB
 	c := mgoSession.DB(mgoDB).C("user")
 
-	if err := c.Update(bson.M{"_id": bson.ObjectIdHex(id)}, bson.M{"$set": bson.M{"pass": utils.Md5(req.NewPass)}}); err != nil {
+	//重新生成密码和盐
+	enc, salt := utils.EncryptedPassword(req.NewPass)
+
+	if err := c.Update(bson.M{"_id": bson.ObjectIdHex(id)}, bson.M{"$set": bson.M{"pass": enc, "salt": salt}}); err != nil {
 		if err == mgo.ErrNotFound {
 			HttpError(w, err.Error(), http.StatusNotFound)
 			return
@@ -376,7 +376,7 @@ func postUserRemove(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		系统审计
 	*/
 	opUser, _ := utils.GetCurrentUser(ctx)
-	_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeUserDelete, "", "", map[string]interface{}{"User": deletedUser})
+	_ = utils.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeDelete, "", "", map[string]interface{}{"User": deletedUser})
 }
 
 // /users/{id:.*}/join?TeamId=xxx"
@@ -467,7 +467,7 @@ func postUserJoin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	if opUser != nil {
-		_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeTeam, types.SystemAuditModuleOperationTypeTeamAddUser, "", "", logData)
+		_ = utils.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeTeam, types.SystemAuditModuleOperationTypeAddUser, "", "", logData)
 	}
 
 }
@@ -560,7 +560,7 @@ func postUserQuit(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	if opUser != nil {
-		_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeTeam, types.SystemAuditModuleOperationTypeTeamRemoveUser, "", "", logData)
+		_ = utils.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeTeam, types.SystemAuditModuleOperationTypeRemoveUser, "", "", logData)
 	}
 }
 
@@ -609,12 +609,9 @@ func postUserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	data["roleset"] = req.Roleset
 
 	if req.Pass != "" {
-		//为用户密码加盐
-		salt := utils.RandomStr(16)
-		//生成加密后的密码，数据库中不保存明文密码
-		encryptedPassword := utils.Md5(fmt.Sprint("%s:%s", req.Pass, salt))
+		enc, salt := utils.EncryptedPassword(req.Pass)
 
-		data["pass"] = encryptedPassword
+		data["pass"] = enc
 		data["salt"] = salt
 	}
 
@@ -653,7 +650,7 @@ func postUserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	opUser, _ := utils.GetCurrentUser(ctx)
 	c.FindId(bson.ObjectIdHex(id)).One(newUer)
 
-	_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeUserUpdate, "", "", map[string]interface{}{"OldUser": oldUser, "NewUser": newUer})
+	_ = utils.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeUpdate, "", "", map[string]interface{}{"OldUser": oldUser, "NewUser": newUer})
 }
 
 type UserPoolsResponse struct {
