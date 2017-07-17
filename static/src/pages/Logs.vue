@@ -177,10 +177,18 @@
       >
         <template slot="items" scope="props">
           <td>{{ props.item.CreatedTime | formatDateTime }}</td>
-          <td>{{ props.item.User.Name }}</td>
+          <td>
+            <span v-if="props.item.User">
+              {{ props.item.User.Name }}
+            </span>
+          </td>
           <td>{{ props.item.IP }}</td>
           <td>{{ moduleName(props.item.Module) }}</td>
-          <td>{{ props.item.Pool.Name }}</td>
+          <td>
+            <span v-if="props.item.Pool">
+              {{ props.item.Pool.Name }}
+            </span>
+          </td>
           <td>
             <span v-if="props.item.Application">
               {{ props.item.Application.Title }} ({{ props.item.Application.Name }} {{ props.item.Application.Version }})
