@@ -44,7 +44,7 @@ func TestCreateApplication(t *testing.T) {
 
 	ctx := context.Background()
 
-	err = application.UpApplication(ctx, app1, pool1)
+	err = application.UpgradeApplication(ctx, app1, pool1)
 
 	if err != nil {
 		t.Error(err)

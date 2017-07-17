@@ -40,6 +40,25 @@ func UpApplication(ctx context.Context, app *types.Application, pool *types.Pool
 
 }
 
+func UpgradeApplication(ctx context.Context, app *types.Application, pool *types.PoolInfo) error {
+	p, err := buildProject(app, pool)
+	if err != nil {
+		return err
+	}
+	err = p.Upgrade(ctx, options.Up{
+		options.Create{ForceRecreate: false,
+			NoBuild:    true,
+			ForceBuild: false},
+	})
+
+	if err != nil {
+		logrus.WithFields(logrus.Fields{"err": err}).Debug("up application err")
+		return err
+	}
+
+	return nil
+}
+
 func buildProject(app *types.Application, pool *types.PoolInfo) (p project.APIProject, err error) {
 	buf, err := buildComposeFileBinary(app, pool)
 	if err != nil {

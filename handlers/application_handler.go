@@ -586,7 +586,7 @@ func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		if err := application.UpApplication(ctx, app, pool); err != nil {
+		if err := application.UpgradeApplication(ctx, app, pool); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -908,7 +908,7 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		if err := application.UpApplication(ctx, app, pool); err != nil {
+		if err := application.UpgradeApplication(ctx, app, pool); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
