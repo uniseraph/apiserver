@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/gpmgo/gopm/modules/log"
 	"github.com/zanecloud/apiserver/types"
@@ -891,13 +892,28 @@ func updateValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	//校验入参
 	if len(id) <= 0 {
-		HttpError(w, "Params error!", http.StatusBadRequest)
+		HttpError(w, "请提供参数ID.", http.StatusBadRequest)
 		return
 	}
 	req.Id = id
 
 	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_param_key"}, func(cs map[string]*mgo.Collection) {
 		data := bson.M{}
+
+		/*
+			系统审计
+		*/
+		oldEnvKey := &types.EnvTreeNodeParamKey{}
+
+		if err := cs["env_tree_node_param_key"].FindId(bson.ObjectIdHex(id)).One(oldEnvKey); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		//如果需要更新KEY
 		if req.Name != "" {
@@ -930,6 +946,31 @@ func updateValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		}
 
 		HttpOK(w, req)
+
+		/*
+			系统审计
+		*/
+		newEnvKey := &types.EnvTreeNodeParamKey{}
+
+		if err := cs["env_tree_node_param_key"].FindId(bson.ObjectIdHex(id)).One(newEnvKey); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		/*
+			系统审计
+		*/
+
+		logData := map[string]interface{}{
+			"OldEnvValue": oldEnvKey,
+			"NewEnvValue": newEnvKey,
+		}
+		utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeEnv, types.SystemAuditModuleOperationTypeUpdateEnvValue, "", "", logData)
 	})
 }
 
@@ -1010,8 +1051,25 @@ func updateValueAttributes(ctx context.Context, w http.ResponseWriter, r *http.R
 	//KEY的ID
 	id := mux.Vars(r)["id"]
 
-	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_param_value"}, func(cs map[string]*mgo.Collection) {
+	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_param_value", "env_tree_node_param_key", "pool"}, func(cs map[string]*mgo.Collection) {
 		bulk := cs["env_tree_node_param_value"].Bulk()
+
+		/*
+			系统审计
+		*/
+		auditData := make([]*types.SystemAuditModuleEnvUpdatePoolValueItem, 0, 20)
+
+		//找到key
+		key := &types.EnvTreeNodeParamKey{}
+
+		if err := cs["env_tree_node_param_key"].FindId(bson.ObjectIdHex(id)).One(key); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		for _, req := range reqs {
 			//如果这个请求参数结构中
@@ -1025,6 +1083,45 @@ func updateValueAttributes(ctx context.Context, w http.ResponseWriter, r *http.R
 				"key":  bson.ObjectIdHex(id),
 				"pool": bson.ObjectIdHex(req.PoolId),
 			}
+
+			/*
+				系统审计
+			*/
+
+			//找到pool
+			pool := &types.PoolInfo{}
+
+			if err := cs["pool"].FindId(bson.ObjectIdHex(req.PoolId)).One(pool); err != nil {
+				logrus.Errorf(err.Error())
+			}
+
+			//找到老版本的value
+			v := &types.EnvTreeNodeParamValue{}
+			if err := cs["env_tree_node_param_value"].Find(selector).One(v); err != nil {
+				if err == mgo.ErrNotFound {
+					HttpError(w, err.Error(), http.StatusNotFound)
+					return
+				}
+				HttpError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			auditItem := &types.SystemAuditModuleEnvUpdatePoolValueItem{
+				EnvValue: map[string]string{
+					"Id":    key.Id.Hex(),
+					"Name":  key.Name,
+					"Value": key.Default,
+				},
+				Pool: map[string]string{
+					"Id":   pool.Id.Hex(),
+					"Name": pool.Name,
+				},
+				ValueId:  v.Id,
+				OldValue: v,
+			}
+
+			auditData = append(auditData, auditItem)
+
 			//更新目标实例的value值
 			data := bson.M{
 				"value": req.Value,
@@ -1036,7 +1133,7 @@ func updateValueAttributes(ctx context.Context, w http.ResponseWriter, r *http.R
 
 		if rlts, err := bulk.Run(); err != nil {
 			if err == mgo.ErrNotFound {
-				HttpError(w, "no such a tree dir", http.StatusNotFound)
+				HttpError(w, err.Error(), http.StatusNotFound)
 				return
 			}
 			HttpError(w, err.Error(), http.StatusInternalServerError)
@@ -1046,6 +1143,29 @@ func updateValueAttributes(ctx context.Context, w http.ResponseWriter, r *http.R
 		}
 
 		HttpOK(w, nil)
+
+		/*
+			系统审计
+		*/
+
+		//整理数据
+		//找出每条Value的最新值
+		for _, item := range auditData {
+			if item.ValueId != "" {
+				vId := item.ValueId
+				v := &types.EnvTreeNodeParamValue{}
+				//找到Value的最新值
+				//存放到系统审计日志中
+				if err := cs["env_tree_node_param_value"].FindId(vId).One(v); err != nil {
+					logrus.Errorln(err.Error())
+				} else {
+					item.NewValue = v
+					//每条变更都要单独入库
+					utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeEnv, types.SystemAuditModuleOperationTypeUpdateEnvValue, item.Pool["Id"], "", item)
+				}
+			}
+
+		}
 	})
 }
 

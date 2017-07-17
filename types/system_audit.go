@@ -61,6 +61,14 @@ const (
 	SystemAuditModuleOperationTypeRollback                  SystemAuditModuleOperationType = "Rollback"                  //应用
 )
 
+type SystemAuditModuleEnvUpdatePoolValueItem struct {
+	EnvValue map[string]string
+	Pool     map[string]string
+	OldValue *EnvTreeNodeParamValue
+	NewValue *EnvTreeNodeParamValue
+	ValueId  bson.ObjectId
+}
+
 //const (
 //	SystemAuditModuleOperationTypeUserCreate SystemAuditModuleOperationType = 1 + iota
 //	SystemAuditModuleOperationTypeUserUpdate
