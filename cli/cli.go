@@ -55,6 +55,15 @@ func Run() {
 			},
 			Action: startCommand,
 		},
+		{
+			Name:  initCommandName,
+			Usage: "init root user",
+			Flags: []cli.Flag{
+				flMgoUrls,
+				flMgoDB,
+			},
+			Action: initCommand,
+		},
 	}
 
 	if err := app.Run(os.Args); err != nil {
