@@ -30,7 +30,7 @@ var (
 
 	flAddr = cli.StringFlag{
 		Name:   utils.KEY_LISTENER_ADDR,
-		Value:  "127.0.0.1",
+		Value:  "0.0.0.0",
 		EnvVar: "ADDR",
 		Usage:  "apiserver listener addr",
 	}
