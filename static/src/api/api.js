@@ -204,7 +204,7 @@ export default {
     },
 
     ResetPassword(params) {
-        return fetch('/users/' + params.Id + '/resetpass?NewPass=' + encodeURIComponent(params.Pass), params);
+        return fetch('/users/' + params.Id + '/resetpass?NewPass=' + encodeURIComponent(params.NewPass), params);
     },
 
     Templates(params) {
