@@ -224,10 +224,10 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 		// - uid
 		// - roleSet
 		//来判断当前登录用户是否有权限
-		content := redisClient.HGetAll(utils.RedisSessionKey(sessionID))
-		logrus.Debugf("HGETALL content: %#v", content)
+		//content := redisClient.HGetAll(utils.RedisSessionKey(sessionID))
+		//logrus.Debugf("HGETALL content: %#v", content)
 		sessionContent, err := redisClient.HGetAll(utils.RedisSessionKey(sessionID)).Result()
-		logrus.Infof("SessionContent: %#v", sessionContent)
+		//logrus.Infof("SessionContent: %#v", sessionContent)
 		//如果没有找到或者redis出错
 		//则认证失败
 		if err != nil {
@@ -271,8 +271,6 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 		//如果鉴权成功
 		//根据uid把当前用户信息load到context中
 		//以便request的剩余生命周期里，可以通过context直接得到用户信息
-		//TODO
-		//留不留都行，不是每个API都需要拿到用户全部信息
 		mgoSession, err := utils.GetMgoSessionClone(ctx)
 		if err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
