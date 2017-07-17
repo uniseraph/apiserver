@@ -6,11 +6,11 @@ import store from '../vuex/store'
 
 // axios默认配置
 axios.defaults.timeout = 60000;
-axios.defaults.baseURL = 'http://localhost:8080/api';
+axios.defaults.baseURL = '/api';
 
 // 仅测试用
 /*
-axios.defaults.baseURL = 'http://localhost:8080/public/mock';
+axios.defaults.baseURL = '/public/mock';
 axios.interceptors.request.use((config) => {
     if(config.method === 'post'){
         config.method = 'get';
