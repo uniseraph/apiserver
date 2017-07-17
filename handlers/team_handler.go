@@ -198,6 +198,21 @@ func postTeamRemove(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	c := mgoSession.DB(mgoDB).C("team")
 
+	/*
+		系统审计
+	*/
+
+	deletedTeam := &types.Team{}
+	if err := c.FindId(bson.ObjectIdHex(id)).One(deletedTeam); err != nil {
+		if err == mgo.ErrNotFound {
+			HttpError(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	if err := c.Remove(bson.M{"_id": bson.ObjectIdHex(id)}); err != nil {
 		if err == mgo.ErrNotFound {
 			HttpError(w, "no such a team", http.StatusNotFound)
@@ -211,6 +226,16 @@ func postTeamRemove(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "{%q:%q}", "Id", id)
 
+	/*
+		系统审计
+	*/
+
+	opUser, _ := utils.GetCurrentUser(ctx)
+	if opUser != nil {
+		_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeTeam, types.SystemAuditModuleOperationTypeTeamDelete, "", "", map[string]interface{}{"Team": deletedTeam})
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 type TeamsCreateRequest struct {
@@ -291,8 +316,17 @@ func postTeamsCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 	result := &TeamsCreateResponse{
 		Id: team.Id.Hex(),
 	}
-	//fmt.Fprintf(w, "{%q:%q}", "Id", team.Id.Hex())
+
 	json.NewEncoder(w).Encode(result)
+
+	/*
+		系统审计
+	*/
+
+	user, _ := utils.GetCurrentUser(ctx)
+	if user != nil {
+		_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, user.Id.Hex(), types.SystemAuditModuleTypeTeam, types.SystemAuditModuleOperationTypeTeamCreate, "", "", map[string]interface{}{"Team": team})
+	}
 }
 
 type TeamUpdateRequest struct {
@@ -327,6 +361,20 @@ func postTeamUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	selector := bson.M{"_id": bson.ObjectIdHex(id)}
 
+	/*
+		系统审计
+	*/
+	oldTeam := &types.Team{}
+	if err := c.FindId(bson.ObjectIdHex(id)).One(oldTeam); err != nil {
+		if err == mgo.ErrNotFound {
+			HttpError(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	data := bson.M{}
 	if req.Name != "" {
 		data = bson.M{"name": req.Name}
@@ -350,7 +398,30 @@ func postTeamUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	/*
+		系统审计
+	*/
+	newTeam := &types.Team{}
+	if err := c.FindId(bson.ObjectIdHex(id)).One(newTeam); err != nil {
+		if err == mgo.ErrNotFound {
+			HttpError(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
+
+	/*
+		系统审计
+	*/
+
+	opUser, _ := utils.GetCurrentUser(ctx)
+	if opUser != nil {
+		_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeTeam, types.SystemAuditModuleOperationTypeTeamUpdate, "", "", map[string]interface{}{"OldTeam": oldTeam, "NewTeam": newTeam})
+	}
 
 }
 
