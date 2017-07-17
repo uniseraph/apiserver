@@ -1074,7 +1074,7 @@ func addApplicationTeam(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		*/
 
 		t := &types.Team{}
-		if err := cs["team"].FindId(teamId).One(t); err != nil {
+		if err := cs["team"].FindId(bson.ObjectIdHex(teamId)).One(t); err != nil {
 			logrus.Errorln(err.Error())
 		} else {
 			logData := map[string]interface{}{
@@ -1145,7 +1145,7 @@ func removeApplicationTeam(ctx context.Context, w http.ResponseWriter, r *http.R
 		*/
 
 		t := &types.Team{}
-		if err := cs["team"].FindId(teamId).One(t); err != nil {
+		if err := cs["team"].FindId(bson.ObjectIdHex(teamId)).One(t); err != nil {
 			logrus.Errorln(err.Error())
 		} else {
 			logData := map[string]interface{}{
@@ -1215,7 +1215,7 @@ func addApplicationMember(ctx context.Context, w http.ResponseWriter, r *http.Re
 		*/
 
 		u := &types.User{}
-		if err := cs["user"].FindId(userId).One(u); err != nil {
+		if err := cs["user"].FindId(bson.ObjectIdHex(userId)).One(u); err != nil {
 			logrus.Errorln(err.Error())
 		} else {
 			logData := map[string]interface{}{
@@ -1285,7 +1285,7 @@ func removeApplicationMember(ctx context.Context, w http.ResponseWriter, r *http
 		*/
 
 		u := &types.User{}
-		if err := cs["user"].FindId(userId).One(u); err != nil {
+		if err := cs["user"].FindId(bson.ObjectIdHex(userId)).One(u); err != nil {
 			logrus.Errorln(err.Error())
 		} else {
 			logData := map[string]interface{}{
