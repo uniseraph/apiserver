@@ -1098,12 +1098,7 @@ func updateValueAttributes(ctx context.Context, w http.ResponseWriter, r *http.R
 			//找到老版本的value
 			v := &types.EnvTreeNodeParamValue{}
 			if err := cs["env_tree_node_param_value"].Find(selector).One(v); err != nil {
-				if err == mgo.ErrNotFound {
-					HttpError(w, err.Error(), http.StatusNotFound)
-					return
-				}
-				HttpError(w, err.Error(), http.StatusInternalServerError)
-				return
+				logrus.Errorf(err.Error())
 			}
 
 			auditItem := &types.SystemAuditModuleEnvUpdatePoolValueItem{
