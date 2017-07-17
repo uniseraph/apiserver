@@ -78,7 +78,7 @@
           <v-card-title>
             服务{{ index + 1 }}: {{ item.Title }}&nbsp;&nbsp;&nbsp;&nbsp;
             <span style="color:#9F9F9F;">
-              域名: {{ item.Name }}.{{ Name }}.${DOMAIN_SUFFIX}
+              域名: {{ Name }}-{{ item.Name }}.${DOMAIN_SUFFIX}
             </span>
             <v-spacer></v-spacer>
             <v-btn v-if="item.hidden" outline small icon class="blue blue--text mr-2" @click.native="hideService(item, false)" title="展开">
@@ -486,7 +486,7 @@
             v => (v && v.length > 0 ? true : '请输入应用名称')
           ],
           Name: [
-            v => (v && v.length > 0 ? (v.match(/\s/) ? "应用ID不允许包含空格" : (/^[a-zA-Z]+\w*$/.test(v) ? true : '应用ID只能由英文字母、数字及下划线组成，并且以英文字母开头')) : '请输入应用ID')
+            v => (v && v.length > 0 ? (v.match(/\s/) ? "应用ID不允许包含空格" : (/^[a-zA-Z]+[a-zA-Z0-9]*$/.test(v) ? true : '应用ID只能由英文字母、数字组成，并且以英文字母开头')) : '请输入应用ID')
           ],
           Version: [
             v => (v && v.length > 0 ? true : '请输入应用版本号')
@@ -496,7 +496,7 @@
               v => (v && v.length > 0 ? true : '请输入服务名称')
             ],
             Name: [
-              v => (v && v.length > 0 ? (v.match(/\s/) ? '服务ID不允许包含空格' : (/^[a-zA-Z]+\w*$/.test(v) ? true : '服务ID只能由英文字母、数字及下划线组成，并且以英文字母开头')) : '请输入应用ID')
+              v => (v && v.length > 0 ? (v.match(/\s/) ? '服务ID不允许包含空格' : (/^[a-zA-Z]+[a-zA-Z0-9]*$/.test(v) ? true : '服务ID只能由英文字母、数字组成，并且以英文字母开头')) : '请输入应用ID')
             ],
             ImageName: [
               v => (v && v.length > 0 ? (v.match(/\s/) ? '镜像名称不允许包含空格' : true) : '请输入镜像名称')
