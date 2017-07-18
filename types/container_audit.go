@@ -72,7 +72,7 @@ type ContainerAuditLog struct {
 	//跟踪ID，用于某次会话的统计，就是TOKEN
 	Token string
 	//UserId跟Trace中的一样，用于Log表的分页查询
-	UserId bson.ObjectId
+	UserId bson.ObjectId `bson:",omitempty"`
 
 	//操作类型
 	//分三种，LoginFailed，Logined，ExecCmd
