@@ -16,7 +16,7 @@ install:
 	brew install mongodb redis npm
 
 init:
-	bash scripts/init.sh
+	bash scripts/sbin/init.sh
 
 apiserver:clean
 	CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}" -o ${TARGET}
