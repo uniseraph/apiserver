@@ -313,7 +313,7 @@ func NewMainHandler(ctx context.Context) (http.Handler, error) {
 		return nil, err
 	}
 	session.SetMode(mgo.Monotonic, true)
-	c := utils.PutMgoSession(ctx, session)
+	ctx = utils.PutMgoSession(ctx, session)
 
 	logrus.Infof("redis address is : %s", config.RedisAddr)
 	client := redis.NewClient(&redis.Options{
@@ -324,15 +324,15 @@ func NewMainHandler(ctx context.Context) (http.Handler, error) {
 	if _, err := client.Ping().Result(); err != nil {
 		return nil, err
 	}
-	c1 := utils.PutRedisClient(c, client)
+	ctx = utils.PutRedisClient(ctx, client)
 
 	r := mux.NewRouter()
 
 	//TODO using request context
-	SetupPrimaryRouter(r, c1, routes)
+	SetupPrimaryRouter(r, ctx, routes)
 
 	r.Path("/api/actions/check").Methods(http.MethodPost).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		checkUserPermission(postActionsCheck, types.ROLESET_NORMAL|types.ROLESET_SYSADMIN)(c1, w, r)
+		checkUserPermission(postActionsCheck, types.ROLESET_NORMAL|types.ROLESET_SYSADMIN)(ctx, w, r)
 	})
 
 	fsh := http.StripPrefix("/", http.FileServer(http.Dir(config.RootDir)))

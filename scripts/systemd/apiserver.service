@@ -4,7 +4,7 @@ Documentation=http://www.zanecloud.com
 After=network.target
 
 [Service]
-Type=notify
+Type=simple
 NotifyAccess=all
 EnvironmentFile=-/etc/zancloud/apiserver
 ExecStart=/opt/zanecloud/apiserver/bin/apiserver -l debug start --root.dir=/opt/zanecloud/apiserver

@@ -116,15 +116,15 @@ func startProxys(ctx context.Context) {
 		return
 	}
 
-	for _, pool := range pools {
-		logrus.Debugf("startProxys:: start the pool:%#v", pool)
+	for i, _ := range pools {
+		logrus.Debugf("startProxys:: start the pool:%s", pools[i].Name)
 
-		proxy, err := proxy.NewProxyInstanceAndStart(ctx, &pool)
+		proxy, err := proxy.NewProxyInstanceAndStart(ctx, &pools[i])
 		if err != nil {
 			logrus.Errorf("startProxys:: startProxy error:%s", err.Error())
 		}
 
-		pool.ProxyEndpoint = proxy.Endpoint()
+		pools[i].ProxyEndpoint = proxy.Endpoint()
 
 	}
 
