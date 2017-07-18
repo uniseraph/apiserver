@@ -2,7 +2,7 @@
   <v-card>
     <v-card-title>
       <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
-      应用管理 / {{ ApplicationTitle }} / {{ ServiceTitle }} / 容器列表
+      &nbsp;&nbsp;应用管理&nbsp;&nbsp;/&nbsp;&nbsp;{{ PoolName }}&nbsp;&nbsp;/&nbsp;&nbsp;{{ ApplicationTitle }}&nbsp;&nbsp;/&nbsp;&nbsp;{{ ServiceTitle }}&nbsp;&nbsp;/&nbsp;&nbsp;容器列表
       <v-spacer></v-spacer>
     </v-card-title>
     <div>
@@ -107,8 +107,9 @@
         },
 
         ApplicationId: this.$route.params.applicationId,
-        ApplicationTitle: this.$route.params.applicationTitle,
         ServiceName: this.$route.params.serviceName,
+        PoolName: this.$route.params.poolName,
+        ApplicationTitle: this.$route.params.applicationTitle,
         ServiceTitle: this.$route.params.serviceTitle,
 
         Keyword: this.$route.query ? (this.$route.query.Keyword || '') : '',

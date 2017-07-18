@@ -4,14 +4,14 @@
       <v-card>
         <v-card-title>
           <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
-          &nbsp;&nbsp;应用管理&nbsp;&nbsp;/&nbsp;&nbsp;{{ Title }}
+          &nbsp;&nbsp;应用管理&nbsp;&nbsp;/&nbsp;&nbsp;{{ PoolName }}&nbsp;&nbsp;/&nbsp;&nbsp;{{ Title }}
           <v-spacer></v-spacer>
-          <router-link :to="'/applications/' + Id + '/upgrade'" style="text-decoration:none;">
+          <router-link :to="'/applications/' + Id + '/upgrade/' + encodeURIComponent(PoolName)" style="text-decoration:none;">
             <v-btn class="green darken-2 white--text" small>
               <v-icon light left>open_in_browser</v-icon>升级
             </v-btn>
           </router-link>
-          <router-link :to="'/applications/' + Id + '/rollback'" style="text-decoration:none;">
+          <router-link :to="'/applications/' + Id + '/rollback/' + encodeURIComponent(PoolName)" style="text-decoration:none;">
             <v-btn class="orange darken-2 white--text ml-4" small>
               <v-icon light left>replay</v-icon>回滚
             </v-btn>
@@ -77,7 +77,7 @@
             <span style="color:#9F9F9F;">
               域名: {{ Name }}-{{ item.Name }}.${DOMAIN_SUFFIX}
             </span>&nbsp;&nbsp;&nbsp;&nbsp;
-            [&nbsp;<router-link :to="'/applications/containers/' + Id + '/' + encodeURIComponent(Title) + '/' + item.Name + '/' + encodeURIComponent(item.Title)" style="text-decoration:none;">容器列表</router-link>&nbsp;]
+            [&nbsp;<router-link :to="'/applications/containers/' + Id + '/' + item.Name + '/' + encodeURIComponent(PoolName) + '/' + encodeURIComponent(Title) + '/' + encodeURIComponent(item.Title)" style="text-decoration:none;">容器列表</router-link>&nbsp;]
             <v-spacer></v-spacer>
             <v-btn v-if="item.hidden" outline small icon class="blue blue--text mr-2" @click.native="hideService(item, false)" title="展开">
               <v-icon>arrow_drop_down</v-icon>
@@ -460,6 +460,7 @@
         labelIdStart: 0,
 
         Id: this.$route.params.id,
+        PoolName: this.$route.params.poolName,
         Title: '',
         Name: '',
         Version: '',
