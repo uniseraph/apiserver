@@ -6,9 +6,12 @@ After=network.target
 [Service]
 Type=notify
 NotifyAccess=all
-EnvironmentFile=-/opt/zanecloud/apiserver/etc/apiserver
-ExecStart=/opt/zanecloud/apiserver/bin/apiserver -l debug
-ExecReload=/bin/kill -s HUP $MAINPID
+EnvironmentFile=-/etc/zancloud/apiserver
+ExecStart=/opt/zanecloud/apiserver/bin/apiserver -l debug start --root.dir=/opt/zanecloud/apiserver
+
+
+
+#ExecReload=/bin/kill -s HUP $MAINPID
 LimitNOFILE=1048576
 LimitNPROC=1048576
 LimitCORE=infinity
