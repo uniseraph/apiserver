@@ -41,7 +41,7 @@ export default new VueRouter({
 		{ path: '/templates/copy/:id/:title', component: TemplateDetail },
 		{ path: '/templates/:id', component: TemplateDetail },
 		{ path: '/templates', component: Templates },
-		{ path: '/applications/containers/:applicationId/:serviceName/:serviceTitle', component: Containers },
+		{ path: '/applications/containers/:applicationId/:applicationTitle/:serviceName/:serviceTitle', component: Containers },
 		{ path: '/applications/create/:poolId', component: CreateApplication },
 		{ path: '/applications/:id/upgrade', component: UpgradeApplication },
 		{ path: '/applications/:id/rollback', component: RollbackApplication },
