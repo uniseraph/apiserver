@@ -73,7 +73,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	if n >= 1 {
-		HttpError(w, "该集群中存在同名应用", http.StatusInternalServerError)
+		HttpError(w, "在一个集群中，一个模版只能创建一个应用", http.StatusInternalServerError)
 		return
 	}
 
