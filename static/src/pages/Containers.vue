@@ -2,7 +2,7 @@
   <v-card>
     <v-card-title>
       <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
-      容器列表 / {{ ServiceTitle }}
+      应用管理 / {{ ApplicationTitle }} / {{ ServiceTitle }} / 容器列表
       <v-spacer></v-spacer>
     </v-card-title>
     <div>
@@ -107,6 +107,7 @@
         },
 
         ApplicationId: this.$route.params.applicationId,
+        ApplicationTitle: this.$route.params.applicationTitle,
         ServiceName: this.$route.params.serviceName,
         ServiceTitle: this.$route.params.serviceTitle,
 

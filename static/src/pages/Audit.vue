@@ -169,10 +169,22 @@
       >
         <template slot="items" scope="props">
           <td>{{ props.item.CreatedTime | formatDateTime }}</td>
-          <td>{{ props.item.User.Name }}</td>
+          <td>
+            <span v-if="props.item.User">
+              {{ props.item.User.Name }}
+            </span>
+          </td>
           <td>{{ props.item.IP }}</td>
-          <td>{{ props.item.Pool.Name }}</td>
-          <td>{{ props.item.Application.Title }} ({{ props.item.Application.Name }} {{ props.item.Application.Version }})</td>
+          <td>
+            <span v-if="props.item.Pool">
+              {{ props.item.Pool.Name }}
+            </span>
+          </td>
+          <td>
+            <span v-if="props.item.Application">
+              {{ props.item.Application.Title }} ({{ props.item.Application.Name }} {{ props.item.Application.Version }})
+            </span>
+          </td>
           <td style="overflow:hidden;">{{ props.item.Container.Id }}</td>
           <td>
             {{ sshOpName(props.item.Operation) }}
