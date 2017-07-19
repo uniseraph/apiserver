@@ -29,11 +29,11 @@ func NewProxy(ctx context.Context, pool *store.PoolInfo) (proxy.Proxy, error) {
 	//
 	//mgoDB, nil := getMgoDB(ctx)
 	//mgoURLs, nil := getMgoURLs(ctx)
-
 	return &Proxy{
 		PoolInfo:        pool,
 		APIServerConfig: utils.GetAPIServerConfig(ctx),
 	}, nil
+
 }
 
 func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
@@ -48,7 +48,6 @@ func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 
 	var paddr string
 
-	logrus.Debugf("proxy.Start:: PoolInfo is %#v", p.PoolInfo)
 
 	if p.PoolInfo.ProxyEndpoint != "" {
 		//TODO 有可能apiserver换了一台机器重启，所以proxy的ip会发送变化,这种情况下也没必要保存端口不变

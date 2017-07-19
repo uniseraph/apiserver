@@ -223,7 +223,6 @@ type Handler func(c context.Context, w http.ResponseWriter, r *http.Request)
 func NewHandler(p *Proxy) (http.Handler, error) {
 
 	poolInfo := p.PoolInfo
-	logrus.Debugf("NewHandler::before starting a pool proxy , poolInfo is %#v  ", poolInfo)
 
 	var client *http.Client
 	if poolInfo.DriverOpts.TlsConfig != nil {
@@ -255,6 +254,8 @@ func NewHandler(p *Proxy) (http.Handler, error) {
 	//defer session.Close()
 	session.SetMode(mgo.Monotonic, true)
 
+	ctx := preparePoolContext(p, session, cli)
+
 	r := mux.NewRouter()
 	for method, mappings := range routers {
 		for route, fct := range mappings {
@@ -263,8 +264,10 @@ func NewHandler(p *Proxy) (http.Handler, error) {
 			localRoute := route
 			localFct := fct
 			wrap := func(w http.ResponseWriter, r *http.Request) {
-				logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI}).Debug("HTTP request received in proxy")
-				ctx := prepareContext(r, p, session, cli)
+				logrus.WithFields(logrus.Fields{"method": r.Method,
+					"uri":                      r.RequestURI,
+					"pool.Name":                poolInfo.Name,
+					"pool.DriverOpts.Endpoint": poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in proxy")
 				localFct(ctx, w, r)
 			}
 			localMethod := method
@@ -277,10 +280,9 @@ func NewHandler(p *Proxy) (http.Handler, error) {
 	// 作为swarm的代理，默认逻辑是所有请求都是转发给后端的swarm集群
 	rootfunc := func(w http.ResponseWriter, req *http.Request) {
 		logrus.WithFields(logrus.Fields{"method": req.Method,
-			"uri":           req.RequestURI,
-			"pool endpoint": poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in proxy rootfunc")
-
-		ctx := prepareContext(req, p, session, cli)
+			"uri":                      req.RequestURI,
+			"pool.Name":                poolInfo.Name,
+			"pool.DriverOpts.Endpoint": poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in proxy rootfunc")
 
 		if err := proxyAsync(ctx, w, req, nil); err != nil {
 			httpError(w, err.Error(), http.StatusInternalServerError)
@@ -291,8 +293,8 @@ func NewHandler(p *Proxy) (http.Handler, error) {
 
 	return r, nil
 }
-func prepareContext(r *http.Request, p *Proxy, session *mgo.Session, cli *dockerclient.Client) context.Context {
-	ctx := context.WithValue(r.Context(), utils.KEY_PROXY_SELF, p)
+func preparePoolContext(p *Proxy, session *mgo.Session, cli *dockerclient.Client) context.Context {
+	ctx := context.WithValue(context.Background(), utils.KEY_PROXY_SELF, p)
 	ctx = context.WithValue(ctx, utils.KEY_APISERVER_CONFIG, p.APIServerConfig)
 	ctx = context.WithValue(ctx, utils.KEY_MGO_SESSION, session)
 	ctx = context.WithValue(ctx, utils.KEY_POOL_CLIENT, cli)
@@ -399,11 +401,20 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 	resp, err := cli.ContainerCreate(ctx, &config.Config, &config.HostConfig, &config.NetworkingConfig, name)
 	if err != nil {
+		logrus.WithFields(logrus.Fields{"resp": resp, "err": err}).Debug("postContainersCreate:create container err")
+
+		resp.ID = ""
+		resp.Warnings = []string{}
+		respBody, _ := json.Marshal(resp)
+
+		//TODO imageNotFoundError 需要处理
 		if strings.HasPrefix(err.Error(), "Conflict") {
-			httpError(w, err.Error(), http.StatusConflict)
+
+			//httpError(w, "postContainersCreate:create container name conflict"+err.Error(), http.StatusConflict)
+			httpError(w, string(respBody), http.StatusConflict)
 			return
 		} else {
-			httpError(w, err.Error(), http.StatusInternalServerError)
+			httpError(w, string(respBody), http.StatusInternalServerError)
 			return
 		}
 	}
