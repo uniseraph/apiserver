@@ -536,9 +536,6 @@
               ]
             },
             Volumns: {
-              Name: [
-                v => (v && v.length > 0 ? (v.match(/\s/) ? '数据卷名称不允许包含空格' : true) : '请输入数据卷名称')
-              ],
               Mount: [
                 v => (v && v.length > 0 ? (v.match(/\s/) ? '数据卷挂载路径不允许包含空格' : true) : '请输入数据卷挂载路径')
               ]
