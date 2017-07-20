@@ -332,10 +332,7 @@
                       <td>
                         <v-text-field
                           v-model="props.item.Name"
-                          :ref="'Volumn_Name_' + props.item.index"
-                          required
-                          :rules="rules.Services[item.Id].Volumns[props.item.Id].Name"
-                          @input="rules.Services[item.Id].Volumns[props.item.Id].Name = rules0.Services.Volumns.Name"
+                          placeholder="匿名卷请留空"
                         ></v-text-field>
                       </td>
                       <td>
