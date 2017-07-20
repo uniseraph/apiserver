@@ -148,6 +148,7 @@ var routes = map[string]map[string]*MyHandler{
 		"/envs/values/{id:.*}/remove":        &MyHandler{h: deleteValue, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/envs/values/{id:.*}/update-values": &MyHandler{h: updateValueAttributes, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/envs/value/get":                    &MyHandler{h: getValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/search":                &MyHandler{h: getEnvKeyNameWithPrefix, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 
 		/*
 			容器日志审计
