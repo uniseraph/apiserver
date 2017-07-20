@@ -18,6 +18,9 @@ const (
 	DEPLOYMENT_OPERATION_CREATE   = "create"
 	DEPLOYMENT_OPERATION_UPGRADE  = "upgrade"
 	DEPLOYMENT_OPERATION_ROLLBACK = "rollback"
+
+	LABEL_CONTAINER_CPUS      = "com.zanecloud.omega.container.cpus"
+	LABEL_CONTAINER_EXCLUSIVE = "com.zanecloud.omega.container.cpu.exclusive"
 )
 
 type APIServerConfig struct {

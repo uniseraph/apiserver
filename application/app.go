@@ -141,7 +141,12 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			composeService.Labels[appService.Labels[i].Name] = appService.Labels[i].Value
 		}
 		composeService.Labels[swarm.LABEL_APPLICATION_ID] = app.Id.Hex()
+
 		//TODO 加上cpuset的label
+		if appService.CPU != "" && appService.ExclusiveCPU == true {
+			composeService.Labels[types.LABEL_CONTAINER_CPUS] = appService.CPU
+			//	composeService.Labels[swarm.LABEL_CONTAINER_EXCLUSIVE] = appService.ExclusiveCPU
+		}
 
 		composeService.Environment = make([]string, 0, len(appService.Envs))
 		for i, _ := range appService.Envs {
