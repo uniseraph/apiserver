@@ -232,6 +232,7 @@
                   <v-data-table
                     :headers="headers_envs"
                     :items="item.Envs"
+                    :customSort="nosort"
                     hide-actions
                     class="elevation-1"
                     no-data-text=""
@@ -278,6 +279,7 @@
                   <v-data-table
                     :headers="headers_ports"
                     :items="item.Ports"
+                    :customSort="nosort"
                     hide-actions
                     class="elevation-1"
                     no-data-text=""
@@ -324,6 +326,7 @@
                   <v-data-table
                     :headers="headers_volumns"
                     :items="item.Volumns"
+                    :customSort="nosort"
                     hide-actions
                     class="elevation-1"
                     no-data-text=""
@@ -370,6 +373,7 @@
                   <v-data-table
                     :headers="headers_labels"
                     :items="item.Labels"
+                    :customSort="nosort"
                     hide-actions
                     class="elevation-1"
                     no-data-text=""
