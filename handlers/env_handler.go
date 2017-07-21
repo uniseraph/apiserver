@@ -1217,10 +1217,11 @@ func getEnvKeyNameWithPrefix(ctx context.Context, w http.ResponseWriter, r *http
 
 	var prefix = r.Form.Get("Keyword")
 
-	if prefix == "" {
-		HttpError(w, "入参Keyword不可为空", http.StatusBadRequest)
-		return
-	}
+	//允许prefix为空的情况
+	//if prefix == "" {
+	//	HttpError(w, "入参Keyword不可为空", http.StatusBadRequest)
+	//	return
+	//}
 
 	var pageSize int
 	s_pageSize := r.Form.Get("PageSize")
@@ -1297,7 +1298,7 @@ func getEnvKeyNameWithPrefix(ctx context.Context, w http.ResponseWriter, r *http
 		}
 
 		//按照name降序输出参数名称模型结果
-		if err := cs["env_tree_node_param_key"].Find(selector).Sort("-name").Skip(page * pageSize).Limit(pageSize).All(&keys); err != nil {
+		if err := cs["env_tree_node_param_key"].Find(selector).Sort("name").Skip(page * pageSize).Limit(pageSize).All(&keys); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
