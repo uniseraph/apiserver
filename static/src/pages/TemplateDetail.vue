@@ -250,7 +250,10 @@
                       <td>
                         <v-text-field
                           v-model="props.item.Value"
+                          :ref="'Env_Value_' + props.item.index"
                           required
+                          class="completer-field"
+                          :rel="'Env_Value_' + props.item.index"
                         ></v-text-field>
                       </td>
                       <td>
@@ -414,7 +417,7 @@
           </div>
         </v-card>
         <div style="color:#9F9F9F;">
-          提示：环境变量、端口映射、数据卷以及标签中的值可以引用参数目录中的参数名，例如：一个表示域名的环境变量可以定义为“eureka1.${DOMAIN_SUFFIX}”。
+          提示：环境变量及标签中的值可以引用参数目录中的参数名，例如：一个表示域名的环境变量可以定义为“eureka1.${DOMAIN_SUFFIX}”。
         </div>
       </div>
     </v-flex>
@@ -439,6 +442,9 @@
 <script>
   import store, { mapGetters } from 'vuex'
   import api from '../api/api'
+  import jQuery from 'jquery'
+  import caret from '../caret'
+  import completer from '../completer'
   import * as ui from '../util/ui'
 
   export default {
@@ -678,6 +684,28 @@
             this.Id = null;
             this.Title = this.$route.params.title;
           }
+
+          this.$nextTick(function() {
+            let that = this;
+            jQuery('.completer-field').find('input').completer({
+              url: this.$axios.defaults.baseURL + '/envs/values/search',
+              completeSuggestion: function(e, v) {
+                let rel = e.parents('.completer-field').attr('rel');
+                Object.keys(that.$refs).forEach(k => {
+                  if (k != rel) {
+                    return;
+                  }
+
+                  let r = that.$refs[k];
+                  if (Array.isArray(r)) {
+                    r = r[0];
+                  }
+
+                  r.value = v;
+                });
+              }
+            });
+          });
         })
       },
 
@@ -867,5 +895,34 @@
 </script>
 
 <style lang="stylus">
+.completer-container
+  font-family: inherit;
+  font-size: 14px;
+  line-height: normal;
+  position: absolute;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid #ccc;
+  border-bottom-color: #39f;
+  background-color: #fff;
 
+.completer-container li
+  overflow: hidden;
+  margin: 0;
+  padding: .5em .8em;
+  cursor: pointer;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid #eee;
+  background-color: #fff;
+
+.completer-container 
+  .completer-selected, li:hover
+    margin-left: -1px;
+    border-left: 1px solid #39f;
+    background-color: #eee;
 </style>

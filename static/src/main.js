@@ -11,6 +11,8 @@ Vue.use(Vuetify)
 Vue.use(common)
 Vue.use(constants)
 
+Vue.prototype.$axios = axios
+
 Vue.filter('formatDate', function(value) {
 	if (!value || value.length == 0) {
 		return '';
