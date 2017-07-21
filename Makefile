@@ -21,11 +21,15 @@ init:
 apiserver:clean
 	CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}" -o ${TARGET}
 
+autodeploy:clean-deploy
+	cd tools && CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}" -o autodeploy && cd ..
+
 portal:
 	cd static && npm install && npm run build && cd ..
 
 build:
 	docker run --rm -v $(shell pwd):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} ${BUILD_IMAGE} make apiserver
+	docker run --rm -v $(shell pwd):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} ${BUILD_IMAGE} make autodeploy
 image: build
 	docker build --rm -t ${IMAGE_NAME}:${MAJOR_VERSION}-${GIT_VERSION} .
 	docker tag  ${IMAGE_NAME}:${MAJOR_VERSION}-${GIT_VERSION} ${IMAGE_NAME}:${MAJOR_VERSION}
@@ -48,6 +52,7 @@ release:portal build
 	cp -r scripts/systemd     release/apiserver/
 	cp static/index.html release/apiserver/
 	cp apiserver release/apiserver/bin/
+	cp tools/autodeploy release/apiserver/bin/
 	cd release && tar zcvf apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz apiserver && cd ..
 	scp release/apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz  root@${TARGET_HOST}:/opt/zanecloud
 
@@ -59,6 +64,10 @@ publish:release
 
 clean:
 	rm -rf apiserver
+
+clean-deploy:
+	rm -rf autodeploy
+
 
 test:
 	mongo zanecloud --eval "db.user.remove({'name':'sadan'})"
