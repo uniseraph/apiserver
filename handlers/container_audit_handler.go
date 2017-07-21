@@ -405,12 +405,12 @@ func createAuditLog(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	logrus.Infoln(req)
+
 	if len(req.Token) <= 0 || len(req.IP) <= 0 || len(req.Command) <= 0 {
 		HttpError(w, "request with invalidate params.", http.StatusBadRequest)
 		return
 	}
-
-	logrus.Infoln(req)
 
 	utils.GetMgoCollections(ctx, w, []string{"container_audit_trace", "container_audit_log"}, func(cs map[string]*mgo.Collection) {
 

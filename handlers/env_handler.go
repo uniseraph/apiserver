@@ -14,6 +14,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
 	"sort"
+	"strconv"
 	"time"
 )
 
@@ -1190,6 +1191,140 @@ func getValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		HttpOK(w, rsp)
+	})
+
+}
+
+type EnvGetEnvKeyNameWithPrefixResponse struct {
+	Total     int
+	PageCount int
+	PageSize  int
+	Page      int
+	Data      []types.EnvTreeNodeParamKey
+}
+
+/*
+	前缀匹配，查询当前用户有权限访问的集群关联的Tree下面的参数名称（KEY）
+*/
+func getEnvKeyNameWithPrefix(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var prefix = r.Form.Get("Keyword")
+
+	if prefix == "" {
+		HttpError(w, "入参Keyword不可为空", http.StatusBadRequest)
+		return
+	}
+
+	var pageSize int
+	s_pageSize := r.Form.Get("PageSize")
+	if s_pageSize == "" {
+		pageSize = 20
+	} else {
+		s, err := strconv.Atoi(s_pageSize)
+		if err != nil {
+			HttpError(w, err.Error(), http.StatusBadRequest)
+			return
+		} else {
+			pageSize = s
+		}
+	}
+
+	var page int
+	s_page := r.Form.Get("Page")
+	if s_page == "" {
+		page = 0
+	} else {
+		page, err := strconv.Atoi(s_page)
+		if err != nil {
+			HttpError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		page -= 1
+	}
+	if page < 0 {
+		page = 0
+	}
+
+	user, err := utils.GetCurrentUser(ctx)
+
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	utils.GetMgoCollections(ctx, w, []string{"pool", "team", "env_tree_meta", "env_tree_node_param_key"}, func(cs map[string]*mgo.Collection) {
+		pids, err := utils.PoolIdsOfUser(cs["pool"], cs["team"], user)
+		if err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		//找到当前用户可访问的集群
+		pools := make([]types.PoolInfo, 0, 20)
+
+		if err := cs["pool"].Find(bson.M{"_id": bson.M{"$in": pids}}).All(&pools); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		eids := make([]bson.ObjectId, 0, 20)
+
+		for _, pool := range pools {
+			eids = append(eids, bson.ObjectIdHex(pool.EnvTreeId))
+		}
+
+		keys := make([]types.EnvTreeNodeParamKey, 0, 20)
+
+		selector := bson.M{
+			"tree": bson.M{
+				"$in": eids,
+			},
+		}
+		if prefix != "" {
+			selector["name"] = bson.M{
+				"$regex": bson.RegEx{
+					Pattern: fmt.Sprintf("^%s", prefix),
+					Options: "i",
+				},
+			}
+		}
+
+		//按照name降序输出参数名称模型结果
+		if err := cs["env_tree_node_param_key"].Find(selector).Sort("-name").Skip(page * pageSize).Limit(pageSize).All(&keys); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		var total int
+		if t, err := cs["env_tree_node_param_key"].Find(selector).Count(); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else {
+			total = t
+		}
+
+		//返回分页后，根据前缀查询的KEYS
+
+		var pageCount int
+		if total%pageSize == 0 {
+			pageCount = total / pageSize
+		} else {
+			pageCount = total/pageSize + 1
+		}
+
+		rsp := EnvGetEnvKeyNameWithPrefixResponse{
+			Total:     total,
+			PageSize:  len(keys),
+			PageCount: pageCount,
+			Page:      page + 1,
+			Data:      keys,
 		}
 
 		HttpOK(w, rsp)
