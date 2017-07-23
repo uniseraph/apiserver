@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/proxy"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
@@ -15,7 +16,6 @@ import (
 	regexp "regexp"
 	"strings"
 	"time"
-	"github.com/pkg/errors"
 )
 
 type PoolInspectResponseUser struct {
@@ -208,15 +208,13 @@ type PoolsFlushResponse struct {
 	Runtime PoolRuntimeInfo
 }
 
-
-func refreshPool(ctx context.Context , id string ) ( *PoolsFlushResponse,error) {
+func refreshPool(ctx context.Context, id string) (*PoolsFlushResponse, error) {
 
 	result := &PoolsFlushResponse{}
-	 err :=	utils.ExecMgoCollections(ctx,[]string{"pool","node"}, func(cs map[string]*mgo.Collection) error {
+	err := utils.ExecMgoCollections(ctx, []string{"pool", "node"}, func(cs map[string]*mgo.Collection) error {
 
-
-		colPool,_ := cs["pool"]
-		colNode,_ := cs["node"]
+		colPool, _ := cs["pool"]
+		colNode, _ := cs["node"]
 
 		if err := colPool.FindId(bson.ObjectIdHex(id)).One(&result.PoolInfo); err != nil {
 			return err
@@ -236,7 +234,7 @@ func refreshPool(ctx context.Context , id string ) ( *PoolsFlushResponse,error) 
 		clusterInfo, err := utils.GetClusterInfo(ctx, result.ProxyEndpoint)
 		if err != nil {
 			//HttpError(w, "获取集群信息错误"+err.Error(), http.StatusInternalServerError)
-			return errors.New("获取集群信息错误"+err.Error())
+			return errors.New("获取集群信息错误" + err.Error())
 		}
 
 		//同步集群的静态信息，需要写到mongodb的pool表
@@ -249,7 +247,7 @@ func refreshPool(ctx context.Context , id string ) ( *PoolsFlushResponse,error) 
 		strategy, filters, nodes, err := utils.ParseNodes(clusterInfo.SystemStatus, result.PoolInfo.Id.Hex(), result.PoolInfo.Name)
 		if err != nil {
 			//HttpError(w, "解析集群节点信息错误"+err.Error(), http.StatusInternalServerError)
-			return errors.New("解析集群节点信息错误"+err.Error())
+			return errors.New("解析集群节点信息错误" + err.Error())
 		}
 
 		result.PoolInfo.Strategy = strategy
@@ -294,8 +292,7 @@ func refreshPool(ctx context.Context , id string ) ( *PoolsFlushResponse,error) 
 		result.Runtime.ContainersRunning = clusterInfo.ContainersRunning
 		result.Runtime.ContainersStopped = clusterInfo.ContainersStopped
 
-
-		if err := colNode.Update(bson.M{"poolid": bson.ObjectIdHex(id)}, bson.M{"$set": bson.M{"status": "offline"}}); err != nil {
+		if err := colNode.Update(bson.M{"poolid": id}, bson.M{"$set": bson.M{"status": "offline"}}); err != nil {
 			if err != mgo.ErrNotFound {
 				//HttpError(w, err.Error(), http.StatusInternalServerError)
 				return err
@@ -303,7 +300,7 @@ func refreshPool(ctx context.Context , id string ) ( *PoolsFlushResponse,error) 
 		}
 
 		for _, node := range result.Nodes {
-			if _, err := colNode.Upsert(bson.M{"poolid": bson.ObjectIdHex(id), "endpoint": node.Endpoint}, &node); err != nil {
+			if _, err := colNode.Upsert(bson.M{"poolid": id, "endpoint": node.Endpoint}, &node); err != nil {
 				logrus.Infof("upsert the node %#v error:%s", node, err.Error())
 				continue
 			}
@@ -315,7 +312,7 @@ func refreshPool(ctx context.Context , id string ) ( *PoolsFlushResponse,error) 
 
 	if err != nil {
 
-		return nil , err
+		return nil, err
 	}
 
 	return result, nil
@@ -325,10 +322,9 @@ func postPoolsFlush(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	id := mux.Vars(r)["id"]
 
-
-	result , err := refreshPool(ctx,id)
+	result, err := refreshPool(ctx, id)
 	if err != nil {
-		HttpError(w,err.Error(),http.StatusInternalServerError)
+		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -438,8 +434,6 @@ func postPoolsFlush(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	//
 	//})
 	//
-	
-
 
 }
 
@@ -566,7 +560,6 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	refreshPool(ctx, poolInfo.Id.Hex())
-
 
 	//httpJsonResponse(w, result)
 	w.Header().Set("Content-Type", "application/json")
