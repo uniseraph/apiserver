@@ -12,7 +12,15 @@ import (
 )
 
 func CreateSystemAuditLogWithCtx(ctx context.Context, r *http.Request, module types.SystemAuditModuleType, operation types.SystemAuditModuleOperationType, poolId string, applicationId string, detail interface{}) (err error) {
-	opUser, _ := GetCurrentUser(ctx)
+
+	opUser, ok := ctx.Value(KEY_CURRENT_USER).(*types.User)
+	if !ok {
+		//logrus.Errorf("can't get current user  by %s", utils.KEY_CURRENT_USER)
+		return  errors.New("can't get current user")
+	}
+
+
+
 	mgoSession, err := GetMgoSessionClone(ctx)
 
 	if err != nil {

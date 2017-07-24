@@ -125,7 +125,7 @@ func getPoolsJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		poolSelector := bson.M{}
 		poolIds := make([]bson.ObjectId, 0, 20)
 
-		user, err := utils.GetCurrentUser(ctx)
+		user, err := getCurrentUser(ctx)
 		if err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -539,7 +539,7 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	poolInfo.EnvTreeName = envTree.Name
 
-	p, err := proxy.NewProxyInstanceAndStart(ctx, poolInfo)
+	p, err := proxy.NewProxyInstanceAndStart(utils.GetAPIServerConfig(ctx), poolInfo)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
 		return

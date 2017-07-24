@@ -56,7 +56,7 @@ func createSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Reques
 			return
 		}
 
-		user, err := utils.GetCurrentUser(ctx)
+		user, err := getCurrentUser(ctx)
 		if err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
