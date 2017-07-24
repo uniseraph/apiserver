@@ -132,6 +132,7 @@ func startProxys(config *store.APIServerConfig , abort chan int , canLunch chan 
 	session, err := mgo.Dial(config.MgoURLs)
 	if err != nil {
 		logrus.Errorf("startProxys::dial mongodb %s  error: %s", config.MgoURLs, err.Error())
+		abort <- 0
 		return
 	}
 
@@ -147,6 +148,7 @@ func startProxys(config *store.APIServerConfig , abort chan int , canLunch chan 
 	var pools []store.PoolInfo
 	if err := session.DB(config.MgoDB).C("pool").Find(bson.M{}).All(&pools); err != nil {
 		logrus.Errorf("startProxys::get all pool error : %", err.Error())
+		abort <- 0
 		return
 	}
 
