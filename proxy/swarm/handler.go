@@ -285,8 +285,11 @@ func proxyAsyncWithCallBack(callback func(context.Context, *http.Request, *http.
 }
 
 func getMgoDB(ctx context.Context) (string, error) {
-	config := utils.GetAPIServerConfig(ctx)
-	return config.MgoDB, nil
+
+	p, _ := ctx.Value(utils.KEY_PROXY_SELF).(*Proxy)
+
+
+	return p.APIServerConfig.MgoDB, nil
 }
 
 func getPoolInfo(ctx context.Context) (*apiserver.PoolInfo, error) {

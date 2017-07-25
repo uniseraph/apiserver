@@ -11,7 +11,6 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/zanecloud/apiserver/handlers"
 	"github.com/zanecloud/apiserver/proxy"
-	_ "github.com/zanecloud/apiserver/proxy/swarm"
 	store "github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
@@ -136,10 +135,10 @@ func startProxys(config *store.APIServerConfig , abort chan int , canLunch chan 
 		return
 	}
 
-	logrus.Debug("startProxys::start a mgosession")
+//	logrus.Debug("startProxys::start a mgosession")
 
 	defer func() {
-		logrus.Debug("startProxys::close mgo session")
+//		logrus.Debug("startProxys::close mgo session")
 		session.Close()
 	}()
 

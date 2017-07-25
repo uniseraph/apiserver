@@ -1,7 +1,7 @@
 package proxy
 
 import (
-	"github.com/Sirupsen/logrus"
+"github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/types"
 )
@@ -65,7 +65,7 @@ func NewProxyInstanceAndStart(config *types.APIServerConfig, poolInfo *types.Poo
 
 	ff, ok := driver2FactoryFunc[poolInfo.Driver]
 	if !ok {
-		logrus.Warnf("no such pool proxy driver %s , ", poolInfo.Driver)
+		logrus.Warnf("no such pool proxy driver %s  ", poolInfo.Driver)
 		return nil, errors.Errorf("no such pool proxy driver %s", poolInfo.Driver)
 	}
 	//ff := driver2FactoryFunc[poolInfo.Driver]
