@@ -30,7 +30,11 @@ export function fetch(url, params, silient) {
                 if (!silient) {
                     let res = error.response;
                     if (res) {
-                        ui.alert(res.data);
+                        if (res.status == 401) {
+                            window.location.reload(true);
+                        } else {
+                            ui.alert(res.data);
+                        }
                     } else {
                         ui.alert('系统错误: ' + error);
                     }
