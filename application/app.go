@@ -154,6 +154,21 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			composeService.Environment = append(composeService.Environment, fmt.Sprintf("%s=%s", appService.Envs[i].Name, appService.Envs[i].Value))
 		}
 
+
+		composeService.Volumes = &composeyml.Volumes{
+			Volumes: make([]*composeyml.Volume,0,len(appService.Volumns)),
+		}
+
+
+		for i,_ := range appService.Volumns {
+
+			composeService.Volumes.Volumes = append(composeService.Volumes.Volumes , &composeyml.Volume{
+				Destination : appService.Volumns[i].ContainerPath ,
+//				AccessMode: "rw",
+
+			}  )
+		}
+
 		ec.Services[appService.Name] = composeService
 
 	}
