@@ -343,11 +343,11 @@
                       </td>
                       <td>
                         <v-text-field
-                          v-model="props.item.Mount"
-                          :ref="'Volumn_Mount_' + props.item.index"
+                          v-model="props.item.ContainerPath"
+                          :ref="'Volumn_ContainerPath_' + props.item.index"
                           required
-                          :rules="rules.Services[item.Id].Volumns[props.item.Id].Mount"
-                          @input="rules.Services[item.Id].Volumns[props.item.Id].Mount = rules0.Services.Volumns.Mount"
+                          :rules="rules.Services[item.Id].Volumns[props.item.Id].ContainerPath"
+                          @input="rules.Services[item.Id].Volumns[props.item.Id].ContainerPath = rules0.Services.Volumns.ContainerPath"
                         ></v-text-field>
                       </td>
                       <td>
@@ -543,7 +543,7 @@
               ]
             },
             Volumns: {
-              Mount: [
+              ContainerPath: [
                 v => (v && v.length > 0 ? (v.match(/\s/) ? '数据卷挂载路径不允许包含空格' : true) : '请输入数据卷挂载路径')
               ]
             },
@@ -769,7 +769,7 @@
 
         this.$set(this.rules.Services[s.Id].Volumns, id, {});
         
-        s.Volumns.push({ index: s.Volumns.length, Id: id, Name: '', Mount: '' });
+        s.Volumns.push({ index: s.Volumns.length, Id: id, Name: '', ContainerPath: '' });
         this.patch(s.Volumns);
       },
 

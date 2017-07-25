@@ -289,7 +289,7 @@
                       </td>
                       <td>
                         <v-text-field
-                          v-model="props.item.Mount"
+                          v-model="props.item.ContainerPath"
                           readonly
                         ></v-text-field>
                       </td>
