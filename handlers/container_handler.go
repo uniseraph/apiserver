@@ -17,6 +17,8 @@ import (
 	"github.com/zanecloud/apiserver/types"
 	"github.com/docker/go-connections/tlsconfig"
 	"time"
+	dockertypes "github.com/docker/docker/api/types"
+	"io"
 )
 
 
@@ -34,6 +36,140 @@ type ContainerListResponse struct {
 	PageResponse
 	Data []*swarm.Container
 
+}
+
+
+
+
+func getContainerJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+	id := mux.Vars(r)["id"]
+
+	utils.GetMgoCollections(ctx,w,[]string{"container","pool"}, func(cs map[string]*mgo.Collection) {
+		container := &swarm.Container{}
+
+		colContainer, _ := cs["container"]
+		colPool, _ := cs["pool"]
+
+		if err := colContainer.FindId(bson.ObjectIdHex(id)).One(container); err != nil {
+			if err == mgo.ErrNotFound {
+				http.Error(w, "No such a container", http.StatusNotFound)
+				return
+			}
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		poolInfo := &types.PoolInfo{}
+		if err := colPool.FindId(bson.ObjectIdHex(container.PoolId)).One(poolInfo); err != nil {
+			if err == mgo.ErrNotFound {
+				http.Error(w, "No such a pool:"+container.PoolId, http.StatusNotFound)
+				return
+			}
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		dockerclient, err := utils.CreateDockerClient(poolInfo)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		containerJSON, err := dockerclient.ContainerInspect(r.Context(), container.ContainerId)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		HttpOK(w, containerJSON)
+	})
+
+}
+
+
+
+type LogsContainerRequest struct {
+
+	ShowStdout bool
+	ShowStderr bool
+	Since      string
+	Timestamps bool
+	//Follow     bool
+	Tail       string
+	//Details    bool
+
+}
+func getContainerLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+
+	req := &LogsContainerRequest{
+		ShowStdout: false,
+		ShowStderr: false,
+		Since: "0",
+		Timestamps: false,
+		Tail : "100",
+	}
+
+	if err:= json.NewDecoder(r.Body).Decode(req) ; err != nil {
+		HttpError(w , err.Error() , http.StatusBadRequest)
+		return
+	}
+
+
+	utils.GetMgoCollections(ctx,w,[]string{"container","pool"}, func(cs map[string]*mgo.Collection) {
+		container := &swarm.Container{}
+
+		colContainer, _ := cs["container"]
+		colPool, _ := cs["pool"]
+
+		if err := colContainer.FindId(bson.ObjectIdHex(id)).One(container); err != nil {
+			if err == mgo.ErrNotFound {
+				http.Error(w, "No such a container", http.StatusNotFound)
+				return
+			}
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		poolInfo := &types.PoolInfo{}
+		if err := colPool.FindId(bson.ObjectIdHex(container.PoolId)).One(poolInfo); err != nil {
+			if err == mgo.ErrNotFound {
+				http.Error(w, "No such a pool:"+container.PoolId, http.StatusNotFound)
+				return
+			}
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		dockerclient, err := utils.CreateDockerClient(poolInfo)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer dockerclient.Close()
+
+		ioreader , err := dockerclient.ContainerLogs(r.Context(), container.ContainerId , dockertypes.ContainerLogsOptions{
+			Follow: false ,
+			ShowStderr: req.ShowStderr,
+			ShowStdout: req.ShowStdout ,
+			Since: req.Since ,
+			Timestamps: req.Timestamps ,
+			Tail: req.Tail,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer ioreader.Close()
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		io.Copy(utils.NewWriteFlusher(w),ioreader)
+
+
+
+	})
 }
 
 func getContainerList(ctx context.Context, w http.ResponseWriter, r *http.Request) {

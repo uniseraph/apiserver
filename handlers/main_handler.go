@@ -33,6 +33,10 @@ type MyHandler struct {
 var routers = map[string]map[string]*MyHandler{
 	"HEAD": {},
 	"GET": {
+
+		"/containers/{id:.*}/inspect": &MyHandler{h: getContainerJSON, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/containers/{id:.*}/logs": &MyHandler{h: getContainerLogs, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+
 		"/users/{name:.*}/login": &MyHandler{h: postSessionCreate},
 		"/users/current":         &MyHandler{h: getUserCurrent, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/users/{id:.*}/inspect": &MyHandler{h: getUserInspect, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
@@ -167,7 +171,10 @@ var routers = map[string]map[string]*MyHandler{
 
 		"/logs/list": &MyHandler{h: getSystemAuditList, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 
+		"/containers/{id:.*}/inspect": &MyHandler{h: getContainerJSON, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/containers/{id:.*}/logs": &MyHandler{h: getContainerLogs, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 		"/containers/list":                         &MyHandler{h: getContainerList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+
 		"/applications/list":                       &MyHandler{h: getApplicationList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 		"/applications/{id:.*}/history":            &MyHandler{h: getApplicationHistory, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 		"/applications/{id:.*}/inspect":            &MyHandler{h: getApplication, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},

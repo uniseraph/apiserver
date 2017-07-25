@@ -42,4 +42,6 @@ func initCommand(c *cli.Context) {
 		logrus.Fatal(err)
 	}
 
+	logrus.Infof("init user:%s success ..." , name)
+
 }

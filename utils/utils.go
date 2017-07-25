@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/docker/go-connections/tlsconfig"
 )
 
 //计算MD5
@@ -340,5 +341,33 @@ func parseLabels(labels string) map[string]string {
 	}
 
 	return result
+
+}
+
+
+//查询请求可以直接到后端集群，bypass proxy
+func CreateDockerClient(poolInfo *types.PoolInfo) (  *client.Client ,    error ) {
+
+	var httpClient *http.Client
+	if poolInfo.DriverOpts.TlsConfig != nil {
+		tlsc, err := tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
+		if err != nil {
+			return nil ,err
+		}
+		httpClient = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: tlsc,
+			},
+			CheckRedirect: client.CheckRedirect,
+		}
+	}
+
+	cli , err := client.NewClient(poolInfo.DriverOpts.EndPoint,poolInfo.DriverOpts.APIVersion,httpClient,nil)
+	if err !=nil {
+		return nil , err
+	}
+
+	return cli , nil
+
 
 }

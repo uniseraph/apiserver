@@ -134,14 +134,7 @@ func startProxys(config *store.APIServerConfig , abort chan int , canLunch chan 
 		abort <- 0
 		return
 	}
-
-//	logrus.Debug("startProxys::start a mgosession")
-
-	defer func() {
-//		logrus.Debug("startProxys::close mgo session")
-		session.Close()
-	}()
-
+	defer session.Close()
 	session.SetMode(mgo.Monotonic, true)
 
 	var pools []store.PoolInfo
