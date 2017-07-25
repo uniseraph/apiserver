@@ -212,7 +212,7 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 		//则err不为空
 		//则认为禁止登陆
 		if err != nil {
-			HttpError(w, "please login", http.StatusForbidden)
+			HttpError(w, "please login", http.StatusUnauthorized)
 			return
 		}
 
@@ -234,20 +234,20 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 		//如果没有找到或者redis出错
 		//则认证失败
 		if err != nil {
-			HttpError(w, err.Error(), http.StatusForbidden)
+			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		//如果session在redis中内容为空
 		//则认证失败
 		if len(sessionContent) == 0 {
-			HttpError(w, "sessionContent is empty", http.StatusForbidden)
+			HttpError(w, "sessionContent is empty", http.StatusUnauthorized)
 			return
 		}
 		//如果session中uid字段为空
 		//则认证失败
 		var uid = string(sessionContent["uid"])
 		if len(uid) == 0 {
-			HttpError(w, err.Error(), http.StatusForbidden)
+			HttpError(w, "session data error for uid field.", http.StatusInternalServerError)
 			return
 		}
 		//校验权限是否满足要求
