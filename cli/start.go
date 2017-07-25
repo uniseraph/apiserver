@@ -11,11 +11,11 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/zanecloud/apiserver/handlers"
 	"github.com/zanecloud/apiserver/proxy"
-	_ "github.com/zanecloud/apiserver/proxy/swarm"
 	store "github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"github.com/go-redis/redis"
 )
 
 const startCommandName = "start"
@@ -55,9 +55,32 @@ func getTlsConfig(c *cli.Context) (*tls.Config, error) {
 func startCommand(c *cli.Context) {
 
 	config := parserAPIServerConfig(c)
-
 	ctx := utils.PutAPIServerConfig(context.Background(), config)
-	h, err := handlers.NewMainHandler(ctx)
+
+
+	session, err := mgo.Dial(config.MgoURLs)
+	if err != nil {
+		logrus.Fatal(err)
+		return
+	}
+	session.SetMode(mgo.Monotonic, true)
+	ctx = utils.PutMgoSession(ctx, session)
+
+	logrus.Debugf("redis address is : %s", config.RedisAddr)
+	client := redis.NewClient(&redis.Options{
+		Addr:     config.RedisAddr,
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+	if _, err := client.Ping().Result(); err != nil {
+		logrus.Fatal(err)
+		return
+	}
+	ctx = utils.PutRedisClient(ctx, client)
+
+
+
+	h, err := handlers.NewMainHandler(ctx , config)
 	if err != nil {
 		logrus.Fatal(err)
 		return
@@ -72,7 +95,17 @@ func startCommand(c *cli.Context) {
 		return
 	}
 
-	go startProxys(ctx)
+	abort := make(chan int)
+	canLunch := make(chan int)
+
+	go startProxys(config , abort , canLunch)
+
+	select {
+		case <- canLunch:
+		case <- abort:
+			return
+	}
+
 
 	if err := server.Serve(listener); err != nil {
 		logrus.Fatal(err)
@@ -92,19 +125,20 @@ func parserAPIServerConfig(c *cli.Context) *store.APIServerConfig {
 
 }
 
-func startProxys(ctx context.Context) {
+func startProxys(config *store.APIServerConfig , abort chan int , canLunch chan int) {
 
-	config := utils.GetAPIServerConfig(ctx)
+	//config := utils.GetAPIServerConfig(ctx)
 	session, err := mgo.Dial(config.MgoURLs)
 	if err != nil {
 		logrus.Errorf("startProxys::dial mongodb %s  error: %s", config.MgoURLs, err.Error())
+		abort <- 0
 		return
 	}
 
-	logrus.Debug("startProxys::start a mgosession")
+//	logrus.Debug("startProxys::start a mgosession")
 
 	defer func() {
-		logrus.Debug("startProxys::close mgo session")
+//		logrus.Debug("startProxys::close mgo session")
 		session.Close()
 	}()
 
@@ -113,19 +147,26 @@ func startProxys(ctx context.Context) {
 	var pools []store.PoolInfo
 	if err := session.DB(config.MgoDB).C("pool").Find(bson.M{}).All(&pools); err != nil {
 		logrus.Errorf("startProxys::get all pool error : %", err.Error())
+		abort <- 0
 		return
 	}
 
 	for i, _ := range pools {
 		logrus.Debugf("startProxys:: start the pool:%s", pools[i].Name)
 
-		proxy, err := proxy.NewProxyInstanceAndStart(ctx, &pools[i])
+		proxy, err := proxy.NewProxyInstanceAndStart(config, &pools[i])
 		if err != nil {
 			logrus.Errorf("startProxys:: startProxy error:%s", err.Error())
+			abort <- 0
+			return
 		}
 
-		pools[i].ProxyEndpoint = proxy.Endpoint()
+		if proxy!=nil {
+			pools[i].ProxyEndpoint = proxy.Endpoint()
+		}
 
 	}
+
+	canLunch <- 0
 
 }

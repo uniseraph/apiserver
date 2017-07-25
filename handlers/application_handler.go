@@ -40,7 +40,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	mgoSession, _ := utils.GetMgoSessionClone(ctx)
 	defer mgoSession.Close()
 	config := utils.GetAPIServerConfig(ctx)
-	currentuser, _ := utils.GetCurrentUser(ctx)
+	currentuser, _ := getCurrentUser(ctx)
 
 	colPool := mgoSession.DB(config.MgoDB).C("pool")
 	pool := &types.PoolInfo{}
@@ -117,7 +117,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	currentUser, _ := utils.GetCurrentUser(ctx)
+	currentUser, _ := getCurrentUser(ctx)
 
 	if err := application.AddDeploymentLog(ctx, app, pool, currentUser, types.DEPLOYMENT_OPERATION_CREATE, nil); err != nil {
 		logrus.WithFields(logrus.Fields{"app": app, "pool": pool, "user": currentUser, "err": err.Error()}).Debug("create app success, save to db err")
@@ -359,7 +359,7 @@ func getApplicationList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		*/
 		appIds := make([]bson.ObjectId, 0, 20)
 
-		user, err := utils.GetCurrentUser(ctx)
+		user, err := getCurrentUser(ctx)
 		if err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -588,7 +588,7 @@ func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 		app.TemplateId = req.ApplicationTemplateId
 		app.Version = template.Version
-		currentUser, _ := utils.GetCurrentUser(ctx)
+		currentUser, _ := getCurrentUser(ctx)
 		app.UpdatedTime = time.Now().Unix()
 		app.UpdaterId = currentUser.Id.Hex()
 		app.UpdaterName = currentUser.Name
@@ -740,7 +740,7 @@ func stopApplication(ctx context.Context, w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		currentUser, _ := utils.GetCurrentUser(ctx)
+		currentUser, _ := getCurrentUser(ctx)
 
 		app.UpdatedTime = time.Now().Unix()
 		app.UpdaterId = currentUser.Id.Hex()
@@ -803,7 +803,7 @@ func startApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 			return
 		}
 
-		currentUser, _ := utils.GetCurrentUser(ctx)
+		currentUser, _ := getCurrentUser(ctx)
 
 		app.UpdatedTime = time.Now().Unix()
 		app.UpdaterId = currentUser.Id.Hex()
@@ -933,7 +933,7 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 	deployment := &types.Deployment{}
 	pool := &types.PoolInfo{}
 
-	currentUser, _ := utils.GetCurrentUser(ctx)
+	currentUser, _ := getCurrentUser(ctx)
 	utils.GetMgoCollections(ctx, w, []string{"deployment", "pool", "application"}, func(cs map[string]*mgo.Collection) {
 
 		colDeployment, _ := cs["deployment"]
@@ -993,7 +993,7 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		currentUser, _ := utils.GetCurrentUser(ctx)
+		currentUser, _ := getCurrentUser(ctx)
 		result := ApplicationRollbackResponse{
 			Id:                    app.Id.Hex(),
 			PoolId:                pool.Id.Hex(),

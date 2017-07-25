@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Sirupsen/logrus"
-	"github.com/go-redis/redis"
 	"github.com/gorilla/mux"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
@@ -31,7 +30,7 @@ type MyHandler struct {
 	roleset   types.Roleset            // 只有拥有这些角色的用户才有权限
 }
 
-var routes = map[string]map[string]*MyHandler{
+var routers = map[string]map[string]*MyHandler{
 	"HEAD": {},
 	"GET": {
 		"/users/{name:.*}/login": &MyHandler{h: postSessionCreate},
@@ -316,49 +315,9 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 	return wrap
 }
 
-func NewMainHandler(ctx context.Context) (http.Handler, error) {
-
-	config := utils.GetAPIServerConfig(ctx)
-
-	session, err := mgo.Dial(config.MgoURLs)
-	if err != nil {
-		return nil, err
-	}
-	session.SetMode(mgo.Monotonic, true)
-	ctx = utils.PutMgoSession(ctx, session)
-
-	logrus.Infof("redis address is : %s", config.RedisAddr)
-	client := redis.NewClient(&redis.Options{
-		Addr:     config.RedisAddr,
-		Password: "", // no password set
-		DB:       0,  // use default DB
-	})
-	if _, err := client.Ping().Result(); err != nil {
-		return nil, err
-	}
-	ctx = utils.PutRedisClient(ctx, client)
-
+func NewMainHandler(ctx context.Context , config *types.APIServerConfig) (http.Handler, error) {
 	r := mux.NewRouter()
 
-	//TODO using request context
-	SetupPrimaryRouter(r, ctx, routes)
-
-	r.Path("/api/actions/check").Methods(http.MethodPost).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		checkUserPermission(postActionsCheck, types.ROLESET_NORMAL|types.ROLESET_SYSADMIN)(ctx, w, r)
-	})
-
-	fsh := http.StripPrefix("/", http.FileServer(http.Dir(config.RootDir)))
-	//r.Path("/").Methods(http.MethodGet).Handler(http.StripPrefix("/",fsh))
-
-	r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI}).Debug("HTTP request received")
-		fsh.ServeHTTP(w, r)
-	})
-
-	return r, nil
-}
-
-func SetupPrimaryRouter(r *mux.Router, ctx context.Context, routers map[string]map[string]*MyHandler) {
 	for method, mappings := range routers {
 		for route, myHandler := range mappings {
 			logrus.WithFields(logrus.Fields{"method": method, "route": route}).Debug("Registering HTTP route")
@@ -375,12 +334,50 @@ func SetupPrimaryRouter(r *mux.Router, ctx context.Context, routers map[string]m
 				}
 			}
 			localMethod := method
-
 			//r.Path("/v{version:[0-9.]+}" + localRoute).Methods(localMethod).HandlerFunc(wrap)
 			r.Path("/api" + localRoute).Methods(localMethod).HandlerFunc(wrap)
 		}
 	}
+
+
+	r.Path("/api/actions/check").Methods(http.MethodPost).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		checkUserPermission(postActionsCheck, types.ROLESET_NORMAL|types.ROLESET_SYSADMIN)(ctx, w, r)
+	})
+
+	fsh := http.StripPrefix("/", http.FileServer(http.Dir(config.RootDir)))
+	//r.Path("/").Methods(http.MethodGet).Handler(http.StripPrefix("/",fsh))
+
+	r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI}).Debug("HTTP request received")
+		fsh.ServeHTTP(w, r)
+	})
+
+	return r, nil
 }
+
+//func SetupPrimaryRouter(r *mux.Router, ctx context.Context, routers map[string]map[string]*MyHandler) {
+//	for method, mappings := range routers {
+//		for route, myHandler := range mappings {
+//			logrus.WithFields(logrus.Fields{"method": method, "route": route}).Debug("Registering HTTP route")
+//
+//			localRoute := route
+//			localHandler := myHandler
+//			wrap := func(w http.ResponseWriter, req *http.Request) {
+//				logrus.WithFields(logrus.Fields{"method": req.Method, "uri": req.RequestURI, "localHandler": localHandler}).Debug("HTTP request received")
+//
+//				if localHandler.opChecker != nil {
+//					localHandler.opChecker(localHandler.h, localHandler.roleset)(ctx, w, req)
+//				} else {
+//					localHandler.h(ctx, w, req)
+//				}
+//			}
+//			localMethod := method
+//
+//			//r.Path("/v{version:[0-9.]+}" + localRoute).Methods(localMethod).HandlerFunc(wrap)
+//			r.Path("/api" + localRoute).Methods(localMethod).HandlerFunc(wrap)
+//		}
+//	}
+//}
 
 func BoolValue(r *http.Request, k string) bool {
 	s := strings.ToLower(strings.TrimSpace(r.FormValue(k)))
@@ -413,7 +410,7 @@ func HttpOK(w http.ResponseWriter, result interface{}) {
 //"/actions/check" : &MyHandler{h: postActionsCheck } ,
 func postActionsCheck(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
-	currentUser, err := utils.GetCurrentUser(ctx)
+	currentUser, err := getCurrentUser(ctx)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusForbidden)
 		return
@@ -431,7 +428,7 @@ func postActionsCheck(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	}
 
 	//这是系统初始化的变量，所以不需要判断是否存在
-	action2MyHandler, _ := routes["POST"]
+	action2MyHandler, _ := routers["POST"]
 
 	for _, action := range req.Actions {
 

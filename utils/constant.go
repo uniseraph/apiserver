@@ -45,15 +45,6 @@ func PutAPIServerConfig(ctx context.Context, config *types.APIServerConfig) cont
 func PutCurrentUser(ctx context.Context, user *types.User) context.Context {
 	return context.WithValue(ctx, KEY_CURRENT_USER, user)
 }
-func GetCurrentUser(ctx context.Context) (*types.User, error) {
-	user, ok := ctx.Value(KEY_CURRENT_USER).(*types.User)
-	if !ok {
-		logrus.Errorf("can't get current user  by %s", KEY_CURRENT_USER)
-		return nil, errors.New("can't get current user")
-	}
-
-	return user, nil
-}
 
 func getMgoSession(ctx context.Context) (*mgo.Session, error) {
 	session, ok := ctx.Value(KEY_MGO_SESSION).(*mgo.Session)

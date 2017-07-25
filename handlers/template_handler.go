@@ -169,7 +169,7 @@ func createTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	//	return
 	//}
 
-	user, err := utils.GetCurrentUser(ctx)
+	user, err := getCurrentUser(ctx)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusForbidden)
 		return
@@ -252,7 +252,7 @@ func copyTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := utils.GetCurrentUser(ctx)
+	user, err := getCurrentUser(ctx)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusForbidden)
 		return
@@ -323,7 +323,7 @@ func updateTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	user, err := utils.GetCurrentUser(ctx)
+	user, err := getCurrentUser(ctx)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusForbidden)
 		return

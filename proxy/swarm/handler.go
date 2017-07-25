@@ -14,7 +14,7 @@ import (
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	store "github.com/zanecloud/apiserver/types"
+	apiserver "github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"io"
 	"net"
@@ -220,41 +220,8 @@ func hijack(tlsConfig *tls.Config, endpoint string, w http.ResponseWriter, r *ht
 
 type Handler func(c context.Context, w http.ResponseWriter, r *http.Request)
 
-func NewHandler(p *Proxy) (http.Handler, error) {
+func NewPoolHandler(ctx context.Context, poolInfo * apiserver.PoolInfo ) (http.Handler, error) {
 
-	poolInfo := p.PoolInfo
-
-	var client *http.Client
-	if poolInfo.DriverOpts.TlsConfig != nil {
-		tlsc, err := tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
-		if err != nil {
-			return nil, err
-		}
-		client = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: tlsc,
-			},
-			CheckRedirect: client.CheckRedirect,
-		}
-	}
-	cli, err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint, poolInfo.DriverOpts.APIVersion, client, nil)
-	if err != nil {
-		return nil, err
-	}
-	//defer func() {
-	//	logrus.Debug("close the docker cli in proxy ctx")
-	//	cli.Close()
-	//}()
-
-	session, err := mgo.Dial(p.APIServerConfig.MgoURLs)
-	if err != nil {
-		return nil, err
-	}
-	//TODO 非常重要不能加defer，否则该session就会被释放
-	//defer session.Close()
-	session.SetMode(mgo.Monotonic, true)
-
-	ctx := preparePoolContext(p, session, cli)
 
 	r := mux.NewRouter()
 	for method, mappings := range routers {
@@ -293,13 +260,13 @@ func NewHandler(p *Proxy) (http.Handler, error) {
 
 	return r, nil
 }
-func preparePoolContext(p *Proxy, session *mgo.Session, cli *dockerclient.Client) context.Context {
-	ctx := context.WithValue(context.Background(), utils.KEY_PROXY_SELF, p)
-	ctx = context.WithValue(ctx, utils.KEY_APISERVER_CONFIG, p.APIServerConfig)
-	ctx = context.WithValue(ctx, utils.KEY_MGO_SESSION, session)
-	ctx = context.WithValue(ctx, utils.KEY_POOL_CLIENT, cli)
-	return ctx
-}
+//func preparePoolContext(p *Proxy, session *mgo.Session, cli *dockerclient.Client)  {
+//	p.ctx = context.WithValue(p.ctx, utils.KEY_PROXY_SELF, p)
+//	p.ctx = context.WithValue(p.ctx, utils.KEY_APISERVER_CONFIG, p.APIServerConfig)
+//	p.ctx = context.WithValue(p.ctx, utils.KEY_MGO_SESSION, session)
+//	p.ctx = context.WithValue(p.ctx, utils.KEY_POOL_CLIENT, cli)
+//
+//}
 
 func proxyAsyncWithCallBack(callback func(context.Context, *http.Request, *http.Response)) Handler {
 
@@ -318,11 +285,14 @@ func proxyAsyncWithCallBack(callback func(context.Context, *http.Request, *http.
 }
 
 func getMgoDB(ctx context.Context) (string, error) {
-	config := utils.GetAPIServerConfig(ctx)
-	return config.MgoDB, nil
+
+	p, _ := ctx.Value(utils.KEY_PROXY_SELF).(*Proxy)
+
+
+	return p.APIServerConfig.MgoDB, nil
 }
 
-func getPoolInfo(ctx context.Context) (*store.PoolInfo, error) {
+func getPoolInfo(ctx context.Context) (*apiserver.PoolInfo, error) {
 	p, ok := ctx.Value(utils.KEY_PROXY_SELF).(*Proxy)
 
 	if !ok {
@@ -517,7 +487,7 @@ func flushContainerInfo(ctx context.Context, container *Container) {
 func OptionsHandler(c context.Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
-func buildContainerInfoForSave(name string, containerId string, poolInfo *store.PoolInfo, config *ContainerCreateConfig) *Container {
+func buildContainerInfoForSave(name string, containerId string, poolInfo *apiserver.PoolInfo, config *ContainerCreateConfig) *Container {
 
 	var cpuCount int64
 	var exclusive bool
@@ -601,7 +571,7 @@ func buildContainerInfoForSave(name string, containerId string, poolInfo *store.
 //	return &http.Client{}, "http"
 //}
 
-func newClientAndSchemeOR(poolInfo *store.PoolInfo) (*http.Client, string, string, error) {
+func newClientAndSchemeOR(poolInfo *apiserver.PoolInfo) (*http.Client, string, string, error) {
 	protoAddrParts := strings.SplitN(poolInfo.DriverOpts.EndPoint, "://", 2)
 
 	var proto, addr string

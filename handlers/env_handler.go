@@ -649,7 +649,7 @@ func getTreeValueDetails(ctx context.Context, w http.ResponseWriter, r *http.Req
 		//用户所有pool中查找跟该dir对应的tree建立关系的poll
 		//建立关系的pool中如果存在没有创建实际VALUE的情况
 		//则使用KEY中的default代替
-		user, err := utils.GetCurrentUser(ctx)
+		user, err := getCurrentUser(ctx)
 		if err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -1253,7 +1253,7 @@ func getEnvKeyNameWithPrefix(ctx context.Context, w http.ResponseWriter, r *http
 		page = 0
 	}
 
-	user, err := utils.GetCurrentUser(ctx)
+	user, err := getCurrentUser(ctx)
 
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)

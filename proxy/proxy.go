@@ -1,8 +1,7 @@
 package proxy
 
 import (
-	"context"
-	"github.com/Sirupsen/logrus"
+"github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/types"
 )
@@ -19,7 +18,7 @@ type Proxy interface {
 	Endpoint() string
 }
 
-type FactoryFunc func(c context.Context, p *types.PoolInfo) (Proxy, error)
+type FactoryFunc func( config *types.APIServerConfig  , p *types.PoolInfo) (Proxy, error)
 
 func Register(driver string, ff FactoryFunc) {
 
@@ -31,47 +30,47 @@ func Register(driver string, ff FactoryFunc) {
 
 }
 
-func NewProxyInstaces(ctx context.Context, poolInfo *types.PoolInfo, n int) ([]Proxy, error) {
+//func NewProxyInstaces(ctx context.Context, poolInfo *types.PoolInfo, n int) ([]Proxy, error) {
+//
+//	ff, ok := driver2FactoryFunc[poolInfo.Driver]
+//	if !ok {
+//		logrus.Warnf("no such pool proxy driver %s , ", poolInfo.Driver)
+//		return nil, errors.Errorf("no such pool proxy driver %s", poolInfo.Driver)
+//	}
+//
+//	//ff := driver2FactoryFunc[poolInfo.Driver]
+//
+//	result := make([]Proxy, n)
+//
+//	for i := 0; i < n; i++ {
+//		proxy, err := ff(ctx, poolInfo)
+//		if err != nil {
+//			logrus.Warnf("new proxy instance error :%s", err.Error())
+//
+//			//for j:=0 ; j<i ; j++ {
+//			//	if errStop := result[j].Stop(&StopProxyOpts{}) ; errStop!=nil {
+//			//		logrus.Errorf("stop error the proxy %#v, error:%s" , result[j],errStop)
+//			//		result[j]=nil
+//			//	}
+//			//}
+//			return nil, err
+//		}
+//		result[i] = proxy
+//	}
+//	return result, nil
+//
+//}
+
+func NewProxyInstanceAndStart(config *types.APIServerConfig, poolInfo *types.PoolInfo) (Proxy, error) {
 
 	ff, ok := driver2FactoryFunc[poolInfo.Driver]
 	if !ok {
-		logrus.Warnf("no such pool proxy driver %s , ", poolInfo.Driver)
-		return nil, errors.Errorf("no such pool proxy driver %s", poolInfo.Driver)
-	}
-
-	//ff := driver2FactoryFunc[poolInfo.Driver]
-
-	result := make([]Proxy, n)
-
-	for i := 0; i < n; i++ {
-		proxy, err := ff(ctx, poolInfo)
-		if err != nil {
-			logrus.Warnf("new proxy instance error :%s", err.Error())
-
-			//for j:=0 ; j<i ; j++ {
-			//	if errStop := result[j].Stop(&StopProxyOpts{}) ; errStop!=nil {
-			//		logrus.Errorf("stop error the proxy %#v, error:%s" , result[j],errStop)
-			//		result[j]=nil
-			//	}
-			//}
-			return nil, err
-		}
-		result[i] = proxy
-	}
-	return result, nil
-
-}
-
-func NewProxyInstanceAndStart(ctx context.Context, poolInfo *types.PoolInfo) (Proxy, error) {
-
-	ff, ok := driver2FactoryFunc[poolInfo.Driver]
-	if !ok {
-		logrus.Warnf("no such pool proxy driver %s , ", poolInfo.Driver)
+		logrus.Warnf("no such pool proxy driver %s  ", poolInfo.Driver)
 		return nil, errors.Errorf("no such pool proxy driver %s", poolInfo.Driver)
 	}
 	//ff := driver2FactoryFunc[poolInfo.Driver]
 
-	proxy, err := ff(ctx, poolInfo)
+	proxy, err := ff(config, poolInfo)
 	if err != nil {
 		return nil, err
 	}

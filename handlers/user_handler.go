@@ -14,13 +14,28 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	"errors"
 )
+
+
+
+func getCurrentUser(ctx context.Context) (*types.User, error) {
+	user, ok := ctx.Value(utils.KEY_CURRENT_USER).(*types.User)
+	if !ok {
+		logrus.Errorf("can't get current user  by %s", utils.KEY_CURRENT_USER)
+		return nil, errors.New("can't get current user")
+	}
+
+	return user, nil
+}
+
+
 
 //TODO 不应该走checkUserPermission过滤角色权限
 //		"/users/current":           &MyHandler{h: getUserCurrent ,opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 func getUserCurrent(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
-	result, err := utils.GetCurrentUser(ctx)
+	result, err := getCurrentUser(ctx)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusForbidden)
 		return
@@ -385,7 +400,7 @@ func postUserRemove(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	/*
 		系统审计
 	*/
-	opUser, _ := utils.GetCurrentUser(ctx)
+	opUser, _ := getCurrentUser(ctx)
 	_ = utils.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeDelete, "", "", map[string]interface{}{"User": deletedUser})
 }
 
@@ -403,7 +418,7 @@ func postUserJoin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	)
 
 	//需要判断当前用户是否为团队主管
-	currentUser, err := utils.GetCurrentUser(ctx)
+	currentUser, err := getCurrentUser(ctx)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusForbidden)
 		return
@@ -465,7 +480,7 @@ func postUserJoin(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		系统审计
 	*/
 
-	opUser, _ := utils.GetCurrentUser(ctx)
+	opUser, _ := getCurrentUser(ctx)
 	logData := map[string]interface{}{
 		"Team": map[string]string{
 			"Id":   team.Id.Hex(),
@@ -496,7 +511,7 @@ func postUserQuit(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	)
 
 	//需要判断当前用户是否为团队主管
-	currentUser, err := utils.GetCurrentUser(ctx)
+	currentUser, err := getCurrentUser(ctx)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusForbidden)
 		return
@@ -558,7 +573,7 @@ func postUserQuit(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		系统审计
 	*/
 
-	opUser, _ := utils.GetCurrentUser(ctx)
+	opUser, _ := getCurrentUser(ctx)
 	logData := map[string]interface{}{
 		"Team": map[string]string{
 			"Id":   team.Id.Hex(),
@@ -655,9 +670,9 @@ func postUserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		系统审计
 	*/
 
-	oldUser, _ := utils.GetCurrentUser(ctx)
+	oldUser, _ := getCurrentUser(ctx)
 	newUer := &types.User{}
-	opUser, _ := utils.GetCurrentUser(ctx)
+	opUser, _ := getCurrentUser(ctx)
 	c.FindId(bson.ObjectIdHex(id)).One(newUer)
 
 	_ = utils.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeUpdate, "", "", map[string]interface{}{"OldUser": oldUser, "NewUser": newUer})
@@ -670,7 +685,7 @@ type UserPoolsResponse struct {
 
 //获取当前用户有权限的Pool
 func getUserPools(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	user, err := utils.GetCurrentUser(ctx)
+	user, err := getCurrentUser(ctx)
 
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusInternalServerError)
