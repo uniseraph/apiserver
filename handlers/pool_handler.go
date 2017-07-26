@@ -280,7 +280,7 @@ func refreshPool(ctx context.Context, id string) (*PoolsFlushResponse, error) {
 			"tunneldport":       result.PoolInfo.TunneldPort,
 			"nodecount":         len(nodes),
 		}}); err != nil {
-			//HttpError(w, err.Error(), http.StatusInternalServerError)
+			//HttpError(w, err.Error(), http.StatusIntern·alServerError)
 			return err
 		}
 

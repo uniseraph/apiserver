@@ -16,6 +16,7 @@ import (
 	"github.com/zanecloud/apiserver/proxy/swarm"
 	"gopkg.in/yaml.v2"
 	"strconv"
+	"strings"
 )
 
 //需要根据pool的驱动不同，调用不同的接口创建容器／应用，暂时只管swarm/compose
@@ -138,7 +139,8 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 
 		composeService.Labels = map[string]string{}
 		for i, _ := range appService.Labels {
-			composeService.Labels[appService.Labels[i].Name] = appService.Labels[i].Value
+
+			composeService.Labels[appService.Labels[i].Name] = strings.Replace(appService.Labels[i].Value, "$", "$$", -1)
 		}
 		composeService.Labels[swarm.LABEL_APPLICATION_ID] = app.Id.Hex()
 
@@ -151,22 +153,21 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 		composeService.Environment = make([]string, 0, len(appService.Envs))
 		for i, _ := range appService.Envs {
 
-			composeService.Environment = append(composeService.Environment, fmt.Sprintf("%s=%s", appService.Envs[i].Name, appService.Envs[i].Value))
+			parsedValue := strings.Replace(appService.Envs[i].Value, "$", "$$", -1)
+			composeService.Environment = append(composeService.Environment, fmt.Sprintf("%s=%s", appService.Envs[i].Name, parsedValue))
 		}
-
 
 		composeService.Volumes = &composeyml.Volumes{
-			Volumes: make([]*composeyml.Volume,0,len(appService.Volumns)),
+			Volumes: make([]*composeyml.Volume, 0, len(appService.Volumns)),
 		}
 
+		for i, _ := range appService.Volumns {
 
-		for i,_ := range appService.Volumns {
+			composeService.Volumes.Volumes = append(composeService.Volumes.Volumes, &composeyml.Volume{
+				Destination: appService.Volumns[i].ContainerPath,
+				//				AccessMode: "rw",
 
-			composeService.Volumes.Volumes = append(composeService.Volumes.Volumes , &composeyml.Volume{
-				Destination : appService.Volumns[i].ContainerPath ,
-//				AccessMode: "rw",
-
-			}  )
+			})
 		}
 
 		ec.Services[appService.Name] = composeService
