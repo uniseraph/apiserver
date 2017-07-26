@@ -89,7 +89,7 @@ func postSessionCreate(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		logrus.Fatalf("Redis hmset error: %#v", err)
 		panic(err)
 	}
-	age := time.Minute * 5
+	age := time.Minute * 15
 	//设置session5分钟超时
 	//如果5分钟之内没有操作
 	//会找不到redis中的key，导致认证不再可以通过，需要重新登录
