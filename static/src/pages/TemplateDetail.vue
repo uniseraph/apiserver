@@ -685,7 +685,16 @@
             this.Title = this.$route.params.title;
           }
 
-          this.$nextTick(function() {
+          this.initCompleters();          
+        })
+      },
+
+      goback() {
+        this.$router.go(-1);
+      },
+
+      initCompleters() {
+        this.$nextTick(function() {
             let that = this;
             jQuery('.completer-field').find('input').completer({
               url: this.$axios.defaults.baseURL + '/envs/values/search',
@@ -702,15 +711,11 @@
                   }
 
                   r.value = v;
+                  r.inputValue = v;
                 });
               }
             });
           });
-        })
-      },
-
-      goback() {
-        this.$router.go(-1);
       },
 
       addService() {
@@ -747,6 +752,8 @@
         
         s.Envs.push({ index: s.Envs.length, Id: id, Name: '', Value: '' });
         this.patch(s.Envs);
+
+        this.initCompleters();
       },
 
       addPort(s) {
@@ -783,6 +790,8 @@
         
         s.Labels.push({ index: s.Labels.length, Id: id, Name: '', Value: '' });
         this.patch(s.Labels);
+
+        this.initCompleters();
       },
 
       downward(items, i) {
