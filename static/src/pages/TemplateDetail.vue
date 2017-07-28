@@ -299,7 +299,7 @@
                       </td>
                       <td>
                         <v-text-field
-                          v-model="props.item.LoadBalancerId"
+                          v-model="props.item.TargetGroupArn"
                           placeholder="若无需负载均衡则留空"
                         ></v-text-field>
                       </td>
@@ -457,7 +457,7 @@
         ],
         headers_ports: [
           { text: '容器端口', sortable: false, left: true },
-          { text: '负载均衡ID', sortable: false, left: true },
+          { text: '负载均衡目标群组ARN', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
         headers_volumns: [
@@ -764,7 +764,7 @@
 
         this.$set(this.rules.Services[s.Id].Ports, id, {});
         
-        s.Ports.push({ index: s.Ports.length, Id: id, SourcePort: '', LoadBalancerId: '' });
+        s.Ports.push({ index: s.Ports.length, Id: id, SourcePort: '', TargetGroupArn: '' });
         this.patch(s.Ports);
       },
 
