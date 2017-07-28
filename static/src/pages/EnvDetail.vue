@@ -25,9 +25,14 @@
               <v-flex xs2>
               </v-flex>
               <v-flex xs2>
-                <v-subheader>默认值<span class="required-star">*</span></v-subheader>
+                <v-checkbox label="敏感数据" v-model="Mask" dark></v-checkbox>
               </v-flex>
               <v-flex xs3>
+              </v-flex>
+              <v-flex xs2>
+                <v-subheader>默认值<span class="required-star">*</span></v-subheader>
+              </v-flex xs2>
+              <v-flex xs7>
                 <v-text-field
                   v-model="Value"
                   ref="Env_Value"
@@ -36,14 +41,18 @@
                   @input="rules.Env.Value = rules0.Env.Value"
                 ></v-text-field>
               </v-flex>
+              <v-flex xs3>
+              </v-flex>
               <v-flex xs2>
                 <v-subheader>说明</v-subheader>
               </v-flex>
-              <v-flex xs3>
+              <v-flex xs7>
                 <v-text-field
                   v-model="Description"
                   ref="Name"
                 ></v-text-field>
+              </v-flex>
+              <v-flex xs3>
               </v-flex>
               <v-flex xs12 mt-4 class="text-xs-center">
                 <v-btn class="orange darken-2 white--text" @click.native="saveEnvValue">
@@ -108,6 +117,7 @@
 
         Id: this.$route.params.id,
         Name: '',
+        Mask: false,
         Value: '',
         Description: '',
         Values: [],
@@ -143,6 +153,7 @@
         api.EnvValue(this.Id).then(data => {
           this.Id = data.Id;
           this.Name = data.Name;
+          this.Mask = data.Mask;
           this.Value = data.Value;
           this.Description = data.Description;
           this.Values = data.Values;
@@ -164,6 +175,7 @@
           api.UpdateEnvValue({
             Id: this.Id,
             Name: this.Name,
+            Mask: this.Mask,
             Value: this.Value,
             Description: this.Description
           }).then(data => {
