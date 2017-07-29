@@ -155,8 +155,9 @@ type Service struct {
 }
 
 type Port struct {
-	SourcePort     int `json:",string"`
-	LoadBalancerId string
+	SourcePort int `json:",string"`
+	//LoadBalancerId string
+	TargetGroupArn string
 }
 type Env struct {
 	Label
