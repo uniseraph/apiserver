@@ -131,7 +131,7 @@
                 <v-flex xs2>
                   <v-subheader>镜像名称<span class="required-star">*</span></v-subheader>
                 </v-flex>
-                <v-flex xs3>
+                <v-flex xs5>
                   <v-text-field
                     :ref="'Service_ImageName_' + item.Id"
                     v-model="item.ImageName"
@@ -139,8 +139,6 @@
                     :rules="rules.Services[item.Id].ImageName"
                     @input="rules.Services[item.Id].ImageName = rules0.Services.ImageName"
                   ></v-text-field>
-                </v-flex>
-                <v-flex xs2>
                 </v-flex>
                 <v-flex xs2>
                   <v-subheader>镜像Tag<span class="required-star">*</span></v-subheader>
@@ -358,7 +356,8 @@
                           item-text="Label"
                           item-value="Value"
                           v-model="props.item.MediaType"
-                          dark></v-select>
+                          dark
+                          @input="mediaTypeChanged(props.item)"></v-select>
                       </td>
                       <td v-if="props.item.MediaType=='SATA'">
                         <v-select
@@ -786,6 +785,14 @@
               }
             });
           });
+      },
+
+      mediaTypeChanged(item) {
+        if (item.MediaType == 'SATA') {
+          item.IopsClass = 3;
+        } else if (item.MediaType == 'SSD') {
+          item.IopsClass = 8;
+        }
       },
 
       addService() {
