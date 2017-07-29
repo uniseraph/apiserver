@@ -358,7 +358,8 @@
                           item-text="Label"
                           item-value="Value"
                           v-model="props.item.MediaType"
-                          dark></v-select>
+                          dark
+                          @input="mediaTypeChanged(props.item)"></v-select>
                       </td>
                       <td v-if="props.item.MediaType=='SATA'">
                         <v-select
@@ -786,6 +787,14 @@
               }
             });
           });
+      },
+
+      mediaTypeChanged(item) {
+        if (item.MediaType == 'SATA') {
+          item.IopsClass = 3;
+        } else if (item.MediaType == 'SSD') {
+          item.IopsClass = 8;
+        }
       },
 
       addService() {
