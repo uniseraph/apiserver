@@ -174,7 +174,7 @@ type Volumne struct {
 	MountType     string
 	MediaType     string
 	IopsClass     int
-	Size          int
+	Size          int `json:",string"`
 }
 
 type Template struct {
