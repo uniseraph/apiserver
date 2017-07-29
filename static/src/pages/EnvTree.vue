@@ -158,6 +158,7 @@
                           :rules="rules.Value.Name"
                           @input="rules.Value.Name = rules0.Value.Name"
                         ></v-text-field>
+                        <v-checkbox label="敏感数据" v-model="NewValue.Mask" dark></v-checkbox>
                         <v-text-field 
                           v-model="NewValue.Value" 
                           ref="NewValue_Value" 
@@ -257,7 +258,7 @@
         SelectedValue: {},
 
         CreateValueDlg: false,
-        NewValue: { Name: '', Value: '', Description: '' },
+        NewValue: { Name: '', Mask: false, Value: '', Description: '' },
 
         rules: { Dir: {}, Value: {} },
 
@@ -441,6 +442,7 @@
 
           let params = {
             Name: this.NewValue.Name,
+            Mask: this.NewValue.Mask,
             Value: this.NewValue.Value,
             Description: this.NewValue.Description,
             DirId: this.SelectedDir.Id,

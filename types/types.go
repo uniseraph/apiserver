@@ -155,8 +155,9 @@ type Service struct {
 }
 
 type Port struct {
-	SourcePort     int `json:",string"`
-	LoadBalancerId string
+	SourcePort int `json:",string"`
+	//LoadBalancerId string
+	TargetGroupArn string
 }
 type Env struct {
 	Label
@@ -166,10 +167,14 @@ type Label struct {
 	Value string
 }
 type Volumne struct {
-	Name          string
+	//Name          string
 	Driver        string
 	ContainerPath string
 	HostPath      string
+	MountType     string
+	MediaType     string
+	IopsClass     int
+	Size          int `json:",string"`
 }
 
 type Template struct {

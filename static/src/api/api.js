@@ -63,6 +63,10 @@ export default {
         return fetch('/session/logout');
     },
 
+    Stat(params) {
+        return fetch('/stat', params);
+    },
+
     Pools(params) {
         return fetch('/pools/ps', params);
     },

@@ -102,6 +102,16 @@
         <v-subheader light>集群与应用管理</v-subheader>
         <v-list>
           <v-list-item>
+            <v-list-tile ripple to="/dashboard" router>
+              <v-list-tile-avatar>
+                <v-icon light>insert_chart</v-icon>
+              </v-list-tile-avatar>
+              <v-list-tile-content>
+                <v-list-tile-title>信息总览</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+          </v-list-item>
+          <v-list-item>
             <v-list-tile ripple to="/pools" router>
               <v-list-tile-avatar>
                 <v-icon light>home</v-icon>
