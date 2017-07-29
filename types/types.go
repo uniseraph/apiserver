@@ -167,10 +167,14 @@ type Label struct {
 	Value string
 }
 type Volumne struct {
-	Name          string
+	//Name          string
 	Driver        string
 	ContainerPath string
 	HostPath      string
+	MountType     string
+	MediaType     string
+	IopsClass     int
+	Size          int
 }
 
 type Template struct {
