@@ -244,7 +244,7 @@ func refreshPool(ctx context.Context, id string) (*PoolsFlushResponse, error) {
 		result.PoolInfo.ClusterStore = clusterInfo.ClusterStore
 		result.PoolInfo.ClusterAdvertise = clusterInfo.ClusterAdvertise
 
-		strategy, filters, nodes, err := utils.ParseNodes(clusterInfo.SystemStatus, result.PoolInfo.Id.Hex(), result.PoolInfo.Name)
+		strategy, filters, nodes, err := utils.ParseNodes(clusterInfo.SystemStatus, result.PoolInfo.Id.Hex())
 		if err != nil {
 			//HttpError(w, "解析集群节点信息错误"+err.Error(), http.StatusInternalServerError)
 			return errors.New("解析集群节点信息错误" + err.Error())
