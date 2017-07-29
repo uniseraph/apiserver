@@ -238,7 +238,7 @@
                     </template>
                   </v-data-table>
                 </v-flex>
-                <v-flex xs12 mt-5 v-if="item.Ports && item.Ports.length > 0">
+                <v-flex xs12 mt-4 v-if="item.Ports && item.Ports.length > 0">
                   <v-divider></v-divider>
                   <v-card-title>
                     <v-subheader>端口映射</v-subheader>
@@ -283,13 +283,49 @@
                     <template slot="items" scope="props">
                       <td>
                         <v-text-field
-                          v-model="props.item.Name"
+                          v-model="props.item.ContainerPath"
                           readonly
                         ></v-text-field>
                       </td>
                       <td>
+                        <v-select
+                          :items="MountTypeList"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.MountType"
+                          dark
+                          disabled></v-select>
+                      </td>
+                      <td>
+                        <v-select
+                          :items="MediaTypeList"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.MediaType"
+                          dark
+                          disabled></v-select>
+                      </td>
+                      <td v-if="props.item.MediaType=='SATA'">
+                        <v-select
+                          :items="IopsClassList_SATA"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.IopsClass"
+                          dark
+                          disabled></v-select>
+                      </td>
+                      <td v-if="props.item.MediaType=='SSD'">
+                        <v-select
+                          :items="IopsClassList_SSD"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.IopsClass"
+                          dark
+                          disabled></v-select>
+                      </td>
+                      <td>
                         <v-text-field
-                          v-model="props.item.ContainerPath"
+                          v-model="props.item.Size"
                           readonly
                         ></v-text-field>
                       </td>
@@ -446,12 +482,41 @@
           { text: '操作', sortable: false, left: true }
         ],
         headers_volumns: [
-          { text: '数据卷名', sortable: false, left: true },
-          { text: '容器挂载路径', sortable: false, left: true }
+          { text: '容器挂载路径', sortable: false, left: true },
+          { text: '卷类型', sortable: false, left: true },
+          { text: '磁盘介质', sortable: false, left: true },
+          { text: '读写频率', sortable: false, left: true },
+          { text: '卷大小 (MB)', sortable: false, left: true }
         ],
         headers_labels: [
           { text: '标签名', sortable: false, left: true },
           { text: '标签值', sortable: false, left: true }
+        ],
+
+        MountTypeList: [
+          { 'Label': '宿主机目录', Value: 'Directory' },
+          { 'Label': '独占磁盘', Value: 'Disk' }
+        ],
+
+        MediaTypeList: [
+          { 'Label': 'SATA', Value: 'SATA' },
+          { 'Label': 'SSD', Value: 'SSD' }
+        ],
+
+        IopsClassList_SATA: [
+          { 'Label': '很少', Value: 1 },
+          { 'Label': '较少', Value: 2 },
+          { 'Label': '中等', Value: 3 },
+          { 'Label': '较重', Value: 4 },
+          { 'Label': '很重', Value: 5 }
+        ],
+
+        IopsClassList_SSD: [
+          { 'Label': '很少', Value: 6 },
+          { 'Label': '较少', Value: 7 },
+          { 'Label': '中等', Value: 8 },
+          { 'Label': '较重', Value: 9 },
+          { 'Label': '很重', Value: 10 }
         ],
 
         svcIdStart: 0,

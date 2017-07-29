@@ -270,7 +270,7 @@
                     </template>
                   </v-data-table>
                 </v-flex>
-                <v-flex xs12 mt-5>
+                <v-flex xs12 mt-4>
                   <v-divider></v-divider>
                   <v-card-title>
                     <v-subheader>端口映射</v-subheader>
@@ -337,17 +337,52 @@
                     <template slot="items" scope="props">
                       <td>
                         <v-text-field
-                          v-model="props.item.Name"
-                          placeholder="匿名卷请留空"
-                        ></v-text-field>
-                      </td>
-                      <td>
-                        <v-text-field
                           v-model="props.item.ContainerPath"
                           :ref="'Volumn_ContainerPath_' + props.item.index"
                           required
                           :rules="rules.Services[item.Id].Volumns[props.item.Id].ContainerPath"
                           @input="rules.Services[item.Id].Volumns[props.item.Id].ContainerPath = rules0.Services.Volumns.ContainerPath"
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-select
+                          :items="MountTypeList"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.MountType"
+                          dark></v-select>
+                      </td>
+                      <td>
+                        <v-select
+                          :items="MediaTypeList"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.MediaType"
+                          dark></v-select>
+                      </td>
+                      <td v-if="props.item.MediaType=='SATA'">
+                        <v-select
+                          :items="IopsClassList_SATA"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.IopsClass"
+                          dark></v-select>
+                      </td>
+                      <td v-if="props.item.MediaType=='SSD'">
+                        <v-select
+                          :items="IopsClassList_SSD"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.IopsClass"
+                          dark></v-select>
+                      </td>
+                      <td>
+                        <v-text-field
+                          v-model="props.item.Size"
+                          :ref="'Volumn_Size_' + props.item.index"
+                          required
+                          :rules="rules.Services[item.Id].Volumns[props.item.Id].Size"
+                          @input="rules.Services[item.Id].Volumns[props.item.Id].Size = rules0.Services.Volumns.Size"
                         ></v-text-field>
                       </td>
                       <td>
@@ -461,14 +496,43 @@
           { text: '操作', sortable: false, left: true }
         ],
         headers_volumns: [
-          { text: '数据卷名', sortable: false, left: true },
           { text: '容器挂载路径', sortable: false, left: true },
+          { text: '卷类型', sortable: false, left: true },
+          { text: '磁盘介质', sortable: false, left: true },
+          { text: '读写频率', sortable: false, left: true },
+          { text: '卷大小 (MB)', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
         headers_labels: [
           { text: '标签名', sortable: false, left: true },
           { text: '标签值', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
+        ],
+
+        MountTypeList: [
+          { 'Label': '宿主机目录', Value: 'Directory' },
+          { 'Label': '独占磁盘', Value: 'Disk' }
+        ],
+
+        MediaTypeList: [
+          { 'Label': 'SATA', Value: 'SATA' },
+          { 'Label': 'SSD', Value: 'SSD' }
+        ],
+
+        IopsClassList_SATA: [
+          { 'Label': '很少', Value: 1 },
+          { 'Label': '较少', Value: 2 },
+          { 'Label': '中等', Value: 3 },
+          { 'Label': '较重', Value: 4 },
+          { 'Label': '很重', Value: 5 }
+        ],
+
+        IopsClassList_SSD: [
+          { 'Label': '很少', Value: 6 },
+          { 'Label': '较少', Value: 7 },
+          { 'Label': '中等', Value: 8 },
+          { 'Label': '较重', Value: 9 },
+          { 'Label': '很重', Value: 10 }
         ],
 
         svcIdStart: 0,
@@ -545,6 +609,12 @@
             Volumns: {
               ContainerPath: [
                 v => (v && v.length > 0 ? (v.match(/\s/) ? '数据卷挂载路径不允许包含空格' : true) : '请输入数据卷挂载路径')
+              ],
+              Size: [
+                function(o) {
+                  let v = o ? o.toString() : '';
+                  return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) > 0 && parseInt(v) <= 4000000 ? true : '卷大小必须为1-4000000的整数') : '请输入卷大小')
+                }
               ]
             },
             Labels: {
@@ -776,7 +846,7 @@
 
         this.$set(this.rules.Services[s.Id].Volumns, id, {});
         
-        s.Volumns.push({ index: s.Volumns.length, Id: id, Name: '', ContainerPath: '' });
+        s.Volumns.push({ index: s.Volumns.length, Id: id, ContainerPath: '', MountType: 'Directory', MediaType: 'SATA', IopsClass: 3, Size: 0 });
         this.patch(s.Volumns);
       },
 

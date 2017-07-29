@@ -1,0 +1,38 @@
+{
+    "Summary": {
+      "Nodes": 3,
+      "CPUs": 6,
+      "CPUsUsed": 4,
+      "Memory": 6152000000,
+      "MemoryUsed": 4096000000,
+      "Disk": 600,
+      "DiskUsed": 150,
+      "Applications": 5,
+      "Containers": 10,
+      "OutstandingApplications": [
+        { "Id": "1", "Title": "Eureka应用", "Name": "eureka", "Version": "V1.0.1", "Containers": 3 }
+      ]
+    },
+    "Trend": {
+      "Upgrades": [
+        { "2017-7-20": 2 },
+        { "2017-7-21": 3 },
+        { "2017-7-22": 0 },
+        { "2017-7-23": 1 },
+        { "2017-7-24": 6 }
+      ], 
+      "Rollbacks": [
+        { "2017-7-20": 1 },
+        { "2017-7-21": 0 },
+        { "2017-7-22": 0 },
+        { "2017-7-23": 2 },
+        { "2017-7-24": 0 }
+      ], 
+      "MostUpgradeApplications": [
+        { "Id": "1", "Title": "Eureka应用", "Name": "eureka", "Version": "V1.0.1", "Upgrades": 5 }
+      ],
+      "MostRollbackApplications": [
+        { "Id": "1", "Title": "Eureka应用", "Name": "eureka", "Version": "V1.0.1", "Rollback": 2 }
+      ]
+    }
+}

@@ -1,6 +1,7 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
 
+import Dashboard from './pages/Dashboard.vue'
 import Pools from './pages/Pools.vue'
 import PoolDetail from './pages/PoolDetail.vue'
 import EnvTrees from './pages/EnvTrees.vue'
@@ -26,6 +27,7 @@ Vue.use(VueRouter)
 
 export default new VueRouter({
 	routes: [
+		{ path: '/dashboard', component: Dashboard },
 		{ path: '/pools/:id', component: PoolDetail },
 		{ path: '/pools', component: Pools },
 		{ path: '/env/trees/values/:id', component: EnvDetail },
@@ -49,6 +51,6 @@ export default new VueRouter({
 		{ path: '/applications', component: Applications },
 		{ path: '/logs', component: Logs },
 		{ path: '/audit', component: Audit },
-		{ path: '*', redirect: '/pools' }
+		{ path: '*', redirect: '/dashboard' }
 	]
 })
