@@ -50,6 +50,7 @@ type EnvTreeNodeParamValueRequest struct {
 type EnvTreeNodeParamKVRequest struct {
 	Id          string `json:",omitempty"`
 	Name        string
+	Mask        string
 	Value       string
 	Description string
 	DirId       string `json:",omitempty"`
@@ -565,7 +566,29 @@ func getTreeValues(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		for _, k := range keys {
 			kv_rlt := &EnvTreeNodeParamKVResponse{}
 			kv_rlt.Id = k.Id.Hex()
-			kv_rlt.Value = k.Default
+
+			//根据规则决定是否允许用户看到明文
+			kv_rlt.Value = "********"
+			if !k.Mask {
+				//如果不是敏感数据
+				kv_rlt.Value = k.Default
+			} else {
+				//如果是敏感数据
+				//则根据用户是否是管理员，来决定返回内容是否是8个星号
+				user, err := getCurrentUser(ctx)
+				if err != nil {
+					//如果找不到当前用户，则返回星号
+					kv_rlt.Value = "********"
+				}
+				//检查当前用户是否有权限操作该容器
+				if user.RoleSet&types.ROLESET_SYSADMIN != types.ROLESET_SYSADMIN {
+					//如果不是管理员
+					kv_rlt.Value = "********"
+				} else {
+					kv_rlt.Value = k.Default
+				}
+			}
+
 			kv_rlt.Name = k.Name
 			kv_rlt.Description = k.Description
 
@@ -722,30 +745,45 @@ func getTreeValueDetails(ctx context.Context, w http.ResponseWriter, r *http.Req
 		//整理成每个KEY对应的每个集群信息
 		for _, pool := range pools {
 			value, ok := m_pid[pool.Id.Hex()]
+			var result *EnvValuesDetailsValueResponse
 			//如果找的到对应关系
 			//说明这个VALUE跟某个具体的POOL是绑定的
 			//该POOL使用了这个VALUE的值
 			if ok {
 				//返回每个集群的当前值
-				result := &EnvValuesDetailsValueResponse{
+				result = &EnvValuesDetailsValueResponse{
 					PoolId:   pool.Id.Hex(),
 					PoolName: pool.Name,
 					Value:    value.Value,
 				}
-
-				results = append(results, result)
 			} else {
 				//说明在此KEY下
 				//这个POOL并没有VALUE实例
 				//那么该POOL将使用KEY的默认值
-				result := &EnvValuesDetailsValueResponse{
+				result = &EnvValuesDetailsValueResponse{
 					PoolId:   pool.Id.Hex(),
 					PoolName: pool.Name,
 					Value:    key.Default,
 				}
-
-				results = append(results, result)
 			}
+
+			//根据规则决定是否允许用户看到明文
+			if key.Mask {
+				//如果是敏感数据
+				//则根据用户是否是管理员，来决定返回内容是否是8个星号
+				user, err := getCurrentUser(ctx)
+				if err != nil {
+					//如果找不到当前用户，则返回星号
+					result.Value = "********"
+				}
+				//检查当前用户是否有权限操作该容器
+				if user.RoleSet&types.ROLESET_SYSADMIN != types.ROLESET_SYSADMIN {
+					//如果不是管理员
+					result.Value = "********"
+				}
+			}
+
+			results = append(results, result)
 		}
 
 		rlt := EnvValuesDetailsResponse{
@@ -755,6 +793,23 @@ func getTreeValueDetails(ctx context.Context, w http.ResponseWriter, r *http.Req
 			Description: key.Description,
 			Values:      results,
 		}
+
+		//根据规则决定是否允许用户看到明文
+		if key.Mask {
+			//如果是敏感数据
+			//则根据用户是否是管理员，来决定返回内容是否是8个星号
+			user, err := getCurrentUser(ctx)
+			if err != nil {
+				//如果找不到当前用户，则返回星号
+				rlt.Value = "********"
+			}
+			//检查当前用户是否有权限操作该容器
+			if user.RoleSet&types.ROLESET_SYSADMIN != types.ROLESET_SYSADMIN {
+				//如果不是管理员
+				rlt.Value = "********"
+			}
+		}
+
 		HttpOK(w, rlt)
 	})
 }
@@ -839,6 +894,7 @@ func createValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		key = &types.EnvTreeNodeParamKey{
 			Id:          bson.NewObjectId(),
 			Name:        req.Name,
+			Mask:        req.Mask == "true",
 			Default:     req.Value,
 			Dir:         dir.Id,
 			Tree:        tree.Id,
@@ -929,6 +985,10 @@ func updateValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		//如果需要更新Description
 		if req.Description != "" {
 			data["description"] = req.Description
+		}
+
+		if req.Mask != "" {
+			data["mask"] = req.Mask == "true"
 		}
 
 		data["updatedtime"] = time.Now().Unix()
