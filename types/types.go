@@ -115,8 +115,8 @@ type ClusterInfo struct {
 
 type Node struct {
 	//Id             bson.ObjectId "_id"
-	PoolId         string
-	PoolName       string
+	PoolId string
+	//PoolName       string
 	Hostname       string
 	Endpoint       string
 	NodeId         string

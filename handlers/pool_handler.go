@@ -220,20 +220,17 @@ func refreshPool(ctx context.Context, id string) (*PoolsFlushResponse, error) {
 			return err
 		}
 
-		//logrus.Debugf("postPoolsFlush::the pool info is %#v",result.PoolInfo)
 		if result.PoolInfo.Driver != "swarm" {
 			//HttpError(w, "目前只支持swarm集群", http.StatusInternalServerError)
 			return errors.New("目前只支持swarm集群")
 		}
 
 		if len(result.ProxyEndpoint) == 0 {
-			//HttpError(w, "没有集群代理", http.StatusInternalServerError)
 			return errors.New("没有集群代理")
 		}
 
 		clusterInfo, err := utils.GetClusterInfo(ctx, result.ProxyEndpoint)
 		if err != nil {
-			//HttpError(w, "获取集群信息错误"+err.Error(), http.StatusInternalServerError)
 			return errors.New("获取集群信息错误" + err.Error())
 		}
 
@@ -244,9 +241,8 @@ func refreshPool(ctx context.Context, id string) (*PoolsFlushResponse, error) {
 		result.PoolInfo.ClusterStore = clusterInfo.ClusterStore
 		result.PoolInfo.ClusterAdvertise = clusterInfo.ClusterAdvertise
 
-		strategy, filters, nodes, err := utils.ParseNodes(clusterInfo.SystemStatus, result.PoolInfo.Id.Hex(), result.PoolInfo.Name)
+		strategy, filters, nodes, err := utils.ParseNodes(clusterInfo.SystemStatus, result.PoolInfo.Id.Hex())
 		if err != nil {
-			//HttpError(w, "解析集群节点信息错误"+err.Error(), http.StatusInternalServerError)
 			return errors.New("解析集群节点信息错误" + err.Error())
 		}
 
@@ -280,7 +276,6 @@ func refreshPool(ctx context.Context, id string) (*PoolsFlushResponse, error) {
 			"tunneldport":       result.PoolInfo.TunneldPort,
 			"nodecount":         len(nodes),
 		}}); err != nil {
-			//HttpError(w, err.Error(), http.StatusIntern·alServerError)
 			return err
 		}
 
@@ -294,7 +289,6 @@ func refreshPool(ctx context.Context, id string) (*PoolsFlushResponse, error) {
 
 		if err := colNode.Update(bson.M{"poolid": id}, bson.M{"$set": bson.M{"status": "offline"}}); err != nil {
 			if err != mgo.ErrNotFound {
-				//HttpError(w, err.Error(), http.StatusInternalServerError)
 				return err
 			}
 		}
@@ -331,109 +325,6 @@ func postPoolsFlush(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(result)
-
-	//utils.GetMgoCollections(ctx,w,[]string{"pool","node"}, func(cs map[string]*mgo.Collection) {
-	//	colPool,_ := cs["pool"]
-	//	colNode,_ := cs["node"]
-	//
-	//	if err := colPool.FindId(bson.ObjectIdHex(id)).One(&result.PoolInfo); err != nil {
-	//		HttpError(w, err.Error(), http.StatusInternalServerError)
-	//		return
-	//	}
-	//
-	//	//logrus.Debugf("postPoolsFlush::the pool info is %#v",result.PoolInfo)
-	//	if result.PoolInfo.Driver != "swarm" {
-	//		HttpError(w, "目前只支持swarm集群", http.StatusInternalServerError)
-	//		return
-	//	}
-	//
-	//	if len(result.ProxyEndpoint) == 0 {
-	//		HttpError(w, "没有集群代理", http.StatusInternalServerError)
-	//		return
-	//	}
-	//
-	//	clusterInfo, err := utils.GetClusterInfo(ctx, result.ProxyEndpoint)
-	//	if err != nil {
-	//		HttpError(w, "获取集群信息错误"+err.Error(), http.StatusInternalServerError)
-	//		return
-	//	}
-	//
-	//	//同步集群的静态信息，需要写到mongodb的pool表
-	//	result.PoolInfo.Labels = clusterInfo.Labels
-	//	result.PoolInfo.CPUs = clusterInfo.NCPU
-	//	result.PoolInfo.Memory = clusterInfo.MemTotal
-	//	result.PoolInfo.ClusterStore = clusterInfo.ClusterStore
-	//	result.PoolInfo.ClusterAdvertise = clusterInfo.ClusterAdvertise
-	//
-	//	strategy, filters, nodes, err := utils.ParseNodes(clusterInfo.SystemStatus, result.PoolInfo.Id.Hex(), result.PoolInfo.Name)
-	//	if err != nil {
-	//		HttpError(w, "解析集群节点信息错误"+err.Error(), http.StatusInternalServerError)
-	//		return
-	//	}
-	//
-	//	result.PoolInfo.Strategy = strategy
-	//	result.PoolInfo.Filters = filters
-	//	result.PoolInfo.NodeCount = len(nodes)
-	//	result.Nodes = nodes
-	//
-	//	if err := getTunneldInfo(ctx, &result.PoolInfo); err != nil {
-	//		logrus.Errorf("flush tunneld info err : %s", err.Error())
-	//		// 这个错误不要紧，下次在刷
-	//	}
-	//
-	//	logrus.Debugf("postPoolsFlush::result is %#v", result)
-	//
-	//	//httpJsonResponse(w,result)
-	//
-	//	if err := colPool.UpdateId(bson.ObjectIdHex(id), bson.M{"$set": bson.M{"labels": result.PoolInfo.Labels,
-	//		"cpus":              clusterInfo.NCPU,
-	//		"memory":            clusterInfo.MemTotal,
-	//		"clusterstore":      clusterInfo.ClusterStore,
-	//		"clusteradvertise":  clusterInfo.ClusterAdvertise,
-	//		"containers":        clusterInfo.Containers,
-	//		"containerspaused":  clusterInfo.ContainersPaused,
-	//		"containersrunning": clusterInfo.ContainersRunning,
-	//		"containersstopped": clusterInfo.ContainersStopped,
-	//		"updatedtime":       time.Now().Unix(),
-	//		"strategy":          strategy,
-	//		"filters":           filters,
-	//		"tunneldaddr":       result.PoolInfo.TunneldAddr,
-	//		"tunneldport":       result.PoolInfo.TunneldPort,
-	//		"nodecount":         len(nodes),
-	//	}}); err != nil {
-	//		HttpError(w, err.Error(), http.StatusInternalServerError)
-	//		return
-	//	}
-	//
-	//	logrus.Debugf("postPoolsFlush:update pool success!")
-	//
-	//	//同步集群的动态信息，不需要写到mongodb
-	//	result.Runtime.Containers = clusterInfo.Containers
-	//	result.Runtime.ContainersPaused = clusterInfo.ContainersPaused
-	//	result.Runtime.ContainersRunning = clusterInfo.ContainersRunning
-	//	result.Runtime.ContainersStopped = clusterInfo.ContainersStopped
-	//
-	//
-	//	if err := colNode.Update(bson.M{"poolid": bson.ObjectIdHex(id)}, bson.M{"$set": bson.M{"status": "offline"}}); err != nil {
-	//		if err != mgo.ErrNotFound {
-	//			HttpError(w, err.Error(), http.StatusInternalServerError)
-	//			return
-	//		}
-	//	}
-	//
-	//	for _, node := range result.Nodes {
-	//		if _, err := colNode.Upsert(bson.M{"poolid": bson.ObjectIdHex(id), "endpoint": node.Endpoint}, &node); err != nil {
-	//			logrus.Infof("upsert the node %#v error:%s", node, err.Error())
-	//			continue
-	//		}
-	//	}
-	//
-	//	w.Header().Set("Content-Type", "application/json")
-	//	w.WriteHeader(http.StatusOK)
-	//	json.NewEncoder(w).Encode(result)
-	//
-	//})
-	//
 
 }
 
