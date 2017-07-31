@@ -50,7 +50,7 @@ type EnvTreeNodeParamValueRequest struct {
 type EnvTreeNodeParamKVRequest struct {
 	Id          string `json:",omitempty"`
 	Name        string
-	Mask        string
+	Mask        bool
 	Value       string
 	Description string
 	DirId       string `json:",omitempty"`
@@ -622,6 +622,7 @@ type EnvValuesDetailsResponse struct {
 	Name        string
 	Value       string
 	Description string
+	Mask        bool
 	Values      []*EnvValuesDetailsValueResponse
 }
 
@@ -634,7 +635,7 @@ type EnvValuesDetailsValueResponse struct {
 //根据参数KEY的id
 //查询所有该KEY的使用情况
 func getTreeValueDetails(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_param_key", "env_tree_node_param_value", "pool"}, func(cs map[string]*mgo.Collection) {
+	utils.GetMgoCollections(ctx, w, []string{"team", "env_tree_node_param_key", "env_tree_node_param_value", "pool"}, func(cs map[string]*mgo.Collection) {
 		//得到某个KEY的id
 		id := mux.Vars(r)["id"]
 
@@ -789,6 +790,7 @@ func getTreeValueDetails(ctx context.Context, w http.ResponseWriter, r *http.Req
 		rlt := EnvValuesDetailsResponse{
 			Id:          id,
 			Name:        key.Name,
+			Mask:        key.Mask,
 			Value:       key.Default,
 			Description: key.Description,
 			Values:      results,
@@ -894,7 +896,7 @@ func createValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		key = &types.EnvTreeNodeParamKey{
 			Id:          bson.NewObjectId(),
 			Name:        req.Name,
-			Mask:        req.Mask == "true",
+			Mask:        req.Mask,
 			Default:     req.Value,
 			Dir:         dir.Id,
 			Tree:        tree.Id,
@@ -987,8 +989,8 @@ func updateValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 			data["description"] = req.Description
 		}
 
-		if req.Mask != "" {
-			data["mask"] = req.Mask == "true"
+		if req.Mask {
+			data["mask"] = req.Mask
 		}
 
 		data["updatedtime"] = time.Now().Unix()
