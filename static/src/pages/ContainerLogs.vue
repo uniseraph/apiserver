@@ -77,7 +77,7 @@
           Lines: [
             function(o) {
               let v = o ? o.toString() : '';
-              return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) > 0 && parseInt(v) <= 10000 ? true : '日志行数必须为1-10000的整数') : '请输入日志行数')
+              return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) > 0 && parseInt(v) <= 9999 ? true : '日志行数必须为1-9999的整数') : '请输入日志行数')
             }
           ]
         }
@@ -109,6 +109,10 @@
       },
 
       getDataFromApi() {
+        if (this.Lines > 9999) {
+          this.Lines = 9999;
+        }
+
         let params = {
           Id: this.ContainerId,
           ShowStdout: true,
