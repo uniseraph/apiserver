@@ -90,8 +90,8 @@ func postSessionCreate(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		panic(err)
 	}
 	age := time.Minute * 15
-	//设置session5分钟超时
-	//如果5分钟之内没有操作
+	//设置session15分钟超时
+	//如果15分钟之内没有操作
 	//会找不到redis中的key，导致认证不再可以通过，需要重新登录
 	client.Expire(utils.RedisSessionKey(sessionKey), age)
 

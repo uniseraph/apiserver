@@ -307,10 +307,10 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 
 		//校验身份成功后
 		//每次操作，都会使得
-		//当前session的超时时间，更新为未来5分钟内有效
-		age := time.Minute * 5
+		//当前session的超时时间，更新为未来15分钟内有效
+		age := time.Minute * 15
 		//设置session5分钟超时
-		//如果5分钟之内没有操作
+		//如果15分钟之内没有操作
 		//会找不到redis中的key，导致认证不再可以通过，需要重新登录
 		redisClient.Expire(utils.RedisSessionKey(sessionID), age)
 
