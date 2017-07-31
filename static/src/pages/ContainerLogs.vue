@@ -39,7 +39,13 @@
             </v-btn>
           </v-flex>
           <v-flex xs12>
-            {{ LogText }}
+            <v-text-field 
+                  v-model="LogText"
+                  readonly
+                  multi-line
+                  auto-grow
+                  full-width
+                ></v-text-field>
           </v-flex>
         </v-layout>
       </v-container>      
@@ -106,7 +112,7 @@
           Id: this.ContainerId,
           ShowStdout: true,
           ShowStderr: true,
-          Timestamps: true,
+          Timestamps: false,
           Since: '0',
           Tail: '' + this.Lines
         };
