@@ -80,10 +80,12 @@
     methods: {
       init() {
         api.Pools().then(data => {
-          this.PoolList = [{ Id: '', Name: '所有集群' }].concat(data);
-        })
+          this.PoolList = data;
 
-        this.stat();
+          if (data.length > 0) {
+            this.PoolId = data[0].Id;
+          }
+        })
       },
 
       stat() {

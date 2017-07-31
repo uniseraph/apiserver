@@ -38,7 +38,7 @@
               <v-icon light left>search</v-icon>刷新
             </v-btn>
           </v-flex>
-          <v-flex xs12>
+          <v-flex xs12 mt-2>
             <v-text-field 
                   v-model="LogText"
                   readonly
