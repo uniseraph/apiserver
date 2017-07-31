@@ -21,6 +21,8 @@
                 @input="getDataFromApi"
               ></v-select>
           </v-flex>
+          <v-flex xs1>
+          </v-flex>
           <v-flex xs2>
             日志行数：
           </v-flex>
@@ -31,7 +33,7 @@
                 :rules="rules.Lines"
               ></v-text-field>
           </v-flex>
-          <v-flex xs3>
+          <v-flex xs2>
             <v-btn small class="orange darken-2 white--text" @click.native="getDataFromApi">
               <v-icon light left>search</v-icon>刷新
             </v-btn>
