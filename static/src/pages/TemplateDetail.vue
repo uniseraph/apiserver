@@ -979,6 +979,8 @@
             this.addEnv(this.CurrentService, { Name: n, Value: v });
           }
         }
+
+        this.EnvListDlg = false;
       },
 
       save() {
