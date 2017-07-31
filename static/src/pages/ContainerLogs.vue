@@ -127,6 +127,6 @@
 </script>
 
 <style lang="stylus">
-.log-field
+.input-group--text-field.log-field textarea
   font-size: 12px
 </style>
