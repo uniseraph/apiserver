@@ -13,7 +13,6 @@ import (
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"strings"
 	"time"
 )
 
@@ -35,7 +34,7 @@ var routers = map[string]map[string]*MyHandler{
 	"GET": {
 
 		"/containers/{id:.*}/inspect": &MyHandler{h: getContainerJSON, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/containers/{id:.*}/logs": &MyHandler{h: getContainerLogs, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/containers/{id:.*}/logs":    &MyHandler{h: getContainerLogs, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 
 		"/users/{name:.*}/login": &MyHandler{h: postSessionCreate},
 		"/users/current":         &MyHandler{h: getUserCurrent, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
@@ -172,8 +171,8 @@ var routers = map[string]map[string]*MyHandler{
 		"/logs/list": &MyHandler{h: getSystemAuditList, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 
 		"/containers/{id:.*}/inspect": &MyHandler{h: getContainerJSON, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/containers/{id:.*}/logs": &MyHandler{h: getContainerLogs, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/containers/list":                         &MyHandler{h: getContainerList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/containers/{id:.*}/logs":    &MyHandler{h: getContainerLogs, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/containers/list":            &MyHandler{h: getContainerList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 
 		"/applications/list":                       &MyHandler{h: getApplicationList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 		"/applications/{id:.*}/history":            &MyHandler{h: getApplicationHistory, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
@@ -322,7 +321,7 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 	return wrap
 }
 
-func NewMainHandler(ctx context.Context , config *types.APIServerConfig) (http.Handler, error) {
+func NewMainHandler(ctx context.Context, config *types.APIServerConfig) (http.Handler, error) {
 	r := mux.NewRouter()
 
 	for method, mappings := range routers {
@@ -346,7 +345,6 @@ func NewMainHandler(ctx context.Context , config *types.APIServerConfig) (http.H
 		}
 	}
 
-
 	r.Path("/api/actions/check").Methods(http.MethodPost).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		checkUserPermission(postActionsCheck, types.ROLESET_NORMAL|types.ROLESET_SYSADMIN)(ctx, w, r)
 	})
@@ -362,40 +360,6 @@ func NewMainHandler(ctx context.Context , config *types.APIServerConfig) (http.H
 	return r, nil
 }
 
-//func SetupPrimaryRouter(r *mux.Router, ctx context.Context, routers map[string]map[string]*MyHandler) {
-//	for method, mappings := range routers {
-//		for route, myHandler := range mappings {
-//			logrus.WithFields(logrus.Fields{"method": method, "route": route}).Debug("Registering HTTP route")
-//
-//			localRoute := route
-//			localHandler := myHandler
-//			wrap := func(w http.ResponseWriter, req *http.Request) {
-//				logrus.WithFields(logrus.Fields{"method": req.Method, "uri": req.RequestURI, "localHandler": localHandler}).Debug("HTTP request received")
-//
-//				if localHandler.opChecker != nil {
-//					localHandler.opChecker(localHandler.h, localHandler.roleset)(ctx, w, req)
-//				} else {
-//					localHandler.h(ctx, w, req)
-//				}
-//			}
-//			localMethod := method
-//
-//			//r.Path("/v{version:[0-9.]+}" + localRoute).Methods(localMethod).HandlerFunc(wrap)
-//			r.Path("/api" + localRoute).Methods(localMethod).HandlerFunc(wrap)
-//		}
-//	}
-//}
-
-func BoolValue(r *http.Request, k string) bool {
-	s := strings.ToLower(strings.TrimSpace(r.FormValue(k)))
-	return !(s == "" || s == "0" || s == "no" || s == "false" || s == "none")
-}
-
-// Default handler for methods not supported by clustering.
-func notImplementedHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	utils.HttpError(w, "Not supported in clustering mode.", http.StatusNotImplemented)
-}
-
 func OptionsHandler(c context.Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
@@ -404,11 +368,6 @@ func HttpError(w http.ResponseWriter, err string, status int) {
 	utils.HttpError(w, err, status)
 
 }
-
-//func HttpErrorAndPanic(w http.ResponseWriter, err string, status int) {
-//	utils.HttpError(w, err, status)
-//	panic(err)
-//}
 
 func HttpOK(w http.ResponseWriter, result interface{}) {
 	utils.HttpOK(w, result)
@@ -459,7 +418,4 @@ func postActionsCheck(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	}
 
 	HttpOK(w, result)
-	//w.Header().Set("Content-Type", "application/json")
-	//w.WriteHeader(http.StatusOK)
-	//json.NewEncoder(w).Encode(result)
 }
