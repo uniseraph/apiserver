@@ -43,7 +43,7 @@
                   v-model="LogText"
                   readonly
                   multi-line
-                  auto-grow
+                  :rows="Lines"
                   full-width
                 ></v-text-field>
           </v-flex>
