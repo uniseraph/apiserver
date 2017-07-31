@@ -109,9 +109,16 @@
       },
 
       getDataFromApi() {
-        if (this.Lines > 9999) {
-          this.Lines = 9999;
+        let lines = parseInt(this.Lines);
+        if (isNaN(lines) || lines <= 0) {
+          lines = 200;
         }
+
+        if (lines > 9999) {
+          lines = 9999;
+        }
+
+        this.Lines = lines;
 
         let params = {
           Id: this.ContainerId,
