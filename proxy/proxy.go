@@ -1,12 +1,18 @@
 package proxy
 
 import (
-"github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/types"
+	"sync"
+	"fmt"
 )
 
 var driver2FactoryFunc = make(map[string]FactoryFunc)
+
+var id2Proxy = make(map[string]Proxy)
+
+var mux sync.Mutex
 
 type StartProxyOpts struct {
 }
@@ -30,36 +36,6 @@ func Register(driver string, ff FactoryFunc) {
 
 }
 
-//func NewProxyInstaces(ctx context.Context, poolInfo *types.PoolInfo, n int) ([]Proxy, error) {
-//
-//	ff, ok := driver2FactoryFunc[poolInfo.Driver]
-//	if !ok {
-//		logrus.Warnf("no such pool proxy driver %s , ", poolInfo.Driver)
-//		return nil, errors.Errorf("no such pool proxy driver %s", poolInfo.Driver)
-//	}
-//
-//	//ff := driver2FactoryFunc[poolInfo.Driver]
-//
-//	result := make([]Proxy, n)
-//
-//	for i := 0; i < n; i++ {
-//		proxy, err := ff(ctx, poolInfo)
-//		if err != nil {
-//			logrus.Warnf("new proxy instance error :%s", err.Error())
-//
-//			//for j:=0 ; j<i ; j++ {
-//			//	if errStop := result[j].Stop(&StopProxyOpts{}) ; errStop!=nil {
-//			//		logrus.Errorf("stop error the proxy %#v, error:%s" , result[j],errStop)
-//			//		result[j]=nil
-//			//	}
-//			//}
-//			return nil, err
-//		}
-//		result[i] = proxy
-//	}
-//	return result, nil
-//
-//}
 
 func NewProxyInstanceAndStart(config *types.APIServerConfig, poolInfo *types.PoolInfo) (Proxy, error) {
 
@@ -79,5 +55,30 @@ func NewProxyInstanceAndStart(config *types.APIServerConfig, poolInfo *types.Poo
 		return nil, err
 	}
 
+
+	mux.Lock()
+	id2Proxy[proxy.Pool().Id.Hex()] = proxy
+	mux.Unlock()
+
 	return proxy, err
+}
+
+
+func Close(id string) error {
+
+	mux.Lock()
+
+
+	p , ok := id2Proxy[id]
+	if !ok {
+		mux.Unlock()
+		return errors.New( fmt.Sprintf("no such a proxy:%s" ,id ))
+	}
+	mux.Unlock()
+
+
+	return p.Stop()
+
+
+
 }
