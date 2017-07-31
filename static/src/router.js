@@ -20,6 +20,7 @@ import CreateApplication from './pages/CreateApplication.vue'
 import UpgradeApplication from './pages/UpgradeApplication.vue'
 import RollbackApplication from './pages/RollbackApplication.vue'
 import Containers from './pages/Containers.vue'
+import ContainerLogs from './pages/ContainerLogs.vue'
 import Logs from './pages/Logs.vue'
 import Audit from './pages/Audit.vue'
 
@@ -44,6 +45,7 @@ export default new VueRouter({
 		{ path: '/templates/:id', component: TemplateDetail },
 		{ path: '/templates', component: Templates },
 		{ path: '/applications/containers/:applicationId/:serviceName/:poolName/:applicationTitle/:serviceTitle', component: Containers },
+		{ path: '/applications/logs/:applicationId/:serviceName/:containerId/:poolName/:applicationTitle/:serviceTitle', component: ContainerLogs },
 		{ path: '/applications/create/:poolId', component: CreateApplication },
 		{ path: '/applications/:id/upgrade/:poolName', component: UpgradeApplication },
 		{ path: '/applications/:id/rollback/:poolName', component: RollbackApplication },

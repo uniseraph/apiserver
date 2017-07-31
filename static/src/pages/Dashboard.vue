@@ -16,16 +16,14 @@
     <div>
       <v-container fluid>
         <v-layout row wrap>
-          <v-flex xs3>
+          <v-flex xs4>
             <v-subheader>节点个数：{{ Summary.Nodes }}</v-subheader>
           </v-flex>
-          <v-flex xs3>
+          <v-flex xs4>
             <v-subheader>应用个数：{{ Summary.Applications }}</v-subheader>
           </v-flex>
-          <v-flex xs3>
+          <v-flex xs4>
             <v-subheader>容器个数：{{ Summary.Containers }}</v-subheader>
-          </v-flex>
-          <v-flex xs3>
           </v-flex>
         </v-layout>
       </v-container>
