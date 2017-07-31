@@ -8,6 +8,31 @@
           <v-spacer></v-spacer>
         </v-card-title>
         <div>
+          <v-layout row justify-center>
+            <v-dialog v-model="EnvListDlg" persistent width="640">
+              <v-card>
+                <v-card-row>
+                  <v-card-text>
+                    <v-text-field 
+                      v-model="EnvList"
+                      :readonly="!Importing"
+                      multi-line
+                      rows="24"
+                      full-width
+                      class="env-list"
+                    ></v-text-field>
+                  </v-card-text>
+                </v-card-row>
+                <v-card-row actions v-if="Importing">
+                  <v-btn class="blue--text darken-1" flat @click.native="doImportEnvs()">确认</v-btn>
+                  <v-btn class="grey--text darken-1" flat @click.native="EnvListDlg = false">取消</v-btn>
+                </v-card-row>
+                <v-card-row actions v-if="!Importing">
+                  <v-btn class="grey--text darken-1" flat @click.native="EnvListDlg = false">关闭</v-btn>
+                </v-card-row>
+              </v-card>
+            </v-dialog>
+          </v-layout>
           <v-container fluid>
             <v-layout row wrap>
               <v-flex xs2>
@@ -223,6 +248,12 @@
                   <v-card-title>
                     <v-subheader>环境变量</v-subheader>
                     <v-spacer></v-spacer>
+                    <v-btn icon class="green--text text--lighten-2" @click.native="exportEnvs(item)" title="导出">
+                      <v-icon light>redo</v-icon>
+                    </v-btn>
+                    <v-btn icon class="green--text text--lighten-2" @click.native="importEnvs(item)" title="导入">
+                      <v-icon light>undo</v-icon>
+                    </v-btn>
                     <v-btn icon class="blue--text text--lighten-2" @click.native="addEnv(item)">
                       <v-icon light>add</v-icon>
                     </v-btn>
@@ -547,6 +578,11 @@
         Description: '',
         Services: [],
 
+        EnvList: '',
+        EnvListDlg: false,
+        Importing: false,
+        CurrentService: null,
+
         rules: {
           Services: []
         },
@@ -819,15 +855,22 @@
         });
       },
 
-      addEnv(s) {
+      addEnv(s, e) {
         let id = this.envIdStart++;
         if (!this.rules.Services[s.Id].Envs) {
           this.rules.Services[s.Id].Envs = [];
         }
 
         this.$set(this.rules.Services[s.Id].Envs, id, {});
-        
-        s.Envs.push({ index: s.Envs.length, Id: id, Name: '', Value: '' });
+
+        if (!e) {
+          e = { Name: '', Value: '' };
+        }
+
+        e.index = s.Envs.length;
+        e.Id = id;
+
+        s.Envs.push(e);
         this.patch(s.Envs);
 
         this.initCompleters();
@@ -901,6 +944,40 @@
         let i = 0;
         for (let item of items) {
           item.index = i++;
+        }
+      },
+
+      exportEnvs(item) {
+        let s = "";
+        for (let e of item.Envs) {
+          if (s.length > 0) {
+            s += "\n";
+          }
+
+          s += e.Name + "=" + e.Value;
+        }
+
+        this.EnvList = s;
+        this.Importing = false;
+        this.EnvListDlg = true;
+      },
+
+      importEnvs(item) {
+        this.EnvList = '';
+        this.Importing = true;
+        this.CurrentService = item;
+        this.EnvListDlg = true;
+      },
+
+      doImportEnvs() {
+        let lines = this.EnvList.split(/\n/);
+        for (let line of lines) {
+          let p = line.indexOf('=');
+          if (p > 0) {
+            let n = line.substring(0, p);
+            let v = line.substring(p + 1);
+            this.addEnv(this.CurrentService, { Name: n, Value: v });
+          }
         }
       },
 
@@ -1011,4 +1088,9 @@
     margin-left: -1px;
     border-left: 1px solid #39f;
     background-color: #eee;
+
+.input-group--text-field
+  &.env-list
+    textarea
+      font-size: 12px;
 </style>
