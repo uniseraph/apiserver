@@ -45,6 +45,7 @@
                   multi-line
                   :rows="Lines"
                   full-width
+                  class="log-field"
                 ></v-text-field>
           </v-flex>
         </v-layout>
@@ -126,5 +127,6 @@
 </script>
 
 <style lang="stylus">
-
+.log-field
+  font-size: 12px
 </style>
