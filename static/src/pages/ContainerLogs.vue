@@ -174,7 +174,7 @@
       },
 
       displaySSHInfo() {
-        api.ContainerSSHInfo(ContainerId).then(data => {
+        api.ContainerSSHInfo(this.ContainerId).then(data => {
           this.SSHInfo = data;
           this.SSHInfoDlg = true;
         });
