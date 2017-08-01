@@ -130,6 +130,13 @@
       this.init();
     },
 
+    destroyed() {
+      if (this.Timer) {
+        clearInterval(this.Timer);
+        this.Timer = null;
+      }
+    },
+
     methods: {
       init() {
         let params = {
