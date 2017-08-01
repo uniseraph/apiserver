@@ -6,9 +6,34 @@
       <v-spacer></v-spacer>
     </v-card-title>
     <div>
+      <v-layout row justify-center>
+        <v-dialog v-model="SSHInfoDlg" persistent width="540">
+          <v-card>
+            <v-card-row>
+              <v-card-title>{{ ContainerMap[ContainerId] }}登录信息</v-card-title>
+            </v-card-row>
+            <v-card-row>
+              <v-card-text>
+                <v-text-field
+                  label="登录命令"
+                  ref="SSHInfo_Command"
+                  v-model="SSHInfo.Command"
+                  readonly
+                  @focus="selectAll('SSHInfo_Command')"
+                  hint="此登录命令有效期为5分钟"
+                  persistent-hint
+                ></v-text-field>
+              </v-card-text>
+            </v-card-row>
+            <v-card-row actions>
+              <v-btn class="green--text darken-1" flat="flat" @click.native="SSHInfoDlg = false">关闭</v-btn>
+            </v-card-row>
+          </v-card>
+        </v-dialog>
+      </v-layout>
       <v-container fluid>
         <v-layout row wrap>
-          <v-flex xs2>
+          <v-flex xs1>
             当前容器：
           </v-flex>
           <v-flex xs3>
@@ -22,8 +47,13 @@
               ></v-select>
           </v-flex>
           <v-flex xs1>
+            <v-btn outline small icon class="green green--text" @click.native="displaySSHInfo()" title="登录信息">
+              <v-icon>lock_outline</v-icon>
+            </v-btn>
           </v-flex>
-          <v-flex xs2>
+          <v-flex xs1>
+          </v-flex>
+          <v-flex xs1>
             日志行数：
           </v-flex>
           <v-flex xs2>
@@ -69,9 +99,13 @@
         ServiceTitle: this.$route.params.serviceTitle,
 
         ContainerList: [],
+        ContainerMap: {},
 
         Lines: 200,
         LogText: '',
+
+        SSHInfoDlg: false,
+        SSHInfo: {},
 
         rules: {
           Lines: [
@@ -99,6 +133,11 @@
 
         api.Containers(params).then(data => {
           this.ContainerList = data.Data;
+
+          this.ContainerMap = {};
+          for (let c of data) {
+            this.ContainerMap[c.Id] = c.Name;
+          }
         });
 
         this.getDataFromApi();
@@ -132,7 +171,14 @@
         api.ContainerLogs(params).then(data => {
           this.LogText = data;
         });
-      }
+      },
+
+      displaySSHInfo() {
+        api.ContainerSSHInfo(ContainerId).then(data => {
+          this.SSHInfo = data;
+          this.SSHInfoDlg = true;
+        });
+      },
     }
   }
 </script>
@@ -140,4 +186,9 @@
 <style lang="stylus">
 .input-group--text-field.log-field textarea
   font-size: 12px
+
+.dialog
+  .input-group
+    &__details
+      min-height: 22px
 </style>
