@@ -36,7 +36,7 @@
           <v-flex xs2>
             当前容器：
           </v-flex>
-          <v-flex xs2>
+          <v-flex xs3>
             <v-select
                 :items="ContainerList"
                 item-text="Name"
@@ -50,8 +50,6 @@
             <v-btn outline small icon class="green green--text" @click.native="displaySSHInfo()" title="登录信息">
               <v-icon>lock_outline</v-icon>
             </v-btn>
-          </v-flex>
-          <v-flex xs1>
           </v-flex>
           <v-flex xs2>
             日志行数：
