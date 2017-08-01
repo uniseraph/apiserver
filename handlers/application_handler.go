@@ -140,25 +140,31 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 func replaceEnv(ctx context.Context, l *types.Label, pool *types.PoolInfo) error {
 
-	re := regexp.MustCompile(`\$\{(.+)\}`)
+	re := regexp.MustCompile(`\$\{(.+?)\}`)
 
-	loc := re.FindStringIndex(l.Value)
+	value := l.Value
 
-	if loc == nil {
-		return nil
+	for {
+		loc := re.FindStringIndex(value)
+
+		if loc == nil {
+			//匹配不到
+			break
+		}
+
+		key := value[loc[0]+2 : loc[1]-1]
+
+		logrus.WithFields(logrus.Fields{"key": key, "label": value}).Debugf("replace Env for label")
+		pvalue, err := GetEnvValueByName(ctx, pool.EnvTreeId, pool.Id.Hex(), key)
+
+		if err != nil {
+			return err
+		}
+
+		value = re.ReplaceAllString(value, pvalue.Value)
 	}
 
-	key := l.Value[loc[0]+2 : loc[1]-1]
-
-	logrus.WithFields(logrus.Fields{"key": key, "label": l.Value}).Debugf("replace Env for label")
-	value, err := GetEnvValueByName(ctx, pool.EnvTreeId, pool.Id.Hex(), key)
-
-	if err != nil {
-		return err
-	}
-
-	l.Value = re.ReplaceAllString(l.Value, value.Value)
-
+	l.Value = value
 	return nil
 }
 
