@@ -179,6 +179,10 @@
           this.SSHInfoDlg = true;
         });
       },
+
+      selectAll(i) {
+        this.$refs[i].$refs.input.select();
+      }
     }
   }
 </script>
