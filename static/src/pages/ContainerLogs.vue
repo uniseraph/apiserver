@@ -33,10 +33,10 @@
       </v-layout>
       <v-container fluid>
         <v-layout row wrap>
-          <v-flex xs1>
+          <v-flex xs2>
             当前容器：
           </v-flex>
-          <v-flex xs3>
+          <v-flex xs2>
             <v-select
                 :items="ContainerList"
                 item-text="Name"
@@ -53,7 +53,7 @@
           </v-flex>
           <v-flex xs1>
           </v-flex>
-          <v-flex xs1>
+          <v-flex xs2>
             日志行数：
           </v-flex>
           <v-flex xs2>
