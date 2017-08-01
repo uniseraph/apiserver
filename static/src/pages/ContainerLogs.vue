@@ -149,8 +149,7 @@
         });
 
         this.getDataFromApi();
-
-        setAutoRefresh();
+        this.setAutoRefresh();
       },
 
       goback() {
