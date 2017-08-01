@@ -199,8 +199,9 @@
             return;
           }
 
+          let that = this;
           this.Timer = setInterval(function() {
-            this.getDataFromApi();
+            that.getDataFromApi();
           }, 1000);
         } else {
           if (!this.Timer) {
