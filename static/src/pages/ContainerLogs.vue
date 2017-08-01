@@ -133,7 +133,7 @@
           this.ContainerList = data.Data;
 
           this.ContainerMap = {};
-          for (let c of data) {
+          for (let c of data.Data) {
             this.ContainerMap[c.Id] = c.Name;
           }
         });
