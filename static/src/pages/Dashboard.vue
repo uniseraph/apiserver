@@ -64,7 +64,7 @@
             <bar-chart :chart-data="VersionData" :options="VersionOptions" :height="100"></bar-chart>
           </v-flex>
           <v-flex xs6 mt-4>
-            <v-subheader>发布次数最多的应用</v-subheader>
+            <v-subheader>升级次数最多的应用</v-subheader>
             <v-data-table
               :headers="headers_upgrade"
               :items="Trend.MostUpgradeApplications"
