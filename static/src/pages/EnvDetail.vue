@@ -64,6 +64,16 @@
         </div>
       </v-card>
     </v-flex>
+    <v-flex xs12>
+      <v-alert 
+            v-if="alertArea==='PoolValueAlert'"
+            v-bind:success="alertType==='success'" 
+            v-bind:info="alertType==='info'" 
+            v-bind:warning="alertType==='warning'" 
+            v-bind:error="alertType==='error'" 
+            v-model="alertMsg" 
+            dismissible>{{ alertMsg }}</v-alert>
+    </v-flex>
     <v-flex xs12 mt-4>
       <v-card>
         <v-card-title>
@@ -103,6 +113,7 @@
 </template>
 
 <script>
+  import store, { mapGetters } from 'vuex'
   import api from '../api/api'
   import * as ui from '../util/ui'
 
@@ -144,8 +155,20 @@
       }
     },
 
+    computed: {
+      ...mapGetters([
+          'alertArea',
+          'alertType',
+          'alertMsg'
+      ])
+    },
+
     mounted() {
       this.init();
+    },
+
+    destroyed() {
+      ui.showAlertAt();
     },
 
     methods: {
@@ -165,6 +188,8 @@
       },
 
       saveEnvValue() {
+        ui.showAlertAt();
+
         this.rules.Env = this.rules0.Env;
         this.$nextTick(_ => {
           if (!this.validateForm('Env_')) {
@@ -185,6 +210,8 @@
       },
 
       savePoolValue(item) {
+        ui.showAlertAt('PoolValueAlert');
+
         this.rules.Pool = this.rules0.Pool;
         this.$nextTick(_ => {
           if (!this.validateForm('Pool_')) {
