@@ -121,13 +121,13 @@
         headers_upgrade: [
           { text: '应用名称', sortable: false, left: true },
           { text: '应用ID', sortable: false, left: true },
-          { text: '应用版本', sortable: false, left: true },
+          { text: '当前版本', sortable: false, left: true },
           { text: '升级次数', sortable: false, left: true }
         ],
         headers_rollback: [
           { text: '应用名称', sortable: false, left: true },
           { text: '应用ID', sortable: false, left: true },
-          { text: '应用版本', sortable: false, left: true },
+          { text: '当前版本', sortable: false, left: true },
           { text: '回滚次数', sortable: false, left: true }
         ],
 
@@ -189,7 +189,25 @@
         },
 
         VersionData: null,
-        VersionOptions: { }
+        VersionOptions: {
+          scales: {
+            yAxes: [{
+              ticks: {
+                beginAtZero: true
+              },
+              gridLines: {
+                display: true
+              }
+            }],
+            xAxes: [{
+              gridLines: {
+                display: true
+              },
+              categoryPercentage: 0.9,
+              barPercentage: 0.8
+            }]
+          }
+        }
       }
     },
 
