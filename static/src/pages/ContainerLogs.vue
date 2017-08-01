@@ -76,6 +76,9 @@
                   class="log-field"
                 ></v-text-field>
           </v-flex>
+          <v-flex xs2>
+            <v-checkbox label="自动刷新" v-model="AutoRefresh" dark></v-checkbox>
+          </v-flex>
         </v-layout>
       </v-container>      
     </div>
@@ -105,6 +108,9 @@
         SSHInfoDlg: false,
         SSHInfo: {},
 
+        AutoRefresh: true,
+        Timer: null,
+
         rules: {
           Lines: [
             function(o) {
@@ -114,6 +120,10 @@
           ]
         }
       }
+    },
+
+    watch: {
+      AutoRefresh: 'setAutoRefresh'
     },
 
     mounted() {
@@ -139,6 +149,8 @@
         });
 
         this.getDataFromApi();
+
+        setAutoRefresh();
       },
 
       goback() {
@@ -180,6 +192,25 @@
 
       selectAll(i) {
         this.$refs[i].$refs.input.select();
+      },
+
+      setAutoRefresh() {
+        if (this.AutoRefresh) {
+          if (this.Timer) {
+            return;
+          }
+
+          this.Timer = setInterval(function() {
+            this.getDataFromApi();
+          }, 1000);
+        } else {
+          if (!this.Timer) {
+            return;
+          }
+
+          clearInterval(this.Timer);
+          this.Timer = null;
+        }
       }
     }
   }
