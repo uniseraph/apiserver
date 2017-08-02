@@ -57,6 +57,7 @@ release:portal build
 
 
 publish:release
+	ssh -q root@${TARGET_HOST}  "mkdir -p /opt/zanecloud"
 	scp release/apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz  root@${TARGET_HOST}:/opt/zanecloud
 	ssh -q root@${TARGET_HOST}  "cd /opt/zanecloud && rm -rf apiserver && tar zxvf apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz"
 	ssh -q root@${TARGET_HOST}  "systemctl stop apiserver"
