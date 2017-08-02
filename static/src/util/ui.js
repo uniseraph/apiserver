@@ -7,7 +7,7 @@ export function alert(msg, type='warning') {
 
     setTimeout(() => {
         store.dispatch('alertArea', null); 
-    }, 1500);
+    }, type == 'success' ? 1500 : 2500);
 }
 
 export function showAlertAt(area='global') {
