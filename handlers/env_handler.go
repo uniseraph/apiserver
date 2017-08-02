@@ -1323,24 +1323,33 @@ func getEnvKeyNameWithPrefix(ctx context.Context, w http.ResponseWriter, r *http
 	}
 
 	utils.GetMgoCollections(ctx, w, []string{"pool", "team", "env_tree_meta", "env_tree_node_param_key"}, func(cs map[string]*mgo.Collection) {
-		pids, err := utils.PoolIdsOfUser(cs["pool"], cs["team"], user)
-		if err != nil {
-			HttpError(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		eids := make([]bson.ObjectId, 0, 20) // EnvTreeMeta的ID
 
-		//找到当前用户可访问的集群
-		pools := make([]types.PoolInfo, 0, 20)
+		var treeId = r.Form.Get("TreeId")
+		if treeId != "" {
+			//如果调用方提供了某个参数目录树的ID
+			//则只查找该目录树的参数名称
+			//缩小了查找范围
+			//不需要考虑权限问题
+			eids = append(eids, bson.ObjectIdHex(treeId))
+		} else {
+			pids, err := utils.PoolIdsOfUser(cs["pool"], cs["team"], user)
+			if err != nil {
+				HttpError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 
-		if err := cs["pool"].Find(bson.M{"_id": bson.M{"$in": pids}}).All(&pools); err != nil {
-			HttpError(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+			//找到当前用户可访问的集群
+			pools := make([]types.PoolInfo, 0, 20)
 
-		eids := make([]bson.ObjectId, 0, 20)
+			if err := cs["pool"].Find(bson.M{"_id": bson.M{"$in": pids}}).All(&pools); err != nil {
+				HttpError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 
-		for _, pool := range pools {
-			eids = append(eids, bson.ObjectIdHex(pool.EnvTreeId))
+			for _, pool := range pools {
+				eids = append(eids, bson.ObjectIdHex(pool.EnvTreeId))
+			}
 		}
 
 		keys := make([]types.EnvTreeNodeParamKey, 0, 20)
