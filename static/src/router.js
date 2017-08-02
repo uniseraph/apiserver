@@ -31,7 +31,7 @@ export default new VueRouter({
 		{ path: '/dashboard', component: Dashboard },
 		{ path: '/pools/:id', component: PoolDetail },
 		{ path: '/pools', component: Pools },
-		{ path: '/env/trees/values/:id', component: EnvDetail },
+		{ path: '/env/trees/values/:id/:treeId', component: EnvDetail },
 		{ path: '/env/trees/:id/:name', component: EnvTree },
 		{ path: '/env/trees', component: EnvTrees },
 		{ path: '/users/password/:id', component: ResetPassword },

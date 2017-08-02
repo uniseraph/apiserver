@@ -39,6 +39,8 @@
                   required
                   :rules="rules.Env.Value"
                   @input="rules.Env.Value = rules0.Env.Value"
+                  class="completer-field"
+                  rel="Env_Value"
                 ></v-text-field>
               </v-flex>
               <v-flex xs3>
@@ -64,7 +66,7 @@
         </div>
       </v-card>
     </v-flex>
-    <v-flex xs12>
+    <v-flex xs12 mt-4>
       <v-alert 
             v-if="alertArea==='PoolValueAlert'"
             v-bind:success="alertType==='success'" 
@@ -74,7 +76,7 @@
             v-model="alertMsg" 
             dismissible>{{ alertMsg }}</v-alert>
     </v-flex>
-    <v-flex xs12 mt-4>
+    <v-flex xs12>
       <v-card>
         <v-card-title>
           各集群当前参数值
@@ -97,6 +99,8 @@
                   required
                   :rules="rules.Pool.Values"
                   @input="rules.Pool.Values = rules0.Pool.Values"
+                  class="completer-field"
+                  :rel="'Pool_' + props.item.PoolId"
                 ></v-text-field>
               </td>
               <td>
@@ -115,6 +119,9 @@
 <script>
   import store, { mapGetters } from 'vuex'
   import api from '../api/api'
+  import jQuery from 'jquery'
+  import caret from '../caret'
+  import completer from '../completer'
   import * as ui from '../util/ui'
 
   export default {
@@ -127,6 +134,7 @@
         ],
 
         Id: this.$route.params.id,
+        TreeId: this.$route.params.treeId,
         Name: '',
         Mask: false,
         Value: '',
@@ -180,7 +188,34 @@
           this.Value = data.Value;
           this.Description = data.Description;
           this.Values = data.Values;
+
+          this.initCompleters();
         })
+      },
+
+      initCompleters() {
+        this.$nextTick(function() {
+            let that = this;
+            jQuery('.completer-field').find('input').completer({
+              url: this.$axios.defaults.baseURL + '/envs/values/search?TreeId=' + this.TreeId,
+              completeSuggestion: function(e, v) {
+                let rel = e.parents('.completer-field').attr('rel');
+                Object.keys(that.$refs).forEach(k => {
+                  if (k != rel) {
+                    return;
+                  }
+
+                  let r = that.$refs[k];
+                  if (Array.isArray(r)) {
+                    r = r[0];
+                  }
+
+                  r.value = v;
+                  r.inputValue = v;
+                });
+              }
+            });
+          });
       },
 
       goback() {
