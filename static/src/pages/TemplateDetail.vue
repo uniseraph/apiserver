@@ -413,6 +413,7 @@
                           required
                           :rules="rules.Services[item.Id].Volumns[props.item.Id].Size"
                           @input="rules.Services[item.Id].Volumns[props.item.Id].Size = rules0.Services.Volumns.Size"
+                          placeholder="0表示不限制大小"
                         ></v-text-field>
                       </td>
                       <td>
@@ -648,7 +649,7 @@
               Size: [
                 function(o) {
                   let v = o ? o.toString() : '';
-                  return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) > 0 && parseInt(v) <= 4000000 ? true : '卷大小必须为1-4000000的整数') : '请输入卷大小')
+                  return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) >= 0 && parseInt(v) <= 4000000 ? true : '卷大小必须为0-4000000的整数') : '请输入卷大小')
                 }
               ]
             },
