@@ -86,7 +86,7 @@
                 <v-icon light>bubble_chart</v-icon>
               </v-list-tile-avatar>
               <v-list-tile-content v-if="!miniVariant">
-                <v-list-tile-title>峥云网络</v-list-tile-title>
+                <v-list-tile-title>{{ constants.COMPANY }}</v-list-tile-title>
               </v-list-tile-content>
               <v-spacer></v-spacer v-if="!miniVariant">
               <v-list-tile-action>
@@ -219,7 +219,7 @@
       <v-toolbar light>
         <v-toolbar-side-icon light @click.native.stop="drawer = !drawer">
         </v-toolbar-side-icon>
-        <v-toolbar-title>峥云网络</v-toolbar-title>
+        <v-toolbar-title>{{ constants.COMPANY }}</v-toolbar-title>
         <v-spacer></v-spacer>
         <v-subheader light>{{ token.Name }}</v-subheader>
         <v-btn light icon @click.native="logout" title="退出">

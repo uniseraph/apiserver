@@ -280,6 +280,10 @@ export default {
         return fetch('/audit/ssh?ContainerId=' + id);
     },
 
+    ContainerLogs(params) {
+        return fetch('/containers/' + params.Id + '/logs?Timestamps=' + params.Timestamps + "&Tail="+ params.Tail, params);
+    },
+
     ScaleService(params) {
         return fetch('/applications/' + params.Id + '/scale', params);
     },

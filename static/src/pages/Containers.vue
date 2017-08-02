@@ -59,11 +59,16 @@
         <template slot="items" scope="props">
           <td>{{ props.item.Id }}</td>
           <td>{{ props.item.Name }}</td>
-          <td :class="applicationClass(props.item.Status)">{{ applicationStatus(props.item.Status) }}</td>
+          <td><router-link :to="'/applications/logs/' + ApplicationId + '/' + ServiceName + '/' + props.item.Id + '/' + encodeURIComponent(PoolName) + '/' + encodeURIComponent(ApplicationTitle) + '/' + encodeURIComponent(ServiceTitle)" style="text-decoration:none;"><span :class="applicationClass(props.item.Status)">{{ applicationStatus(props.item.Status) }}</span></router-link></td>
           <td>{{ props.item.IP }}</td>
           <td>{{ props.item.Node ? props.item.Node.Name : '' }}</td>
           <td>{{ props.item.Node ? props.item.Node.IP : '' }}</td>
           <td>
+            <router-link :to="'/applications/logs/' + ApplicationId + '/' + ServiceName + '/' + props.item.Id + '/' + encodeURIComponent(PoolName) + '/' + encodeURIComponent(ApplicationTitle) + '/' + encodeURIComponent(ServiceTitle)">
+              <v-btn outline small icon class="blue blue--text" title="容器日志">
+                  <v-icon>description</v-icon>
+              </v-btn>
+            </router-link>
             <v-btn outline small icon class="green green--text" @click.native="displaySSHInfo(props.item)" title="登录信息">
               <v-icon>lock_outline</v-icon>
             </v-btn>
