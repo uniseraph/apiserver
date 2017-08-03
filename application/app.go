@@ -114,64 +114,58 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 		Volumes:  buildDefaultVolumes(),
 	}
 
-	for _, appService := range app.Services {
+	for _, as := range app.Services {
 
-		composeService := &config.ServiceConfig{
-			Image:       appService.ImageName + ":" + appService.ImageTag,
-			Restart:     appService.Restart,
+		sc := &config.ServiceConfig{
+			Image:       as.ImageName + ":" + as.ImageTag,
+			Restart:     as.Restart,
 			NetworkMode: "bridge",
-			CPUSet:      appService.CPU,
+			CPUSet:      as.CPU,
 			//Ports:       s.Ports,
 		}
 
-		if appService.Memory != "" {
-			mem, err := strconv.ParseInt(appService.Memory, 10, 64)
-
+		if as.Memory != "" {
+			mem, err := strconv.ParseInt(as.Memory, 10, 64)
 			if err == nil {
-				composeService.MemLimit = composeyml.MemStringorInt(mem << 20)
+				sc.MemLimit = composeyml.MemStringorInt(mem << 20)
 			}
 		}
 
-		composeService.Ports = make([]string, len(appService.Ports))
-		for i, _ := range appService.Ports {
-			composeService.Ports[i] = strconv.Itoa(appService.Ports[i].SourcePort)
+		sc.Ports = make([]string, len(as.Ports))
+		for i, _ := range as.Ports {
+			sc.Ports[i] = strconv.Itoa(as.Ports[i].SourcePort)
 		}
 
-		composeService.Labels = map[string]string{}
-		for i, _ := range appService.Labels {
-
-			composeService.Labels[appService.Labels[i].Name] = strings.Replace(appService.Labels[i].Value, "$", "$$", -1)
+		sc.Labels = map[string]string{}
+		for i, _ := range as.Labels {
+			sc.Labels[as.Labels[i].Name] = strings.Replace(as.Labels[i].Value, "$", "$$", -1)
 		}
-		composeService.Labels[swarm.LABEL_APPLICATION_ID] = app.Id.Hex()
+		sc.Labels[swarm.LABEL_APPLICATION_ID] = app.Id.Hex()
 
-		//TODO 加上cpuset的label
-		if appService.CPU != "" && appService.ExclusiveCPU == true {
-			composeService.Labels[types.LABEL_CONTAINER_CPUS] = appService.CPU
-			//	composeService.Labels[swarm.LABEL_CONTAINER_EXCLUSIVE] = appService.ExclusiveCPU
+		if as.CPU != "" && as.ExclusiveCPU == true {
+			sc.Labels[types.LABEL_CONTAINER_CPUS] = as.CPU
 		}
 
-		composeService.Environment = make([]string, 0, len(appService.Envs))
-		for i, _ := range appService.Envs {
-
-			parsedValue := strings.Replace(appService.Envs[i].Value, "$", "$$", -1)
-			composeService.Environment = append(composeService.Environment, fmt.Sprintf("%s=%s", appService.Envs[i].Name, parsedValue))
+		sc.Environment = make([]string, 0, len(as.Envs))
+		for i, _ := range as.Envs {
+			parsedValue := strings.Replace(as.Envs[i].Value, "$", "$$", -1)
+			sc.Environment = append(sc.Environment, fmt.Sprintf("%s=%s", as.Envs[i].Name, parsedValue))
 		}
 
-		composeService.Volumes = &composeyml.Volumes{
-			Volumes: make([]*composeyml.Volume, 0, len(appService.Volumns)),
+		sc.Volumes = &composeyml.Volumes{
+			Volumes: make([]*composeyml.Volume, 0, len(as.Volumns)),
 		}
 
-		for i, _ := range appService.Volumns {
+		for i, _ := range as.Volumns {
+			if as.Volumns[i].HostPath == "" {
+				sc.Volumes.Volumes = append(sc.Volumes.Volumes, &composeyml.Volume{
+					Destination: as.Volumns[i].ContainerPath,
+				})
+			} else {
 
-			composeService.Volumes.Volumes = append(composeService.Volumes.Volumes, &composeyml.Volume{
-				Destination: appService.Volumns[i].ContainerPath,
-				//				AccessMode: "rw",
-
-			})
+			}
 		}
-
-		ec.Services[appService.Name] = composeService
-
+		ec.Services[as.Name] = sc
 	}
 
 	buf, err = yaml.Marshal(ec)
