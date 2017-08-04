@@ -142,7 +142,10 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 		}
 		sc.Labels[swarm.LABEL_APPLICATION_ID] = app.Id.Hex()
 
-		if as.CPU != "" && as.ExclusiveCPU == true {
+		if as.ExclusiveCPU == true {
+			sc.Labels[types.LABEL_CONTAINER_EXCLUSIVE] = "true"
+		}
+		if as.CPU != "" {
 			sc.Labels[types.LABEL_CONTAINER_CPUS] = as.CPU
 		}
 
@@ -157,11 +160,17 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 		}
 
 		for i, _ := range as.Volumns {
-			if as.Volumns[i].HostPath == "" {
+			if as.Volumns[i].HostPath == "" { // 不指定宿主机目录，随便挂 ,匿名卷
 				sc.Volumes.Volumes = append(sc.Volumes.Volumes, &composeyml.Volume{
 					Destination: as.Volumns[i].ContainerPath,
 				})
-			} else {
+			} else if as.Volumns[i].HostPath[0:2] == "./" { //指定宿主机目录
+				sc.Volumes.Volumes = append(sc.Volumes.Volumes, &composeyml.Volume{
+					Destination: as.Volumns[i].ContainerPath,
+					Source:      as.Volumns[i].HostPath,
+				})
+
+			} else { //有名卷方式，
 				sc.Volumes.Volumes = append(sc.Volumes.Volumes, &composeyml.Volume{
 					Destination: as.Volumns[i].ContainerPath,
 					Source:      as.Volumns[i].HostPath,
