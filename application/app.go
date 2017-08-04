@@ -162,7 +162,12 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 					Destination: as.Volumns[i].ContainerPath,
 				})
 			} else {
+				sc.Volumes.Volumes = append(sc.Volumes.Volumes, &composeyml.Volume{
+					Destination: as.Volumns[i].ContainerPath,
+					Source:      as.Volumns[i].HostPath,
+				})
 
+				ec.Volumes[as.Volumns[i].HostPath] = &config.VolumeConfig{}
 			}
 		}
 		ec.Services[as.Name] = sc

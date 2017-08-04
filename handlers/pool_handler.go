@@ -800,8 +800,8 @@ func deletePool(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := proxy.Stop(pool.Id.Hex()) ; err !=nil {
-			HttpError(w, "关闭该集群代理失败"+err.Error(),http.StatusInternalServerError)
+		if err := proxy.Stop(pool.Id.Hex()); err != nil {
+			HttpError(w, "关闭该集群代理失败"+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
