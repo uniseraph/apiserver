@@ -10,7 +10,7 @@ GIT_NOTES     = $(shell git log -1 --oneline)
 
 
 IMAGE_NAME     = registry.cn-hangzhou.aliyuncs.com/zanecloud/apiserver
-BUILD_IMAGE     = golang:1.8.3
+BUILD_IMAGE     = golang:1.8.3-onbuild
 
 install:
 	brew install mongodb redis npm
@@ -54,10 +54,11 @@ release:portal build
 	cp apiserver release/apiserver/bin/
 	cp tools/autodeploy release/apiserver/bin/
 	cd release && tar zcvf apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz apiserver && cd ..
-	scp release/apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz  root@${TARGET_HOST}:/opt/zanecloud
 
 
 publish:release
+	ssh -q root@${TARGET_HOST}  "mkdir -p /opt/zanecloud"
+	scp release/apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz  root@${TARGET_HOST}:/opt/zanecloud
 	ssh -q root@${TARGET_HOST}  "cd /opt/zanecloud && rm -rf apiserver && tar zxvf apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz"
 	ssh -q root@${TARGET_HOST}  "systemctl stop apiserver"
 	ssh -q root@${TARGET_HOST}  "systemctl start apiserver"

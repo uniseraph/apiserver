@@ -238,7 +238,11 @@
         this.hide();
         if (prefix !== null) {
           let that = this;
-          $.ajax({ url: this.options.url + '?PageSize=20&Keyword=' + encodeURIComponent(prefix),
+          let url = this.options.url 
+            + (this.options.url.indexOf('?') > 0 ? '&' : '?') 
+            + 'PageSize=20&Keyword=' + encodeURIComponent(prefix);
+
+          $.ajax({ url: url,
             success: function(rspStr) {
               let rsp = JSON.parse(rspStr);
               let data = [];

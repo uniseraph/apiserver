@@ -8,6 +8,31 @@
           <v-spacer></v-spacer>
         </v-card-title>
         <div>
+          <v-layout row justify-center>
+            <v-dialog v-model="EnvListDlg" persistent width="640">
+              <v-card>
+                <v-card-row>
+                  <v-card-text>
+                    <v-text-field 
+                      v-model="EnvList"
+                      :readonly="!Importing"
+                      multi-line
+                      rows="24"
+                      full-width
+                      class="env-list"
+                    ></v-text-field>
+                  </v-card-text>
+                </v-card-row>
+                <v-card-row actions v-if="Importing">
+                  <v-btn class="blue--text darken-1" flat @click.native="doImportEnvs()">确认</v-btn>
+                  <v-btn class="grey--text darken-1" flat @click.native="EnvListDlg = false">取消</v-btn>
+                </v-card-row>
+                <v-card-row actions v-if="!Importing">
+                  <v-btn class="grey--text darken-1" flat @click.native="EnvListDlg = false">关闭</v-btn>
+                </v-card-row>
+              </v-card>
+            </v-dialog>
+          </v-layout>
           <v-container fluid>
             <v-layout row wrap>
               <v-flex xs2>
@@ -131,7 +156,7 @@
                 <v-flex xs2>
                   <v-subheader>镜像名称<span class="required-star">*</span></v-subheader>
                 </v-flex>
-                <v-flex xs3>
+                <v-flex xs5>
                   <v-text-field
                     :ref="'Service_ImageName_' + item.Id"
                     v-model="item.ImageName"
@@ -139,8 +164,6 @@
                     :rules="rules.Services[item.Id].ImageName"
                     @input="rules.Services[item.Id].ImageName = rules0.Services.ImageName"
                   ></v-text-field>
-                </v-flex>
-                <v-flex xs2>
                 </v-flex>
                 <v-flex xs2>
                   <v-subheader>镜像Tag<span class="required-star">*</span></v-subheader>
@@ -225,6 +248,12 @@
                   <v-card-title>
                     <v-subheader>环境变量</v-subheader>
                     <v-spacer></v-spacer>
+                    <v-btn icon class="green--text text--lighten-2" @click.native="exportEnvs(item)" title="导出">
+                      <v-icon light>redo</v-icon>
+                    </v-btn>
+                    <v-btn icon class="green--text text--lighten-2" @click.native="importEnvs(item)" title="导入">
+                      <v-icon light>undo</v-icon>
+                    </v-btn>
                     <v-btn icon class="blue--text text--lighten-2" @click.native="addEnv(item)">
                       <v-icon light>add</v-icon>
                     </v-btn>
@@ -270,7 +299,7 @@
                     </template>
                   </v-data-table>
                 </v-flex>
-                <v-flex xs12 mt-5>
+                <v-flex xs12 mt-4>
                   <v-divider></v-divider>
                   <v-card-title>
                     <v-subheader>端口映射</v-subheader>
@@ -299,7 +328,7 @@
                       </td>
                       <td>
                         <v-text-field
-                          v-model="props.item.LoadBalancerId"
+                          v-model="props.item.TargetGroupArn"
                           placeholder="若无需负载均衡则留空"
                         ></v-text-field>
                       </td>
@@ -337,17 +366,54 @@
                     <template slot="items" scope="props">
                       <td>
                         <v-text-field
-                          v-model="props.item.Name"
-                          placeholder="匿名卷请留空"
-                        ></v-text-field>
-                      </td>
-                      <td>
-                        <v-text-field
                           v-model="props.item.ContainerPath"
                           :ref="'Volumn_ContainerPath_' + props.item.index"
                           required
                           :rules="rules.Services[item.Id].Volumns[props.item.Id].ContainerPath"
                           @input="rules.Services[item.Id].Volumns[props.item.Id].ContainerPath = rules0.Services.Volumns.ContainerPath"
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-select
+                          :items="MountTypeList"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.MountType"
+                          dark></v-select>
+                      </td>
+                      <td>
+                        <v-select
+                          :items="MediaTypeList"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.MediaType"
+                          dark
+                          @input="mediaTypeChanged(props.item)"></v-select>
+                      </td>
+                      <td v-if="props.item.MediaType=='SATA'">
+                        <v-select
+                          :items="IopsClassList_SATA"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.IopsClass"
+                          dark></v-select>
+                      </td>
+                      <td v-if="props.item.MediaType=='SSD'">
+                        <v-select
+                          :items="IopsClassList_SSD"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.IopsClass"
+                          dark></v-select>
+                      </td>
+                      <td>
+                        <v-text-field
+                          v-model="props.item.Size"
+                          :ref="'Volumn_Size_' + props.item.index"
+                          required
+                          :rules="rules.Services[item.Id].Volumns[props.item.Id].Size"
+                          @input="rules.Services[item.Id].Volumns[props.item.Id].Size = rules0.Services.Volumns.Size"
+                          placeholder="0表示不限制大小"
                         ></v-text-field>
                       </td>
                       <td>
@@ -457,18 +523,47 @@
         ],
         headers_ports: [
           { text: '容器端口', sortable: false, left: true },
-          { text: '负载均衡ID', sortable: false, left: true },
+          { text: '负载均衡目标群组ARN', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
         headers_volumns: [
-          { text: '数据卷名', sortable: false, left: true },
           { text: '容器挂载路径', sortable: false, left: true },
+          { text: '卷类型', sortable: false, left: true },
+          { text: '磁盘介质', sortable: false, left: true },
+          { text: '读写频率', sortable: false, left: true },
+          { text: '卷大小 (MB)', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
         headers_labels: [
           { text: '标签名', sortable: false, left: true },
           { text: '标签值', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
+        ],
+
+        MountTypeList: [
+          { 'Label': '宿主机目录', Value: 'Directory' },
+          { 'Label': '独占磁盘', Value: 'Disk' }
+        ],
+
+        MediaTypeList: [
+          { 'Label': 'SATA', Value: 'SATA' },
+          { 'Label': 'SSD', Value: 'SSD' }
+        ],
+
+        IopsClassList_SATA: [
+          { 'Label': '很少', Value: 1 },
+          { 'Label': '较少', Value: 2 },
+          { 'Label': '中等', Value: 3 },
+          { 'Label': '较重', Value: 4 },
+          { 'Label': '很重', Value: 5 }
+        ],
+
+        IopsClassList_SSD: [
+          { 'Label': '很少', Value: 6 },
+          { 'Label': '较少', Value: 7 },
+          { 'Label': '中等', Value: 8 },
+          { 'Label': '较重', Value: 9 },
+          { 'Label': '很重', Value: 10 }
         ],
 
         svcIdStart: 0,
@@ -483,6 +578,11 @@
         Version: '',
         Description: '',
         Services: [],
+
+        EnvList: '',
+        EnvListDlg: false,
+        Importing: false,
+        CurrentService: null,
 
         rules: {
           Services: []
@@ -545,6 +645,12 @@
             Volumns: {
               ContainerPath: [
                 v => (v && v.length > 0 ? (v.match(/\s/) ? '数据卷挂载路径不允许包含空格' : true) : '请输入数据卷挂载路径')
+              ],
+              Size: [
+                function(o) {
+                  let v = o ? o.toString() : '';
+                  return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) >= 0 && parseInt(v) <= 4000000 ? true : '卷大小必须为0-4000000的整数') : '请输入卷大小')
+                }
               ]
             },
             Labels: {
@@ -685,7 +791,16 @@
             this.Title = this.$route.params.title;
           }
 
-          this.$nextTick(function() {
+          this.initCompleters();          
+        })
+      },
+
+      goback() {
+        this.$router.go(-1);
+      },
+
+      initCompleters() {
+        this.$nextTick(function() {
             let that = this;
             jQuery('.completer-field').find('input').completer({
               url: this.$axios.defaults.baseURL + '/envs/values/search',
@@ -702,15 +817,19 @@
                   }
 
                   r.value = v;
+                  r.inputValue = v;
                 });
               }
             });
           });
-        })
       },
 
-      goback() {
-        this.$router.go(-1);
+      mediaTypeChanged(item) {
+        if (item.MediaType == 'SATA') {
+          item.IopsClass = 3;
+        } else if (item.MediaType == 'SSD') {
+          item.IopsClass = 8;
+        }
       },
 
       addService() {
@@ -737,16 +856,25 @@
         });
       },
 
-      addEnv(s) {
+      addEnv(s, e) {
         let id = this.envIdStart++;
         if (!this.rules.Services[s.Id].Envs) {
           this.rules.Services[s.Id].Envs = [];
         }
 
         this.$set(this.rules.Services[s.Id].Envs, id, {});
-        
-        s.Envs.push({ index: s.Envs.length, Id: id, Name: '', Value: '' });
+
+        if (!e) {
+          e = { Name: '', Value: '' };
+        }
+
+        e.index = s.Envs.length;
+        e.Id = id;
+
+        s.Envs.push(e);
         this.patch(s.Envs);
+
+        this.initCompleters();
       },
 
       addPort(s) {
@@ -757,7 +885,7 @@
 
         this.$set(this.rules.Services[s.Id].Ports, id, {});
         
-        s.Ports.push({ index: s.Ports.length, Id: id, SourcePort: '', LoadBalancerId: '' });
+        s.Ports.push({ index: s.Ports.length, Id: id, SourcePort: '', TargetGroupArn: '' });
         this.patch(s.Ports);
       },
 
@@ -769,7 +897,7 @@
 
         this.$set(this.rules.Services[s.Id].Volumns, id, {});
         
-        s.Volumns.push({ index: s.Volumns.length, Id: id, Name: '', ContainerPath: '' });
+        s.Volumns.push({ index: s.Volumns.length, Id: id, ContainerPath: '', MountType: 'Directory', MediaType: 'SATA', IopsClass: 3, Size: 0 });
         this.patch(s.Volumns);
       },
 
@@ -783,6 +911,8 @@
         
         s.Labels.push({ index: s.Labels.length, Id: id, Name: '', Value: '' });
         this.patch(s.Labels);
+
+        this.initCompleters();
       },
 
       downward(items, i) {
@@ -816,6 +946,42 @@
         for (let item of items) {
           item.index = i++;
         }
+      },
+
+      exportEnvs(item) {
+        let s = "";
+        for (let e of item.Envs) {
+          if (s.length > 0) {
+            s += "\n";
+          }
+
+          s += e.Name + "=" + e.Value;
+        }
+
+        this.EnvList = s;
+        this.Importing = false;
+        this.EnvListDlg = true;
+      },
+
+      importEnvs(item) {
+        this.EnvList = '';
+        this.Importing = true;
+        this.CurrentService = item;
+        this.EnvListDlg = true;
+      },
+
+      doImportEnvs() {
+        let lines = this.EnvList.split(/\n/);
+        for (let line of lines) {
+          let p = line.indexOf('=');
+          if (p > 0) {
+            let n = line.substring(0, p);
+            let v = line.substring(p + 1);
+            this.addEnv(this.CurrentService, { Name: n, Value: v });
+          }
+        }
+
+        this.EnvListDlg = false;
       },
 
       save() {
@@ -925,4 +1091,9 @@
     margin-left: -1px;
     border-left: 1px solid #39f;
     background-color: #eee;
+
+.input-group--text-field
+  &.env-list
+    textarea
+      font-size: 12px;
 </style>

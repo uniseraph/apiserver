@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/tlsconfig"
 	"github.com/zanecloud/apiserver/types"
 	"gopkg.in/mgo.v2"
 	"io"
@@ -16,7 +17,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"github.com/docker/go-connections/tlsconfig"
 )
 
 //计算MD5
@@ -290,7 +290,7 @@ func GetClusterInfo(ctx context.Context, endpoint string) (*types.ClusterInfo, e
 //"1.12.6"
 //]
 //],
-func ParseNodes(input [][]string, poolId string, poolName string) (string, string, []types.Node, error) {
+func ParseNodes(input [][]string, poolId string) (string, string, []types.Node, error) {
 
 	strategy := input[1][1]
 	filters := input[2][1]
@@ -301,8 +301,8 @@ func ParseNodes(input [][]string, poolId string, poolName string) (string, strin
 
 	for i := 0; i < nodes; i++ {
 		result[i] = types.Node{
-			PoolId:   poolId,
-			PoolName: poolName,
+			PoolId: poolId,
+			//PoolName: poolName,
 		}
 
 		result[i].Hostname = input[4+i*9][0]
@@ -344,15 +344,14 @@ func parseLabels(labels string) map[string]string {
 
 }
 
-
 //查询请求可以直接到后端集群，bypass proxy
-func CreateDockerClient(poolInfo *types.PoolInfo) (  *client.Client ,    error ) {
+func CreateDockerClient(poolInfo *types.PoolInfo) (*client.Client, error) {
 
 	var httpClient *http.Client
 	if poolInfo.DriverOpts.TlsConfig != nil {
 		tlsc, err := tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
 		if err != nil {
-			return nil ,err
+			return nil, err
 		}
 		httpClient = &http.Client{
 			Transport: &http.Transport{
@@ -362,12 +361,11 @@ func CreateDockerClient(poolInfo *types.PoolInfo) (  *client.Client ,    error )
 		}
 	}
 
-	cli , err := client.NewClient(poolInfo.DriverOpts.EndPoint,poolInfo.DriverOpts.APIVersion,httpClient,nil)
-	if err !=nil {
-		return nil , err
+	cli, err := client.NewClient(poolInfo.DriverOpts.EndPoint, poolInfo.DriverOpts.APIVersion, httpClient, nil)
+	if err != nil {
+		return nil, err
 	}
 
-	return cli , nil
-
+	return cli, nil
 
 }

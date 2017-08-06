@@ -48,15 +48,13 @@ type EnvTreeNodeDir struct {
 type EnvTreeNodeParamKey struct {
 	Id          bson.ObjectId "_id"
 	Name        string
+	Mask        bool //是否是敏感数据
 	Description string
-	//默认值
-	Default string
-	//EnvTreeNodeDir
-	Dir bson.ObjectId
-	//EnvTreeMeta
-	Tree        bson.ObjectId
-	CreatedTime int64 `json:",omitempty"`
-	UpdatedTime int64 `json:",omitempty"`
+	Default     string        //默认值
+	Dir         bson.ObjectId //EnvTreeNodeDir
+	Tree        bson.ObjectId //EnvTreeMeta
+	CreatedTime int64         `json:",omitempty"`
+	UpdatedTime int64         `json:",omitempty"`
 }
 
 //参数目录树节点的参数值

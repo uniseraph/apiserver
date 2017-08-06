@@ -63,6 +63,10 @@ export default {
         return fetch('/session/logout');
     },
 
+    Stat(params) {
+        return fetch('/stat', params);
+    },
+
     Pools(params) {
         return fetch('/pools/ps', params);
     },
@@ -274,6 +278,10 @@ export default {
 
     ContainerSSHInfo(id) {
         return fetch('/audit/ssh?ContainerId=' + id);
+    },
+
+    ContainerLogs(params) {
+        return fetch('/containers/' + params.Id + '/logs?Timestamps=' + params.Timestamps + "&Tail="+ params.Tail, params);
     },
 
     ScaleService(params) {

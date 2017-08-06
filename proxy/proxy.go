@@ -24,7 +24,7 @@ type Proxy interface {
 	Endpoint() string
 }
 
-type FactoryFunc func( config *types.APIServerConfig  , p *types.PoolInfo) (Proxy, error)
+type FactoryFunc func(config *types.APIServerConfig, p *types.PoolInfo) (Proxy, error)
 
 func Register(driver string, ff FactoryFunc) {
 
@@ -35,7 +35,6 @@ func Register(driver string, ff FactoryFunc) {
 	driver2FactoryFunc[driver] = ff
 
 }
-
 
 func NewProxyInstanceAndStart(config *types.APIServerConfig, poolInfo *types.PoolInfo) (Proxy, error) {
 
