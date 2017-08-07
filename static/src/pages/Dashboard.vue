@@ -85,7 +85,7 @@
                 <td><router-link :to="'/applications/' + props.item.Id + '/' + encodeURIComponent(PoolMap[PoolId])">{{ props.item.Title }}</router-link></td>
                 <td>{{ props.item.Name }}</td>
                 <td>{{ props.item.Version }}</td>
-                <td class="text-xs-right">{{ props.item.Upgrades }}</td>
+                <td class="text-xs-right">{{ props.item.Count }}</td>
               </template>
             </v-data-table>
           </v-flex>
@@ -102,7 +102,7 @@
                 <td><router-link :to="'/applications/' + props.item.Id + '/' + encodeURIComponent(PoolMap[PoolId])">{{ props.item.Title }}</router-link></td>
                 <td>{{ props.item.Name }}</td>
                 <td>{{ props.item.Version }}</td>
-                <td class="text-xs-right">{{ props.item.Rollbacks }}</td>
+                <td class="text-xs-right">{{ props.item.Count }}</td>
               </template>
             </v-data-table>
           </v-flex>
