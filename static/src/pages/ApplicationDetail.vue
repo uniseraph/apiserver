@@ -182,10 +182,13 @@
                 </v-flex>
                 <v-flex xs2>
                 </v-flex>
+                <v-flex xs5>
+                  <v-checkbox label="使用宿主机网络" v-model="item.UseHostNetwork" dark disabled></v-checkbox>
+                </v-flex>
                 <v-flex xs2>
                   <v-subheader>说明</v-subheader>
                 </v-flex>
-                <v-flex xs3>
+                <v-flex xs10>
                   <v-text-field
                     v-model="item.Description"
                     readonly
@@ -239,7 +242,7 @@
                 <v-flex xs12 mt-4 v-if="item.Ports && item.Ports.length > 0">
                   <v-divider></v-divider>
                   <v-card-title>
-                    <v-subheader>端口映射</v-subheader>
+                    <v-subheader>端口声明</v-subheader>
                     <v-spacer></v-spacer>
                   </v-card-title>
                   <v-data-table

@@ -251,10 +251,13 @@
                 </v-flex>
                 <v-flex xs2>
                 </v-flex>
+                <v-flex xs5>
+                  <v-checkbox label="使用宿主机网络" v-model="item.UseHostNetwork" dark></v-checkbox>
+                </v-flex>
                 <v-flex xs2>
                   <v-subheader>说明</v-subheader>
                 </v-flex>
-                <v-flex xs3>
+                <v-flex xs10>
                   <v-text-field
                     v-model="item.Description"
                   ></v-text-field>
@@ -333,7 +336,7 @@
                 <v-flex xs12 mt-4>
                   <v-divider></v-divider>
                   <v-card-title>
-                    <v-subheader>端口映射</v-subheader>
+                    <v-subheader>端口声明</v-subheader>
                     <v-spacer></v-spacer>
                     <v-btn icon class="blue--text text--lighten-2" @click.native="addPort(item)">
                       <v-icon light>add</v-icon>
@@ -884,6 +887,7 @@
           ExclusiveCPU: false,
           Memory: '',
           ReplicaCount: '',
+          UseHostNetwork: false,
           Description: '',
           Command: '',
           Restart: 'always',
