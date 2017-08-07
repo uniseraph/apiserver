@@ -271,11 +271,17 @@
 
           let t = data.Trend;
           let labels = [];
+          let creates = [];
           let upgrades = [];
           let rollbacks = [];
-          for (let u of t.Upgrades) {
+          for (let u of t.Creates) {
             Object.keys(u).forEach(k => {
               labels.push(k);
+              creates.push(u[k]);
+            });
+          }
+          for (let u of t.Upgrades) {
+            Object.keys(u).forEach(k => {
               upgrades.push(u[k]);
             });
           }
@@ -287,6 +293,12 @@
 
           this.VersionData = {
             datasets: [{
+              label: '新增应用个数',
+              data: creates,
+              backgroundColor: "rgba(54, 162, 235, 0.2)",
+              borderColor: "rgb(54, 162, 235)",
+              borderWidth: 1
+            }, {
               label: '应用升级次数',
               data: upgrades,
               backgroundColor: "rgba(75, 192, 192, 0.2)",
