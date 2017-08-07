@@ -234,7 +234,9 @@
 
       stat() {
         let d = new Date(new Date().getTime() - 1000 * 60 * 60 * 24 * this.StartTime);
-        let st = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+        let mon = d.getMonth() + 1;
+        let dat = d.getDate();
+        let st = d.getFullYear() + "-" + (mon > 9 ? mon : '0' + mon) + "-" + (dat > 9 ? dat : '0' + dat);
 
         api.Stat({
           PoolId: this.PoolId,
