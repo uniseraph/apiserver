@@ -236,57 +236,10 @@
         let d = new Date(new Date().getTime() - 1000 * 60 * 60 * 24 * this.StartTime);
         let st = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
 
-        let data = {
-          "Summary": {
-            "Nodes": 3,
-            "CPUs": 6,
-            "CPUsUsed": 4,
-            "Memory": 6152000000,
-            "MemoryUsed": 4096000000,
-            "Disk": 600000000000,
-            "DiskUsed": 150000000000,
-            "Applications": 5,
-            "Containers": 10,
-            "OutstandingServices": [
-              { 
-                "Id": "1", "Title": "Eureka1", "Name": "service1", 
-                "Application": { "Id": "1", "Title": "Eureka集群", "Name": "eureka", "Version": "V1.0.1" }, 
-                "ReplicaCount": 1 
-              }
-            ]
-          },
-          "Trend": {
-            "Upgrades": [
-              { "2017-7-20": 2 },
-              { "2017-7-21": 3 },
-              { "2017-7-22": 0 },
-              { "2017-7-23": 1 },
-              { "2017-7-24": 6 },
-              { "2017-7-25": 4 },
-              { "2017-7-26": 2 }
-            ], 
-            "Rollbacks": [
-              { "2017-7-20": 1 },
-              { "2017-7-21": 0 },
-              { "2017-7-22": 0 },
-              { "2017-7-23": 2 },
-              { "2017-7-24": 0 },
-              { "2017-7-25": 1 },
-              { "2017-7-26": 0 }
-            ], 
-            "MostUpgradeApplications": [
-              { "Id": "1", "Title": "Eureka应用", "Name": "eureka", "Version": "V1.0.1", "Upgrades": 5 }
-            ],
-            "MostRollbackApplications": [
-              { "Id": "1", "Title": "Eureka应用", "Name": "eureka", "Version": "V1.0.1", "Rollbacks": 2 }
-            ]
-          }
-        };
-
-        //api.Stat({
-        //  PoolId: this.PoolId,
-        //  StartTime: st
-        // }).then(data => {
+        api.Stat({
+          PoolId: this.PoolId,
+          StartTime: st
+        }).then(data => {
           let s = data.Summary;
           this.CPUUsageData = {
             datasets: [{
@@ -349,7 +302,7 @@
 
           this.Summary = data.Summary;
           this.Trend = data.Trend;
-        // })
+        })
       }
     }
   }

@@ -64,7 +64,7 @@ export default {
     },
 
     Stat(params) {
-        return fetch('/stat', params);
+        return fetch('/dashboard', params);
     },
 
     Pools(params) {
