@@ -212,7 +212,7 @@ func getMostApplication(deploymentCol *mgo.Collection, poolid, operationtype str
 
 	projectOp := bson.M{
 		"$project": bson.M{
-			"_id": bson.NewObjectId(),
+		//	"_id": bson.NewObjectId(),
 			"id" :  "$_id.applicationid",
 		//	"version" :  "$_id.version",
 		//	"title" :  "$_id.title",
