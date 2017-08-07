@@ -119,7 +119,7 @@ func poolDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		rsp.Summary.Applications = apps
 
 		deployments := make([]types.Deployment, 0, 200)
-		if err := applicationCol.Find(bson.M{"poolid": req.PoolId, "createtime": bson.M{"$gte": from}}).Sort("createtime").All(&deployments); err != nil {
+		if err := deploymentCol.Find(bson.M{"poolid": req.PoolId, "createdtime": bson.M{"$gte": from}}).Sort("-createdtime").All(&deployments); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -233,9 +233,9 @@ func getMostApplication(deploymentCol *mgo.Collection, poolid, operationtype str
 		return nil, err
 	}
 
-	for i, _ := range result {
-		logrus.Debugf("operation is %s,i is %d, result is %#v", operationtype,i,result[i])
-	}
+	//for i, _ := range result {
+	//	logrus.Debugf("operation is %s,i is %d, result is %#v", operationtype,i,result[i])
+	//}
 
 	return result, nil
 
