@@ -613,7 +613,7 @@
         Importing: false,
 
         TemplateData: '',
-        TemplateData: false,
+        TemplateDataDlg: false,
 
         EnvList: '',
         EnvListDlg: false,
