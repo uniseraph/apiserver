@@ -6,8 +6,39 @@
           <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
           &nbsp;&nbsp;应用模板&nbsp;&nbsp;/&nbsp;&nbsp;{{ Id ? Title : '新增应用模板' }}
           <v-spacer></v-spacer>
+          <v-btn icon class="green--text text--lighten-2" @click.native="exportTemplate()" title="导出">
+            <v-icon light>redo</v-icon>
+          </v-btn>
+          <v-btn icon class="green--text text--lighten-2" @click.native="importTemplate()" title="导入">
+            <v-icon light>undo</v-icon>
+          </v-btn>
         </v-card-title>
         <div>
+          <v-layout row justify-center>
+            <v-dialog v-model="TemplateDataDlg" persistent width="640">
+              <v-card>
+                <v-card-row>
+                  <v-card-text>
+                    <v-text-field 
+                      v-model="TemplateData"
+                      :readonly="!Importing"
+                      multi-line
+                      rows="24"
+                      full-width
+                      class="env-list"
+                    ></v-text-field>
+                  </v-card-text>
+                </v-card-row>
+                <v-card-row actions v-if="Importing">
+                  <v-btn class="blue--text darken-1" flat @click.native="doImportTemplate()">确认</v-btn>
+                  <v-btn class="grey--text darken-1" flat @click.native="TemplateDataDlg = false">取消</v-btn>
+                </v-card-row>
+                <v-card-row actions v-if="!Importing">
+                  <v-btn class="grey--text darken-1" flat @click.native="TemplateDataDlg = false">关闭</v-btn>
+                </v-card-row>
+              </v-card>
+            </v-dialog>
+          </v-layout>
           <v-layout row justify-center>
             <v-dialog v-model="EnvListDlg" persistent width="640">
               <v-card>
@@ -579,9 +610,13 @@
         Description: '',
         Services: [],
 
+        Importing: false,
+
+        TemplateData: '',
+        TemplateData: false,
+
         EnvList: '',
         EnvListDlg: false,
-        Importing: false,
         CurrentService: null,
 
         rules: {
@@ -695,104 +730,108 @@
         }
 
         api.Template(this.Id).then(data => {
-          this.svcIdStart = 0;
-          this.envIdStart = 0;
-          this.portIdStart = 0;
-          this.volumnIdStart = 0;
-          this.labelIdStart = 0;
-
-          this.Id = data.Id;
-          this.Title = data.Title;
-          this.Name = data.Name;
-          this.Version = data.Version;
-          this.Description = data.Description;
-
-          let rules = {
-            Title: this.rules0.Title,
-            Name: this.rules0.Name,
-            Version: this.rules0.Version,
-            Services: []
-          };
-
-          if (!data.Services) {
-            data.Services = [];
-          } else {
-            for (let st of data.Services) {
-              st.index = st.Id = this.svcIdStart++;
-              st.hidden = true;
-
-              let r = {
-                Title: this.rules0.Services.Title,
-                Name: this.rules0.Services.Name,
-                ImageName: this.rules0.Services.ImageName,
-                ImageTag: this.rules0.Services.ImageTag,
-                CPU: this.rules0.Services.CPU,
-                Memory: this.rules0.Services.Memory,
-                ReplicaCount: this.rules0.Services.ReplicaCount,
-                Envs: [],
-                Ports: [],
-                Volumns: [],
-                Labels: []
-              };
-
-              if (!st.Envs) {
-                st.Envs = [];
-              } else {
-                let i = 0;
-                for (let e of st.Envs) {
-                  e.index = i++;
-                  e.Id = this.envIdStart++;
-                  r.Envs[e.Id] = this.rules0.Services.Envs;
-                }
-              }
-
-              if (!st.Ports) {
-                st.Ports = [];
-              } else {
-                let i = 0;
-                for (let e of st.Ports) {
-                  e.index = i++;
-                  e.Id = this.portIdStart++;
-                  r.Ports[e.Id] = this.rules0.Services.Ports;
-                }
-              }
-
-              if (!st.Volumns) {
-                st.Volumns = [];
-              } else {
-                let i = 0;
-                for (let e of st.Volumns) {
-                  e.index = i++;
-                  e.Id = this.volumnIdStart++;
-                  r.Volumns[e.Id] = this.rules0.Services.Volumns;
-                }
-              }
-
-              if (!st.Labels) {
-                st.Labels = [];
-              } else {
-                let i = 0;
-                for (let e of st.Labels) {
-                  e.index = i++;
-                  e.Id = this.labelIdStart++;
-                  r.Labels[e.Id] = this.rules0.Services.Labels;
-                }
-              }
-
-              rules.Services[st.Id] = r; 
-            }
-          }
-
-          this.rules = rules;
-          this.Services = data.Services;
-
-          if (this.$route.params && this.$route.params.title) {
-            this.Id = null;
-            this.Title = this.$route.params.title;
-          }
-
-          this.initCompleters();          
+          this.initWithTemplateData(data);
         })
+      },
+
+      initWithTemplateData(data) {
+        this.svcIdStart = 0;
+        this.envIdStart = 0;
+        this.portIdStart = 0;
+        this.volumnIdStart = 0;
+        this.labelIdStart = 0;
+
+        this.Id = data.Id;
+        this.Title = data.Title;
+        this.Name = data.Name;
+        this.Version = data.Version;
+        this.Description = data.Description;
+
+        let rules = {
+          Title: this.rules0.Title,
+          Name: this.rules0.Name,
+          Version: this.rules0.Version,
+          Services: []
+        };
+
+        if (!data.Services) {
+          data.Services = [];
+        } else {
+          for (let st of data.Services) {
+            st.index = st.Id = this.svcIdStart++;
+            st.hidden = true;
+
+            let r = {
+              Title: this.rules0.Services.Title,
+              Name: this.rules0.Services.Name,
+              ImageName: this.rules0.Services.ImageName,
+              ImageTag: this.rules0.Services.ImageTag,
+              CPU: this.rules0.Services.CPU,
+              Memory: this.rules0.Services.Memory,
+              ReplicaCount: this.rules0.Services.ReplicaCount,
+              Envs: [],
+              Ports: [],
+              Volumns: [],
+              Labels: []
+            };
+
+            if (!st.Envs) {
+              st.Envs = [];
+            } else {
+              let i = 0;
+              for (let e of st.Envs) {
+                e.index = i++;
+                e.Id = this.envIdStart++;
+                r.Envs[e.Id] = this.rules0.Services.Envs;
+              }
+            }
+
+            if (!st.Ports) {
+              st.Ports = [];
+            } else {
+              let i = 0;
+              for (let e of st.Ports) {
+                e.index = i++;
+                e.Id = this.portIdStart++;
+                r.Ports[e.Id] = this.rules0.Services.Ports;
+              }
+            }
+
+            if (!st.Volumns) {
+              st.Volumns = [];
+            } else {
+              let i = 0;
+              for (let e of st.Volumns) {
+                e.index = i++;
+                e.Id = this.volumnIdStart++;
+                r.Volumns[e.Id] = this.rules0.Services.Volumns;
+              }
+            }
+
+            if (!st.Labels) {
+              st.Labels = [];
+            } else {
+              let i = 0;
+              for (let e of st.Labels) {
+                e.index = i++;
+                e.Id = this.labelIdStart++;
+                r.Labels[e.Id] = this.rules0.Services.Labels;
+              }
+            }
+
+            rules.Services[st.Id] = r; 
+          }
+        }
+
+        this.rules = rules;
+        this.Services = data.Services;
+
+        if (this.$route.params && this.$route.params.title) {
+          this.Id = null;
+          this.Title = this.$route.params.title;
+        }
+
+        this.initCompleters(); 
       },
 
       goback() {
@@ -982,6 +1021,39 @@
         }
 
         this.EnvListDlg = false;
+      },
+
+      exportTemplate() {
+        let t = {
+          Title: this.Title,
+          Name: this.Name,
+          Version: this.Version,
+          Description: this.Description,
+          Services: this.Services
+        };
+
+        this.TemplateData = JSON.stringify(t);
+        this.Importing = false;
+        this.TemplateDataDlg = true;
+      },
+
+      importTemplate() {
+        this.TemplateData = '';
+        this.Importing = true;
+        this.TemplateDataDlg = true;
+      },
+
+      doImportTemplate() {
+        let t;
+        try {
+          t = JSON.parse(this.TemplateData);
+        } catch (e) {
+          ui.alert('模板数据格式不正确');
+          return;
+        }
+
+        this.initWithTemplateData(t);
+        this.TemplateDataDlg = false;
       },
 
       save() {

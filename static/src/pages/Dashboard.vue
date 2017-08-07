@@ -17,13 +17,22 @@
       <v-container fluid>
         <v-layout row wrap>
           <v-flex xs4>
-            <v-subheader>节点个数：{{ Summary.Nodes }}</v-subheader>
+            <v-subheader>
+              <v-icon class="blue--text">device_hub</v-icon>
+              节点个数：{{ Summary.Nodes }}
+            </v-subheader>
           </v-flex>
           <v-flex xs4>
-            <v-subheader>应用个数：{{ Summary.Applications }}</v-subheader>
+            <v-subheader>
+              <v-icon class="green--text">brightness_auto</v-icon>
+              应用个数：{{ Summary.Applications }}
+            </v-subheader>
           </v-flex>
           <v-flex xs4>
-            <v-subheader>容器个数：{{ Summary.Containers }}</v-subheader>
+            <v-subheader>
+              <v-icon class="cyan--text">directions_boat</v-icon>
+              容器个数：{{ Summary.Containers }}
+            </v-subheader>
           </v-flex>
           <v-flex xs3 mt-4>
             <pie-chart :chart-data="CPUUsageData" :options="CPUUsageOptions"></pie-chart>
@@ -76,7 +85,7 @@
                 <td><router-link :to="'/applications/' + props.item.Id + '/' + encodeURIComponent(PoolMap[PoolId])">{{ props.item.Title }}</router-link></td>
                 <td>{{ props.item.Name }}</td>
                 <td>{{ props.item.Version }}</td>
-                <td class="text-xs-right">{{ props.item.Upgrades }}</td>
+                <td class="text-xs-right">{{ props.item.Count }}</td>
               </template>
             </v-data-table>
           </v-flex>
@@ -93,7 +102,7 @@
                 <td><router-link :to="'/applications/' + props.item.Id + '/' + encodeURIComponent(PoolMap[PoolId])">{{ props.item.Title }}</router-link></td>
                 <td>{{ props.item.Name }}</td>
                 <td>{{ props.item.Version }}</td>
-                <td class="text-xs-right">{{ props.item.Rollbacks }}</td>
+                <td class="text-xs-right">{{ props.item.Count }}</td>
               </template>
             </v-data-table>
           </v-flex>
@@ -234,59 +243,14 @@
 
       stat() {
         let d = new Date(new Date().getTime() - 1000 * 60 * 60 * 24 * this.StartTime);
-        let st = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+        let mon = d.getMonth() + 1;
+        let dat = d.getDate();
+        let st = d.getFullYear() + "-" + (mon > 9 ? mon : '0' + mon) + "-" + (dat > 9 ? dat : '0' + dat);
 
-        let data = {
-          "Summary": {
-            "Nodes": 3,
-            "CPUs": 6,
-            "CPUsUsed": 4,
-            "Memory": 6152000000,
-            "MemoryUsed": 4096000000,
-            "Disk": 600000000000,
-            "DiskUsed": 150000000000,
-            "Applications": 5,
-            "Containers": 10,
-            "OutstandingServices": [
-              { 
-                "Id": "1", "Title": "Eureka1", "Name": "service1", 
-                "Application": { "Id": "1", "Title": "Eureka集群", "Name": "eureka", "Version": "V1.0.1" }, 
-                "ReplicaCount": 1 
-              }
-            ]
-          },
-          "Trend": {
-            "Upgrades": [
-              { "2017-7-20": 2 },
-              { "2017-7-21": 3 },
-              { "2017-7-22": 0 },
-              { "2017-7-23": 1 },
-              { "2017-7-24": 6 },
-              { "2017-7-25": 4 },
-              { "2017-7-26": 2 }
-            ], 
-            "Rollbacks": [
-              { "2017-7-20": 1 },
-              { "2017-7-21": 0 },
-              { "2017-7-22": 0 },
-              { "2017-7-23": 2 },
-              { "2017-7-24": 0 },
-              { "2017-7-25": 1 },
-              { "2017-7-26": 0 }
-            ], 
-            "MostUpgradeApplications": [
-              { "Id": "1", "Title": "Eureka应用", "Name": "eureka", "Version": "V1.0.1", "Upgrades": 5 }
-            ],
-            "MostRollbackApplications": [
-              { "Id": "1", "Title": "Eureka应用", "Name": "eureka", "Version": "V1.0.1", "Rollbacks": 2 }
-            ]
-          }
-        };
-
-        //api.Stat({
-        //  PoolId: this.PoolId,
-        //  StartTime: st
-        // }).then(data => {
+        api.Stat({
+          PoolId: this.PoolId,
+          StartTime: st
+        }).then(data => {
           let s = data.Summary;
           this.CPUUsageData = {
             datasets: [{
@@ -316,11 +280,17 @@
 
           let t = data.Trend;
           let labels = [];
+          let creates = [];
           let upgrades = [];
           let rollbacks = [];
-          for (let u of t.Upgrades) {
+          for (let u of t.Creates) {
             Object.keys(u).forEach(k => {
               labels.push(k);
+              creates.push(u[k]);
+            });
+          }
+          for (let u of t.Upgrades) {
+            Object.keys(u).forEach(k => {
               upgrades.push(u[k]);
             });
           }
@@ -332,6 +302,12 @@
 
           this.VersionData = {
             datasets: [{
+              label: '新增应用个数',
+              data: creates,
+              backgroundColor: "rgba(54, 162, 235, 0.2)",
+              borderColor: "rgb(54, 162, 235)",
+              borderWidth: 1
+            }, {
               label: '应用升级次数',
               data: upgrades,
               backgroundColor: "rgba(75, 192, 192, 0.2)",
@@ -349,7 +325,7 @@
 
           this.Summary = data.Summary;
           this.Trend = data.Trend;
-        // })
+        })
       }
     }
   }
