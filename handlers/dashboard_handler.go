@@ -46,7 +46,10 @@ type PoolDashboardTrend struct {
 }
 
 type Application struct {
-	Id, Title, Name, Version string
+	Id string
+	Title string
+	Name string
+	Version string
 	Count                    int
 }
 
@@ -163,10 +166,10 @@ func poolDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		} else {
-			rsp.Trend.MostUpgradeApplications = as
+			rsp.Trend.MostRollbackApplications = as
 		}
 
-		logrus.Debugf("poolDashboard response the result is %#v", rsp)
+	//	logrus.Debugf("poolDashboard response the result is %#v", rsp)
 		HttpOK(w, rsp)
 	})
 
@@ -177,6 +180,12 @@ func poolDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 //  { $sort:{count:-1} } ,
 //  { $limit:10 } ])
 
+
+
+//db.deployment.aggregate([
+// { $match:{ operationtype:"upgrade"  } },
+//  {  $group : { _id : {  applicationid:"$applicationid" } ,count:{ $sum : 1  }    }  }  ,
+//  {  $project : { _id:0, count:1,  id:"$_id.applicationid"   }   }     ]    )
 func getMostApplication(deploymentCol *mgo.Collection, poolid, operationtype string) ([]*Application, error) {
 
 	matchOp := bson.M{
@@ -188,23 +197,44 @@ func getMostApplication(deploymentCol *mgo.Collection, poolid, operationtype str
 
 	groupOp := bson.M{
 		"$group": bson.M{
+		//	"_id": bson.M{
+		//		"applicationid": "$applicationid",
+		//		"title":         "$title",
+		//		"version":       "$version",
+		//		"name":          "$name",
+		//	},
 			"_id": bson.M{
-				"applicationid": "$applicationid",
-				"title":         "$title",
-				"version":       "$version",
-				"name":          "$name"},
+				"applicationid":  "$applicationid" ,
+			},
 			"count": bson.M{"$sum": 1},
 		},
 	}
+
+	projectOp := bson.M{
+		"$project": bson.M{
+			"_id": bson.NewObjectId(),
+			"id" :  "$_id.applicationid",
+		//	"version" :  "$_id.version",
+		//	"title" :  "$_id.title",
+		//	"name" :  "$_id.name",
+			"count": 1,
+		},
+	}
+
 	sortOp := bson.M{"$sort": bson.M{"count": -1}}
 	limitOp := bson.M{"$limit": 10}
 
-	ops := []bson.M{matchOp, groupOp, sortOp, limitOp}
+	ops := []bson.M{matchOp, groupOp, projectOp, sortOp, limitOp}
 
 	result := make([]*Application, 0, 10)
 
+
 	if err := deploymentCol.Pipe(ops).All(&result); err != nil {
 		return nil, err
+	}
+
+	for i, _ := range result {
+		logrus.Debugf("operation is %s,i is %d, result is %#v", operationtype,i,result[i])
 	}
 
 	return result, nil
