@@ -19,19 +19,19 @@
           <v-flex xs4>
             <v-subheader>
               <v-icon class="blue--text">device_hub</v-icon>
-              节点个数：{{ Summary.Nodes }}
+              &nbsp;节点个数：{{ Summary.Nodes }}
             </v-subheader>
           </v-flex>
           <v-flex xs4>
             <v-subheader>
               <v-icon class="green--text">brightness_auto</v-icon>
-              应用个数：{{ Summary.Applications }}
+              &nbsp;应用个数：{{ Summary.Applications }}
             </v-subheader>
           </v-flex>
           <v-flex xs4>
             <v-subheader>
               <v-icon class="cyan--text">directions_boat</v-icon>
-              容器个数：{{ Summary.Containers }}
+              &nbsp;容器个数：{{ Summary.Containers }}
             </v-subheader>
           </v-flex>
           <v-flex xs3 mt-4>
