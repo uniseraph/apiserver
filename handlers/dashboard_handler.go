@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Sirupsen/logrus"
+	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
@@ -188,6 +189,10 @@ func appendDetail(applications []*Application, applicationCol *mgo.Collection) e
 
 		application := &types.Application{}
 		if err := applicationCol.FindId(bson.ObjectIdHex(applications[i].Id)).One(application); err != nil {
+			if err == mgo.ErrNotFound {
+				return errors.Errorf("no such a application:%s", applications[i].Id)
+			}
+
 			return err
 		}
 
