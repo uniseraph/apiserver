@@ -53,6 +53,7 @@ func NewProxyInstanceAndStart(config *types.APIServerConfig, poolInfo *types.Poo
 		return nil, err
 	}
 
+
 	mux.Lock()
 	id2Proxy[poolInfo.Id.Hex()] = proxy
 	mux.Unlock()
@@ -75,5 +76,24 @@ func Stop(id string) error {
 	}
 
 	return nil
+}
+
+
+func Close(id string) error {
+
+	mux.Lock()
+
+
+	p , ok := id2Proxy[id]
+	if !ok {
+		mux.Unlock()
+		return errors.Errorf( "no such a proxy:%s" ,id )
+	}
+	mux.Unlock()
+
+
+	return p.Stop()
+
+
 
 }
