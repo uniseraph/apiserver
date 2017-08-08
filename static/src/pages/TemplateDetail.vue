@@ -249,9 +249,7 @@
                     @input="rules.Services[item.Id].ReplicaCount = rules0.Services.ReplicaCount"
                   ></v-text-field>
                 </v-flex>
-                <v-flex xs2>
-                </v-flex>
-                <v-flex xs5>
+                <v-flex xs7>
                   <v-checkbox label="使用宿主机网络" v-model="item.NetworkMode" true-value="host" false-value="bridge" dark></v-checkbox>
                 </v-flex>
                 <v-flex xs2>
