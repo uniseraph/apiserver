@@ -354,7 +354,7 @@
                 <v-flex xs12 mt-4>
                   <v-divider></v-divider>
                   <v-card-title>
-                    <v-subheader>端口声明</v-subheader>
+                    <v-subheader>端口申明</v-subheader>
                     <v-spacer></v-spacer>
                     <v-btn icon class="blue--text text--lighten-2" @click.native="addPort(item)">
                       <v-icon light>add</v-icon>

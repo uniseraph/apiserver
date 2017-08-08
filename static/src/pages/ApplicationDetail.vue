@@ -240,7 +240,7 @@
                 <v-flex xs12 mt-4 v-if="item.Ports && item.Ports.length > 0">
                   <v-divider></v-divider>
                   <v-card-title>
-                    <v-subheader>端口声明</v-subheader>
+                    <v-subheader>端口申明</v-subheader>
                     <v-spacer></v-spacer>
                   </v-card-title>
                   <v-data-table
