@@ -141,6 +141,7 @@ type Service struct {
 	CPU          string
 	ExclusiveCPU bool
 	Memory       string
+	NetworkMode  string
 	ReplicaCount int `json:",string"`
 	Description  string
 	Restart      string

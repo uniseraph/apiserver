@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Sirupsen/logrus"
-	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
@@ -55,8 +54,8 @@ type Application struct {
 }
 
 type Record struct {
-	day   string
-	count int
+	Day   string
+	Count int
 }
 
 func poolDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -75,6 +74,8 @@ func poolDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		HttpError(w, "StartTime格式错误"+err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	logrus.Debugf("from is %#v, input str is %s, unix timestamp is %#v", from, req.StartTime, from.Unix())
 
 	rsp := &PoolDashboardResponse{
 		Summary: &PoolDashboardSummary{},
@@ -120,36 +121,48 @@ func poolDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		rsp.Summary.Applications = apps
 
 		deployments := make([]types.Deployment, 0, 200)
-		if err := deploymentCol.Find(bson.M{"poolid": req.PoolId, "createdtime": bson.M{"$gte": from}}).Sort("-createdtime").All(&deployments); err != nil {
+		if err := deploymentCol.Find(bson.M{
+			"poolid":      req.PoolId,
+			"createdtime": bson.M{"$gt": from.Unix()},
+		}).Sort("-createdtime").All(&deployments); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		creates := make(map[string]int)
-		rollbacks := make(map[string]int)
-		upgrades := make(map[string]int)
+		creates := createmap(from)
+		rollbacks := createmap(from)
+		upgrades := createmap(from)
 
 		for i, _ := range deployments {
 			year, month, day := time.Unix(deployments[i].CreatedTime, 0).Date()
 
 			daystr := buildDayStr(year, month, day)
+			logrus.Debugf("daystr  is %s", daystr)
 
-			var target map[string]int
 			if deployments[i].OperationType == types.DEPLOYMENT_OPERATION_CREATE {
-				target = creates
+				count, ok := creates[daystr]
+				if !ok {
+					creates[daystr] = 0
+				} else {
+					creates[daystr] = count + 1
+				}
+
 			} else if deployments[i].OperationType == types.DEPLOYMENT_OPERATION_UPGRADE {
-				target = upgrades
+				count, ok := upgrades[daystr]
+				if !ok {
+					upgrades[daystr] = 0
+				} else {
+					upgrades[daystr] = count + 1
+				}
 			} else {
-				target = rollbacks
+				count, ok := rollbacks[daystr]
+				if !ok {
+					rollbacks[daystr] = 0
+				} else {
+					rollbacks[daystr] = count + 1
+				}
 			}
 
-			count, ok := target[daystr]
-
-			if !ok {
-				target[daystr] = 1
-			} else {
-				target[daystr] = count + 1
-			}
 		}
 
 		rsp.Trend.Creates = sortResult(creates)
@@ -185,6 +198,26 @@ func poolDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 	})
 
 }
+
+func createmap(from time.Time) map[string]int {
+
+	m := make(map[string]int)
+	t := from
+	for {
+
+		if t.After(time.Now()) {
+			return m
+		}
+		year, month, day := t.Date()
+
+		m[buildDayStr(year, month, day)] = 0
+
+		t = t.Add(time.Duration(1) * time.Hour * 24)
+
+	}
+
+}
+
 func appendDetail(applications []*Application, applicationCol *mgo.Collection) ([]*Application, error) {
 
 	result := make([]*Application, 0, len(applications))
@@ -195,6 +228,7 @@ func appendDetail(applications []*Application, applicationCol *mgo.Collection) (
 		if err := applicationCol.FindId(bson.ObjectIdHex(applications[i].Id)).One(application); err != nil {
 			if err == mgo.ErrNotFound {
 				//ignore the application
+				logrus.Debugf("ignore the application:%s", applications[i].Id)
 				continue
 			}
 
@@ -274,9 +308,9 @@ func getMostApplication(deploymentCol *mgo.Collection, poolid, operationtype str
 		return nil, err
 	}
 
-	for i, _ := range result {
-		logrus.Debugf("operation is %s,i is %d, result is %#v", operationtype, i, result[i])
-	}
+	//for i, _ := range result {
+	//	logrus.Debugf("operation is %s,i is %d, result is %#v", operationtype, i, result[i])
+	//}
 
 	return result, nil
 
@@ -284,7 +318,7 @@ func getMostApplication(deploymentCol *mgo.Collection, poolid, operationtype str
 
 func buildDayStr(year int, month time.Month, day int) string {
 
-	daystr := fmt.Sprintf("%s-", year)
+	daystr := fmt.Sprintf("%d-", year)
 
 	if month <= 9 {
 		daystr += fmt.Sprintf("0%d-", month)
@@ -311,13 +345,15 @@ func sortResult(day2count map[string]int) []*Record {
 
 	sort.Strings(keys)
 
+	logrus.Debugf("keys is %#v", keys)
+
 	result := make([]*Record, 0, len(keys))
 
 	for _, key := range keys {
 
 		result = append(result, &Record{
-			day:   key,
-			count: day2count[key],
+			Day:   key,
+			Count: day2count[key],
 		})
 	}
 
