@@ -251,6 +251,7 @@
                 </v-flex>
                 <v-flex xs7>
                   <v-checkbox label="使用宿主机网络" v-model="item.NetworkMode" true-value="host" false-value="bridge" dark></v-checkbox>
+                  <span style="color:#9F9F9F;">(切换网络会导致IP变动，可能会影响应用运行)</span>
                 </v-flex>
                 <v-flex xs2>
                   <v-subheader>说明</v-subheader>
