@@ -7,7 +7,7 @@ After=network.target
 Type=simple
 NotifyAccess=all
 EnvironmentFile=-/etc/zancloud/apiserver.conf
-ExecStart=/opt/zanecloud/apiserver/bin/apiserver -l debug start --root.dir=/opt/zanecloud/apiserver
+ExecStart=/opt/zanecloud/apiserver/bin/apiserver -l debug start  $APISERVER_OPTS
 
 
 
