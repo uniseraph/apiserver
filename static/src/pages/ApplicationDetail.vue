@@ -183,7 +183,7 @@
                 <v-flex xs2>
                 </v-flex>
                 <v-flex xs5>
-                  <v-checkbox label="使用宿主机网络" v-model="item.UseHostNetwork" dark disabled></v-checkbox>
+                  <v-checkbox label="使用宿主机网络" v-model="item.NetworkMode" true-value="host" false-value="bridge" dark disabled></v-checkbox>
                 </v-flex>
                 <v-flex xs2>
                   <v-subheader>说明</v-subheader>
