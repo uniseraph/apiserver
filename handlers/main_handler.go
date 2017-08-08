@@ -92,6 +92,9 @@ var routers = map[string]map[string]*MyHandler{
 		"/applications/{id:.*}/remove-user": &MyHandler{h: removeApplicationMember, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 	},
 	"POST": {
+
+		"/dashboard": &MyHandler{h: poolDashboard, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+
 		"/pools/{id:.*}/refresh":     &MyHandler{h: postPoolsFlush, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/pools/{id:.*}/inspect":     &MyHandler{h: getPoolJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/pools/register":            &MyHandler{h: postPoolsRegister, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
