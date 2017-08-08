@@ -161,48 +161,61 @@ func poolDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 			return
 		} else {
 
-			if err := appendDetail(as, applicationCol); err != nil {
+			if bs, err := appendDetail(as, applicationCol); err != nil {
 				HttpError(w, err.Error(), http.StatusInternalServerError)
 				return
+			} else {
+				rsp.Trend.MostUpgradeApplications = bs
 			}
-			rsp.Trend.MostUpgradeApplications = as
 		}
 
 		if as, err := getMostApplication(deploymentCol, req.PoolId, types.DEPLOYMENT_OPERATION_ROLLBACK); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		} else {
-			if err := appendDetail(as, applicationCol); err != nil {
+			if bs, err := appendDetail(as, applicationCol); err != nil {
 				HttpError(w, err.Error(), http.StatusInternalServerError)
 				return
+			} else {
+				rsp.Trend.MostRollbackApplications = bs
 			}
-			rsp.Trend.MostRollbackApplications = as
 		}
 
 		HttpOK(w, rsp)
 	})
 
 }
-func appendDetail(applications []*Application, applicationCol *mgo.Collection) error {
+func appendDetail(applications []*Application, applicationCol *mgo.Collection) ([]*Application, error) {
+
+	result := make([]*Application, 0, len(applications))
 
 	for i, _ := range applications {
 
 		application := &types.Application{}
 		if err := applicationCol.FindId(bson.ObjectIdHex(applications[i].Id)).One(application); err != nil {
 			if err == mgo.ErrNotFound {
-				return errors.Errorf("no such a application:%s", applications[i].Id)
+				//ignore the application
+				continue
 			}
 
-			return err
+			return nil, err
 		}
 
 		applications[i].Name = application.Name
 		applications[i].Title = application.Title
 		applications[i].Version = application.Version
 
+		result = append(result, &Application{
+			Id:      applications[i].Id,
+			Count:   applications[i].Count,
+			Name:    application.Name,
+			Version: application.Version,
+			Title:   application.Title,
+		})
+
 	}
 
-	return nil
+	return result, nil
 
 }
 
