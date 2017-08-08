@@ -241,7 +241,7 @@
                   ></v-text-field>
                 </v-flex>
                 <v-flex xs2>
-                  <v-checkbox label="独占" v-model="item.ExclusiveCPU" dark :disabled="!(item.CPU > 0)"></v-checkbox>
+                  <v-checkbox label="独占CPU" v-model="item.ExclusiveCPU" dark :disabled="!(item.CPU > 0)"></v-checkbox>
                 </v-flex>
                 <v-flex xs1>
                 </v-flex>
