@@ -46,11 +46,11 @@ type PoolDashboardTrend struct {
 }
 
 type Application struct {
-	Id string
-	Title string
-	Name string
+	Id      string
+	Title   string
+	Name    string
 	Version string
-	Count                    int
+	Count   int
 }
 
 type Record struct {
@@ -159,6 +159,11 @@ func poolDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		} else {
+
+			if err := appendDetail(as, applicationCol); err != nil {
+				HttpError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 			rsp.Trend.MostUpgradeApplications = as
 		}
 
@@ -166,12 +171,33 @@ func poolDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		} else {
+			if err := appendDetail(as, applicationCol); err != nil {
+				HttpError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 			rsp.Trend.MostRollbackApplications = as
 		}
 
-	//	logrus.Debugf("poolDashboard response the result is %#v", rsp)
 		HttpOK(w, rsp)
 	})
+
+}
+func appendDetail(applications []*Application, applicationCol *mgo.Collection) error {
+
+	for i, _ := range applications {
+
+		application := &types.Application{}
+		if err := applicationCol.FindId(bson.ObjectIdHex(applications[i].Id)).One(application); err != nil {
+			return err
+		}
+
+		applications[i].Name = application.Name
+		applications[i].Title = application.Title
+		applications[i].Version = application.Version
+
+	}
+
+	return nil
 
 }
 
@@ -179,8 +205,6 @@ func poolDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 // 	{  $group : { _id : { operationtype: "upgrade" , applicationid:"$applicationid"    } ,"count":{ $sum : 1  }    }  } ,
 //  { $sort:{count:-1} } ,
 //  { $limit:10 } ])
-
-
 
 //db.deployment.aggregate([
 // { $match:{ operationtype:"upgrade"  } },
@@ -197,14 +221,14 @@ func getMostApplication(deploymentCol *mgo.Collection, poolid, operationtype str
 
 	groupOp := bson.M{
 		"$group": bson.M{
-		//	"_id": bson.M{
-		//		"applicationid": "$applicationid",
-		//		"title":         "$title",
-		//		"version":       "$version",
-		//		"name":          "$name",
-		//	},
+			//	"_id": bson.M{
+			//		"applicationid": "$applicationid",
+			//		"title":         "$title",
+			//		"version":       "$version",
+			//		"name":          "$name",
+			//	},
 			"_id": bson.M{
-				"applicationid":  "$applicationid" ,
+				"applicationid": "$applicationid",
 			},
 			"count": bson.M{"$sum": 1},
 		},
@@ -212,11 +236,11 @@ func getMostApplication(deploymentCol *mgo.Collection, poolid, operationtype str
 
 	projectOp := bson.M{
 		"$project": bson.M{
-		//	"_id": bson.NewObjectId(),
-			"id" :  "$_id.applicationid",
-		//	"version" :  "$_id.version",
-		//	"title" :  "$_id.title",
-		//	"name" :  "$_id.name",
+			//	"_id": bson.NewObjectId(),
+			"id": "$_id.applicationid",
+			//	"version" :  "$_id.version",
+			//	"title" :  "$_id.title",
+			//	"name" :  "$_id.name",
 			"count": 1,
 		},
 	}
@@ -228,14 +252,13 @@ func getMostApplication(deploymentCol *mgo.Collection, poolid, operationtype str
 
 	result := make([]*Application, 0, 10)
 
-
 	if err := deploymentCol.Pipe(ops).All(&result); err != nil {
 		return nil, err
 	}
 
-	//for i, _ := range result {
-	//	logrus.Debugf("operation is %s,i is %d, result is %#v", operationtype,i,result[i])
-	//}
+	for i, _ := range result {
+		logrus.Debugf("operation is %s,i is %d, result is %#v", operationtype, i, result[i])
+	}
 
 	return result, nil
 
