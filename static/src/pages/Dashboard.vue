@@ -236,7 +236,6 @@
 
           if (data.length > 0) {
             this.PoolId = data[0].Id;
-            this.stat();
           }
         })
       },
