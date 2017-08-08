@@ -134,7 +134,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	if err := colApplication.FindId(app.Id).One(logData); err != nil {
 		logrus.Errorln(err.Error())
 	} else {
-		utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeCreate, "", app.Id.Hex(), map[string]interface{}{"Application": logData})
+		utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeCreate, app.PoolId, app.Id.Hex(), map[string]interface{}{"Application": logData})
 	}
 }
 
@@ -703,7 +703,7 @@ func removeApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		/*
 			系统审计
 		*/
-		utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeDelete, "", app.Id.Hex(), map[string]interface{}{"Application": app})
+		utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeDelete, app.PoolId, app.Id.Hex(), map[string]interface{}{"Application": app})
 	})
 }
 func stopApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -1024,7 +1024,7 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 		if err := cs["application"].FindId(currentApp.Id).One(newApp); err != nil {
 			logrus.Errorln(err.Error())
 		} else {
-			utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeUpgrade, pool.Id.Hex(), app.Id.Hex(), map[string]interface{}{"OldApplication": currentApp, "NewApplication": newApp})
+			utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeRollback, pool.Id.Hex(), app.Id.Hex(), map[string]interface{}{"OldApplication": currentApp, "NewApplication": newApp})
 		}
 	})
 
@@ -1305,7 +1305,7 @@ func removeApplicationMember(ctx context.Context, w http.ResponseWriter, r *http
 					"Name": u.Name,
 				},
 			}
-			utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeAddUser, "", app.Id.Hex(), logData)
+			utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeAddUser, app.PoolId, app.Id.Hex(), logData)
 		}
 	})
 }
