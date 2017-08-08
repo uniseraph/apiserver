@@ -240,6 +240,7 @@ func refreshPool(ctx context.Context, id string) (*PoolsFlushResponse, error) {
 		result.PoolInfo.Memory = clusterInfo.MemTotal
 		result.PoolInfo.ClusterStore = clusterInfo.ClusterStore
 		result.PoolInfo.ClusterAdvertise = clusterInfo.ClusterAdvertise
+		result.PoolInfo.Containers = clusterInfo.Containers
 
 		strategy, filters, nodes, err := utils.ParseNodes(clusterInfo.SystemStatus, result.PoolInfo.Id.Hex())
 		if err != nil {

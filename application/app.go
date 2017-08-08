@@ -123,6 +123,9 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			CPUSet:      as.CPU,
 			//Ports:       s.Ports,
 		}
+		if as.NetworkMode == "host" {
+			as.NetworkMode = "host"
+		}
 
 		if as.Memory != "" {
 			mem, err := strconv.ParseInt(as.Memory, 10, 64)
@@ -131,9 +134,15 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			}
 		}
 
+		capNetAdmin := false
 		sc.Ports = make([]string, len(as.Ports))
 		for i, _ := range as.Ports {
 			sc.Ports[i] = strconv.Itoa(as.Ports[i].SourcePort)
+			if as.Ports[i].SourcePort < 1024 && as.NetworkMode == "host" && !capNetAdmin {
+				sc.CapAdd = append(sc.CapAdd, "NET_ADMIN")
+				capNetAdmin = true
+			}
+
 		}
 
 		sc.Labels = map[string]string{}

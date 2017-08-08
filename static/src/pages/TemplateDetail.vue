@@ -6,8 +6,39 @@
           <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
           &nbsp;&nbsp;应用模板&nbsp;&nbsp;/&nbsp;&nbsp;{{ Id ? Title : '新增应用模板' }}
           <v-spacer></v-spacer>
+          <v-btn icon class="green--text text--lighten-2" @click.native="exportTemplate()" title="导出">
+            <v-icon light>redo</v-icon>
+          </v-btn>
+          <v-btn icon class="green--text text--lighten-2" @click.native="importTemplate()" title="导入">
+            <v-icon light>undo</v-icon>
+          </v-btn>
         </v-card-title>
         <div>
+          <v-layout row justify-center>
+            <v-dialog v-model="TemplateDataDlg" persistent width="640">
+              <v-card>
+                <v-card-row>
+                  <v-card-text>
+                    <v-text-field 
+                      v-model="TemplateData"
+                      :readonly="!Importing"
+                      multi-line
+                      rows="24"
+                      full-width
+                      class="env-list"
+                    ></v-text-field>
+                  </v-card-text>
+                </v-card-row>
+                <v-card-row actions v-if="Importing">
+                  <v-btn class="blue--text darken-1" flat @click.native="doImportTemplate()">确认</v-btn>
+                  <v-btn class="grey--text darken-1" flat @click.native="TemplateDataDlg = false">取消</v-btn>
+                </v-card-row>
+                <v-card-row actions v-if="!Importing">
+                  <v-btn class="grey--text darken-1" flat @click.native="TemplateDataDlg = false">关闭</v-btn>
+                </v-card-row>
+              </v-card>
+            </v-dialog>
+          </v-layout>
           <v-layout row justify-center>
             <v-dialog v-model="EnvListDlg" persistent width="640">
               <v-card>
@@ -33,6 +64,26 @@
               </v-card>
             </v-dialog>
           </v-layout>
+          <v-layout row justify-center>
+            <v-snackbar
+                v-model="ApplicationNameWarning"
+                timeout="1500"
+                top
+                error
+              >应用ID改动将会影响到后续升级，请慎重</v-snackbar>
+            <v-snackbar
+                v-model="ServiceNameWarning"
+                timeout="1500"
+                top
+                error
+              >服务ID改动将会影响到后续升级，请慎重</v-snackbar>
+            <v-snackbar
+                v-model="NetworkModeWarning"
+                timeout="1500"
+                top
+                error
+              >切换网络会导致容器IP变动，可能会影响应用运行</v-snackbar>
+          </v-layout>
           <v-container fluid>
             <v-layout row wrap>
               <v-flex xs2>
@@ -57,10 +108,10 @@
                   ref="Name"
                   v-model="Name"
                   required
-                  hint="应用ID改动将会影响到后续升级，请慎重"
-                  persistent-hint
                   :rules="rules.Name"
                   @input="rules.Name = rules0.Name"
+                  @focus="OriginalValue = Name"
+                  @change="showApplicationNameWarning"
                 ></v-text-field>
               </v-flex>
               <v-flex xs2>
@@ -147,10 +198,10 @@
                     :ref="'Service_Name_' + item.Id"
                     v-model="item.Name"
                     required
-                    hint="服务ID改动将会影响到后续升级，请慎重"
-                    persistent-hint
                     :rules="rules.Services[item.Id].Name"
                     @input="rules.Services[item.Id].Name = rules0.Services.Name"
+                    @focus="OriginalValue = item.Name"
+                    @change="showServiceNameWarning"
                   ></v-text-field>
                 </v-flex>
                 <v-flex xs2>
@@ -190,7 +241,7 @@
                   ></v-text-field>
                 </v-flex>
                 <v-flex xs2>
-                  <v-checkbox label="独占" v-model="item.ExclusiveCPU" dark :disabled="!(item.CPU > 0)"></v-checkbox>
+                  <v-checkbox label="独占CPU" v-model="item.ExclusiveCPU" dark :disabled="!(item.CPU > 0)"></v-checkbox>
                 </v-flex>
                 <v-flex xs1>
                 </v-flex>
@@ -209,7 +260,7 @@
                 <v-flex xs2>
                   <v-subheader>容器个数<span class="required-star">*</span></v-subheader>
                 </v-flex>
-                <v-flex xs3>
+                <v-flex xs2>
                   <v-text-field
                     :ref="'Service_ReplicaCount_' + item.Id"
                     v-model="item.ReplicaCount"
@@ -218,12 +269,13 @@
                     @input="rules.Services[item.Id].ReplicaCount = rules0.Services.ReplicaCount"
                   ></v-text-field>
                 </v-flex>
-                <v-flex xs2>
+                <v-flex xs8>
+                  <v-checkbox label="使用宿主机网络" v-model="item.NetworkMode" true-value="host" false-value="bridge" dark @change="NetworkModeWarning = true"></v-checkbox>
                 </v-flex>
                 <v-flex xs2>
                   <v-subheader>说明</v-subheader>
                 </v-flex>
-                <v-flex xs3>
+                <v-flex xs10>
                   <v-text-field
                     v-model="item.Description"
                   ></v-text-field>
@@ -302,7 +354,7 @@
                 <v-flex xs12 mt-4>
                   <v-divider></v-divider>
                   <v-card-title>
-                    <v-subheader>端口映射</v-subheader>
+                    <v-subheader>端口申明</v-subheader>
                     <v-spacer></v-spacer>
                     <v-btn icon class="blue--text text--lighten-2" @click.native="addPort(item)">
                       <v-icon light>add</v-icon>
@@ -579,10 +631,19 @@
         Description: '',
         Services: [],
 
+        Importing: false,
+
+        TemplateData: '',
+        TemplateDataDlg: false,
+
         EnvList: '',
         EnvListDlg: false,
-        Importing: false,
         CurrentService: null,
+
+        ApplicationNameWarning: false,
+        ServiceNameWarning: false,
+        NetworkModeWarning: false,
+        OriginalValue: '',
 
         rules: {
           Services: []
@@ -593,7 +654,7 @@
             v => (v && v.length > 0 ? true : '请输入应用名称')
           ],
           Name: [
-            v => (v && v.length > 0 ? (v.match(/\s/) ? "应用ID不允许包含空格" : (/^[a-zA-Z]+[a-zA-Z0-9]*$/.test(v) ? true : '应用ID只能由英文字母、数字组成，并且以英文字母开头')) : '请输入应用ID')
+            v => (v && v.length > 0 ? (v.match(/\s/) ? "应用ID不允许包含空格" : (/^[a-z]+[a-z0-9\-]*$/.test(v) ? true : '应用ID只能由小写英文字母、减号、数字组成，并且以英文字母开头')) : '请输入应用ID')
           ],
           Version: [
             v => (v && v.length > 0 ? true : '请输入应用版本号')
@@ -603,7 +664,7 @@
               v => (v && v.length > 0 ? true : '请输入服务名称')
             ],
             Name: [
-              v => (v && v.length > 0 ? (v.match(/\s/) ? '服务ID不允许包含空格' : (/^[a-zA-Z]+[a-zA-Z0-9]*$/.test(v) ? true : '服务ID只能由英文字母、数字组成，并且以英文字母开头')) : '请输入应用ID')
+              v => (v && v.length > 0 ? (v.match(/\s/) ? "服务ID不允许包含空格" : (/^[a-z]+[a-z0-9\-]*$/.test(v) ? true : '服务ID只能由小写英文字母、减号、数字组成，并且以英文字母开头')) : '请输入应用ID')
             ],
             ImageName: [
               v => (v && v.length > 0 ? (v.match(/\s/) ? '镜像名称不允许包含空格' : true) : '请输入镜像名称')
@@ -695,104 +756,109 @@
         }
 
         api.Template(this.Id).then(data => {
-          this.svcIdStart = 0;
-          this.envIdStart = 0;
-          this.portIdStart = 0;
-          this.volumnIdStart = 0;
-          this.labelIdStart = 0;
-
-          this.Id = data.Id;
-          this.Title = data.Title;
-          this.Name = data.Name;
-          this.Version = data.Version;
-          this.Description = data.Description;
-
-          let rules = {
-            Title: this.rules0.Title,
-            Name: this.rules0.Name,
-            Version: this.rules0.Version,
-            Services: []
-          };
-
-          if (!data.Services) {
-            data.Services = [];
-          } else {
-            for (let st of data.Services) {
-              st.index = st.Id = this.svcIdStart++;
-              st.hidden = true;
-
-              let r = {
-                Title: this.rules0.Services.Title,
-                Name: this.rules0.Services.Name,
-                ImageName: this.rules0.Services.ImageName,
-                ImageTag: this.rules0.Services.ImageTag,
-                CPU: this.rules0.Services.CPU,
-                Memory: this.rules0.Services.Memory,
-                ReplicaCount: this.rules0.Services.ReplicaCount,
-                Envs: [],
-                Ports: [],
-                Volumns: [],
-                Labels: []
-              };
-
-              if (!st.Envs) {
-                st.Envs = [];
-              } else {
-                let i = 0;
-                for (let e of st.Envs) {
-                  e.index = i++;
-                  e.Id = this.envIdStart++;
-                  r.Envs[e.Id] = this.rules0.Services.Envs;
-                }
-              }
-
-              if (!st.Ports) {
-                st.Ports = [];
-              } else {
-                let i = 0;
-                for (let e of st.Ports) {
-                  e.index = i++;
-                  e.Id = this.portIdStart++;
-                  r.Ports[e.Id] = this.rules0.Services.Ports;
-                }
-              }
-
-              if (!st.Volumns) {
-                st.Volumns = [];
-              } else {
-                let i = 0;
-                for (let e of st.Volumns) {
-                  e.index = i++;
-                  e.Id = this.volumnIdStart++;
-                  r.Volumns[e.Id] = this.rules0.Services.Volumns;
-                }
-              }
-
-              if (!st.Labels) {
-                st.Labels = [];
-              } else {
-                let i = 0;
-                for (let e of st.Labels) {
-                  e.index = i++;
-                  e.Id = this.labelIdStart++;
-                  r.Labels[e.Id] = this.rules0.Services.Labels;
-                }
-              }
-
-              rules.Services[st.Id] = r; 
-            }
-          }
-
-          this.rules = rules;
-          this.Services = data.Services;
-
-          if (this.$route.params && this.$route.params.title) {
-            this.Id = null;
-            this.Title = this.$route.params.title;
-          }
-
-          this.initCompleters();          
+          this.initWithTemplateData(data);
         })
+      },
+
+      initWithTemplateData(data) {
+        this.svcIdStart = 0;
+        this.envIdStart = 0;
+        this.portIdStart = 0;
+        this.volumnIdStart = 0;
+        this.labelIdStart = 0;
+
+        this.Id = data.Id;
+        this.Title = data.Title;
+        this.Name = data.Name;
+        this.Version = data.Version;
+        this.Description = data.Description;
+
+        let rules = {
+          Title: this.rules0.Title,
+          Name: this.rules0.Name,
+          Version: this.rules0.Version,
+          Services: []
+        };
+
+        if (!data.Services) {
+          data.Services = [];
+        } else {
+          for (let st of data.Services) {
+            st.index = st.Id = this.svcIdStart++;
+            st.hidden = true;
+            st.NetworkModeWarning = false;
+
+            let r = {
+              Title: this.rules0.Services.Title,
+              Name: this.rules0.Services.Name,
+              ImageName: this.rules0.Services.ImageName,
+              ImageTag: this.rules0.Services.ImageTag,
+              CPU: this.rules0.Services.CPU,
+              Memory: this.rules0.Services.Memory,
+              ReplicaCount: this.rules0.Services.ReplicaCount,
+              Envs: [],
+              Ports: [],
+              Volumns: [],
+              Labels: []
+            };
+
+            if (!st.Envs) {
+              st.Envs = [];
+            } else {
+              let i = 0;
+              for (let e of st.Envs) {
+                e.index = i++;
+                e.Id = this.envIdStart++;
+                r.Envs[e.Id] = this.rules0.Services.Envs;
+              }
+            }
+
+            if (!st.Ports) {
+              st.Ports = [];
+            } else {
+              let i = 0;
+              for (let e of st.Ports) {
+                e.index = i++;
+                e.Id = this.portIdStart++;
+                r.Ports[e.Id] = this.rules0.Services.Ports;
+              }
+            }
+
+            if (!st.Volumns) {
+              st.Volumns = [];
+            } else {
+              let i = 0;
+              for (let e of st.Volumns) {
+                e.index = i++;
+                e.Id = this.volumnIdStart++;
+                r.Volumns[e.Id] = this.rules0.Services.Volumns;
+              }
+            }
+
+            if (!st.Labels) {
+              st.Labels = [];
+            } else {
+              let i = 0;
+              for (let e of st.Labels) {
+                e.index = i++;
+                e.Id = this.labelIdStart++;
+                r.Labels[e.Id] = this.rules0.Services.Labels;
+              }
+            }
+
+            rules.Services[st.Id] = r; 
+          }
+        }
+
+        this.rules = rules;
+        this.Services = data.Services;
+
+        if (this.$route.params && this.$route.params.title) {
+          this.Id = null;
+          this.Title = this.$route.params.title;
+        }
+
+        this.initCompleters(); 
       },
 
       goback() {
@@ -824,6 +890,18 @@
           });
       },
 
+      showApplicationNameWarning(v) {
+        if (v != this.OriginalValue) {
+          this.ApplicationNameWarning = true;
+        }
+      },
+
+      showServiceNameWarning(v) {
+        if (v != this.OriginalValue) {
+          this.ServiceNameWarning = true;
+        }
+      },
+
       mediaTypeChanged(item) {
         if (item.MediaType == 'SATA') {
           item.IopsClass = 3;
@@ -845,6 +923,7 @@
           ExclusiveCPU: false,
           Memory: '',
           ReplicaCount: '',
+          NetworkMode: 'bridge',
           Description: '',
           Command: '',
           Restart: 'always',
@@ -982,6 +1061,39 @@
         }
 
         this.EnvListDlg = false;
+      },
+
+      exportTemplate() {
+        let t = {
+          Title: this.Title,
+          Name: this.Name,
+          Version: this.Version,
+          Description: this.Description,
+          Services: this.Services
+        };
+
+        this.TemplateData = JSON.stringify(t);
+        this.Importing = false;
+        this.TemplateDataDlg = true;
+      },
+
+      importTemplate() {
+        this.TemplateData = '';
+        this.Importing = true;
+        this.TemplateDataDlg = true;
+      },
+
+      doImportTemplate() {
+        let t;
+        try {
+          t = JSON.parse(this.TemplateData);
+        } catch (e) {
+          ui.alert('模板数据格式不正确');
+          return;
+        }
+
+        this.initWithTemplateData(t);
+        this.TemplateDataDlg = false;
       },
 
       save() {
