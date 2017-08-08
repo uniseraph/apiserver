@@ -16,23 +16,23 @@
     <div>
       <v-container fluid>
         <v-layout row wrap>
-          <v-flex xs4>
-            <v-subheader>
-              <v-icon class="blue--text">device_hub</v-icon>
-              &nbsp;节点个数：{{ Summary.Nodes }}
-            </v-subheader>
+          <v-flex xs3 class="text-xs-center">
+            <v-icon class="blue--text">device_hub</v-icon>
+            &nbsp;节点个数：{{ Summary.Nodes }}
           </v-flex>
-          <v-flex xs4>
-            <v-subheader>
-              <v-icon class="green--text">brightness_auto</v-icon>
-              &nbsp;应用个数：{{ Summary.Applications }}
-            </v-subheader>
+          <v-flex xs1>
           </v-flex>
-          <v-flex xs4>
-            <v-subheader>
-              <v-icon class="cyan--text">directions_boat</v-icon>
-              &nbsp;容器个数：{{ Summary.Containers }}
-            </v-subheader>
+          <v-flex xs3 class="text-xs-center">
+            <v-icon class="green--text">brightness_auto</v-icon>
+            &nbsp;应用个数：{{ Summary.Applications }}
+          </v-flex>
+          <v-flex xs1>
+          </v-flex>
+          <v-flex xs3 class="text-xs-center">
+            <v-icon class="cyan--text">directions_boat</v-icon>
+            &nbsp;容器个数：{{ Summary.Containers }}
+          </v-flex>
+          <v-flex xs1>
           </v-flex>
           <v-flex xs3 mt-4>
             <pie-chart :chart-data="CPUUsageData" :options="CPUUsageOptions"></pie-chart>
