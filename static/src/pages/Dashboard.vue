@@ -140,7 +140,9 @@
           { text: '回滚次数', sortable: false, left: true }
         ],
 
-        PoolId: '',
+        PoolId: this.$route.query ? (this.$route.query.PoolId || '') : '', 
+        StartTime: this.$route.query ? (this.$route.query.StartTime || 7) : 7, 
+
         PoolList: [],
         PoolMap: {},
         TimeList: [ 
@@ -148,7 +150,7 @@
           { Label: '最近15天发布统计', Value: 15 },
           { Label: '最近30天发布统计', Value: 30 }
         ],
-        StartTime: 7,
+
         Summary: {},
         Trend: {},
 
@@ -235,12 +237,27 @@
           }
 
           if (data.length > 0) {
-            this.PoolId = data[0].Id;
+            if (this.PoolId == '') {
+              this.PoolId = data[0].Id;
+            } else {
+              this.stat();
+            }
           }
         })
       },
 
       stat() {
+        let params = {
+          PoolId: this.PoolId,
+          StartTime: this.StartTime
+        };
+
+        this.$router.replace({
+          name: this.$route.name,
+          params: this.$route.params,
+          query: params
+        });
+
         let d = new Date(new Date().getTime() - 1000 * 60 * 60 * 24 * this.StartTime);
         let mon = d.getMonth() + 1;
         let dat = d.getDate();
