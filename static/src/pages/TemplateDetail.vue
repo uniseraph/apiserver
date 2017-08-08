@@ -654,7 +654,7 @@
             v => (v && v.length > 0 ? true : '请输入应用名称')
           ],
           Name: [
-            v => (v && v.length > 0 ? (v.match(/\s/) ? "应用ID不允许包含空格" : (/^[a-zA-Z]+[a-zA-Z0-9]*$/.test(v) ? true : '应用ID只能由英文字母、数字组成，并且以英文字母开头')) : '请输入应用ID')
+            v => (v && v.length > 0 ? (v.match(/\s/) ? "应用ID不允许包含空格" : (/^[a-z]+[a-z0-9\-]*$/.test(v) ? true : '应用ID只能由小写英文字母、减号、数字组成，并且以英文字母开头')) : '请输入应用ID')
           ],
           Version: [
             v => (v && v.length > 0 ? true : '请输入应用版本号')
@@ -664,7 +664,7 @@
               v => (v && v.length > 0 ? true : '请输入服务名称')
             ],
             Name: [
-              v => (v && v.length > 0 ? (v.match(/\s/) ? '服务ID不允许包含空格' : (/^[a-zA-Z]+[a-zA-Z0-9]*$/.test(v) ? true : '服务ID只能由英文字母、数字组成，并且以英文字母开头')) : '请输入应用ID')
+              v => (v && v.length > 0 ? (v.match(/\s/) ? "服务ID不允许包含空格" : (/^[a-z]+[a-z0-9\-]*$/.test(v) ? true : '服务ID只能由小写英文字母、减号、数字组成，并且以英文字母开头')) : '请输入应用ID')
             ],
             ImageName: [
               v => (v && v.length > 0 ? (v.match(/\s/) ? '镜像名称不允许包含空格' : true) : '请输入镜像名称')
