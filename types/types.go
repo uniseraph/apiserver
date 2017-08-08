@@ -64,6 +64,7 @@ type PoolInfo struct {
 	TunneldPort      int
 	Labels           []string `json:",omitempty"`
 	ProxyEndpoint    string   `json:",omitempty"`
+	Containers       int
 	UpdatedTime      int64
 	CreatedTime      int64
 }
