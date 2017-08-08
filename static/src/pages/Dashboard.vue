@@ -141,7 +141,7 @@
         ],
 
         PoolId: this.$route.query ? (this.$route.query.PoolId || '') : '', 
-        StartTime: this.$route.query ? (this.$route.query.StartTime || 7) : 7, 
+        StartTime: this.$route.query ? parseInt(this.$route.query.StartTime || '7') : 7, 
 
         PoolList: [],
         PoolMap: {},
