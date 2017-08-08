@@ -110,7 +110,8 @@
                   required
                   :rules="rules.Name"
                   @input="rules.Name = rules0.Name"
-                  @change="ApplicationNameWarning = true"
+                  @focus="OriginalValue = Name"
+                  @change="showApplicationNameWarning"
                 ></v-text-field>
               </v-flex>
               <v-flex xs2>
@@ -199,7 +200,8 @@
                     required
                     :rules="rules.Services[item.Id].Name"
                     @input="rules.Services[item.Id].Name = rules0.Services.Name"
-                    @change="ServiceNameWarning = true"
+                    @focus="OriginalValue = item.Name"
+                    @change="showServiceNameWarning"
                   ></v-text-field>
                 </v-flex>
                 <v-flex xs2>
@@ -641,6 +643,7 @@
         ApplicationNameWarning: false,
         ServiceNameWarning: false,
         NetworkModeWarning: false,
+        OriginalValue: '',
 
         rules: {
           Services: []
@@ -885,6 +888,18 @@
               }
             });
           });
+      },
+
+      showApplicationNameWarning(v) {
+        if (v != this.OriginalValue) {
+          this.ApplicationNameWarning = true;
+        }
+      },
+
+      showServiceNameWarning(v) {
+        if (v != this.OriginalValue) {
+          this.ServiceNameWarning = true;
+        }
       },
 
       mediaTypeChanged(item) {
