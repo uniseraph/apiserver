@@ -282,21 +282,15 @@
           let creates = [];
           let upgrades = [];
           let rollbacks = [];
-          for (let u of t.Creates) {
-            Object.keys(u).forEach(k => {
-              labels.push(k);
-              creates.push(u[k]);
-            });
+          for (let r of t.Creates) {
+            labels.push(r.Day);
+            creates.push(r.Count);
           }
-          for (let u of t.Upgrades) {
-            Object.keys(u).forEach(k => {
-              upgrades.push(u[k]);
-            });
+          for (let r of t.Upgrades) {
+            upgrades.push(r.Count);
           }
-          for (let u of t.Rollbacks) {
-            Object.keys(u).forEach(k => {
-              rollbacks.push(u[k]);
-            });
+          for (let r of t.Rollbacks) {
+            rollbacks.push(r.Count);
           }
 
           this.VersionData = {
