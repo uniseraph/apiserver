@@ -6,8 +6,84 @@
           <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
           &nbsp;&nbsp;应用模板&nbsp;&nbsp;/&nbsp;&nbsp;{{ Id ? Title : '新增应用模板' }}
           <v-spacer></v-spacer>
+          <v-btn icon class="green--text text--lighten-2" @click.native="exportTemplate()" title="导出">
+            <v-icon light>redo</v-icon>
+          </v-btn>
+          <v-btn icon class="green--text text--lighten-2" @click.native="importTemplate()" title="导入">
+            <v-icon light>undo</v-icon>
+          </v-btn>
         </v-card-title>
         <div>
+          <v-layout row justify-center>
+            <v-dialog v-model="TemplateDataDlg" persistent width="640">
+              <v-card>
+                <v-card-row>
+                  <v-card-text>
+                    <v-text-field 
+                      v-model="TemplateData"
+                      :readonly="!Importing"
+                      multi-line
+                      rows="24"
+                      full-width
+                      class="env-list"
+                    ></v-text-field>
+                  </v-card-text>
+                </v-card-row>
+                <v-card-row actions v-if="Importing">
+                  <v-btn class="blue--text darken-1" flat @click.native="doImportTemplate()">确认</v-btn>
+                  <v-btn class="grey--text darken-1" flat @click.native="TemplateDataDlg = false">取消</v-btn>
+                </v-card-row>
+                <v-card-row actions v-if="!Importing">
+                  <v-btn class="grey--text darken-1" flat @click.native="TemplateDataDlg = false">关闭</v-btn>
+                </v-card-row>
+              </v-card>
+            </v-dialog>
+          </v-layout>
+          <v-layout row justify-center>
+            <v-dialog v-model="EnvListDlg" persistent width="640">
+              <v-card>
+                <v-card-row>
+                  <v-card-text>
+                    <v-text-field 
+                      v-model="EnvList"
+                      :readonly="!Importing"
+                      multi-line
+                      rows="24"
+                      full-width
+                      class="env-list"
+                    ></v-text-field>
+                  </v-card-text>
+                </v-card-row>
+                <v-card-row actions v-if="Importing">
+                  <v-btn class="blue--text darken-1" flat @click.native="doImportEnvs()">确认</v-btn>
+                  <v-btn class="grey--text darken-1" flat @click.native="EnvListDlg = false">取消</v-btn>
+                </v-card-row>
+                <v-card-row actions v-if="!Importing">
+                  <v-btn class="grey--text darken-1" flat @click.native="EnvListDlg = false">关闭</v-btn>
+                </v-card-row>
+              </v-card>
+            </v-dialog>
+          </v-layout>
+          <v-layout row justify-center>
+            <v-snackbar
+                v-model="ApplicationNameWarning"
+                timeout="1500"
+                top
+                error
+              >应用ID改动将会影响到后续升级，请慎重</v-snackbar>
+            <v-snackbar
+                v-model="ServiceNameWarning"
+                timeout="1500"
+                top
+                error
+              >服务ID改动将会影响到后续升级，请慎重</v-snackbar>
+            <v-snackbar
+                v-model="NetworkModeWarning"
+                timeout="1500"
+                top
+                error
+              >切换网络会导致容器IP变动，可能会影响应用运行</v-snackbar>
+          </v-layout>
           <v-container fluid>
             <v-layout row wrap>
               <v-flex xs2>
@@ -32,10 +108,10 @@
                   ref="Name"
                   v-model="Name"
                   required
-                  hint="应用ID改动将会影响到后续升级，请慎重"
-                  persistent-hint
                   :rules="rules.Name"
                   @input="rules.Name = rules0.Name"
+                  @focus="OriginalValue = Name"
+                  @change="showApplicationNameWarning"
                 ></v-text-field>
               </v-flex>
               <v-flex xs2>
@@ -76,7 +152,10 @@
       <div>
         <v-card v-for="(item, index) in Services" :key="item.Id" class="mb-2">
           <v-card-title>
-            服务{{ index + 1 }}: {{ item.Title }}
+            服务{{ index + 1 }}: {{ item.Title }}&nbsp;&nbsp;&nbsp;&nbsp;
+            <span style="color:#9F9F9F;">
+              域名: {{ Name }}-{{ item.Name }}.${DOMAIN_SUFFIX}
+            </span>
             <v-spacer></v-spacer>
             <v-btn v-if="item.hidden" outline small icon class="blue blue--text mr-2" @click.native="hideService(item, false)" title="展开">
               <v-icon>arrow_drop_down</v-icon>
@@ -119,16 +198,16 @@
                     :ref="'Service_Name_' + item.Id"
                     v-model="item.Name"
                     required
-                    hint="服务ID改动将会影响到后续升级，请慎重"
-                    persistent-hint
                     :rules="rules.Services[item.Id].Name"
                     @input="rules.Services[item.Id].Name = rules0.Services.Name"
+                    @focus="OriginalValue = item.Name"
+                    @change="showServiceNameWarning"
                   ></v-text-field>
                 </v-flex>
                 <v-flex xs2>
                   <v-subheader>镜像名称<span class="required-star">*</span></v-subheader>
                 </v-flex>
-                <v-flex xs3>
+                <v-flex xs5>
                   <v-text-field
                     :ref="'Service_ImageName_' + item.Id"
                     v-model="item.ImageName"
@@ -136,8 +215,6 @@
                     :rules="rules.Services[item.Id].ImageName"
                     @input="rules.Services[item.Id].ImageName = rules0.Services.ImageName"
                   ></v-text-field>
-                </v-flex>
-                <v-flex xs2>
                 </v-flex>
                 <v-flex xs2>
                   <v-subheader>镜像Tag<span class="required-star">*</span></v-subheader>
@@ -164,7 +241,7 @@
                   ></v-text-field>
                 </v-flex>
                 <v-flex xs2>
-                  <v-checkbox label="独占" v-model="item.ExclusiveCPU" dark :disabled="!(item.CPU > 0)"></v-checkbox>
+                  <v-checkbox label="独占CPU" v-model="item.ExclusiveCPU" dark :disabled="!(item.CPU > 0)"></v-checkbox>
                 </v-flex>
                 <v-flex xs1>
                 </v-flex>
@@ -183,7 +260,7 @@
                 <v-flex xs2>
                   <v-subheader>容器个数<span class="required-star">*</span></v-subheader>
                 </v-flex>
-                <v-flex xs3>
+                <v-flex xs2>
                   <v-text-field
                     :ref="'Service_ReplicaCount_' + item.Id"
                     v-model="item.ReplicaCount"
@@ -192,12 +269,13 @@
                     @input="rules.Services[item.Id].ReplicaCount = rules0.Services.ReplicaCount"
                   ></v-text-field>
                 </v-flex>
-                <v-flex xs2>
+                <v-flex xs8>
+                  <v-checkbox label="使用宿主机网络" v-model="item.NetworkMode" true-value="host" false-value="bridge" dark @change="NetworkModeWarning = true"></v-checkbox>
                 </v-flex>
                 <v-flex xs2>
                   <v-subheader>说明</v-subheader>
                 </v-flex>
-                <v-flex xs3>
+                <v-flex xs10>
                   <v-text-field
                     v-model="item.Description"
                   ></v-text-field>
@@ -222,6 +300,12 @@
                   <v-card-title>
                     <v-subheader>环境变量</v-subheader>
                     <v-spacer></v-spacer>
+                    <v-btn icon class="green--text text--lighten-2" @click.native="exportEnvs(item)" title="导出">
+                      <v-icon light>redo</v-icon>
+                    </v-btn>
+                    <v-btn icon class="green--text text--lighten-2" @click.native="importEnvs(item)" title="导入">
+                      <v-icon light>undo</v-icon>
+                    </v-btn>
                     <v-btn icon class="blue--text text--lighten-2" @click.native="addEnv(item)">
                       <v-icon light>add</v-icon>
                     </v-btn>
@@ -229,6 +313,7 @@
                   <v-data-table
                     :headers="headers_envs"
                     :items="item.Envs"
+                    :customSort="nosort"
                     hide-actions
                     class="elevation-1"
                     no-data-text=""
@@ -246,7 +331,10 @@
                       <td>
                         <v-text-field
                           v-model="props.item.Value"
+                          :ref="'Env_Value_' + props.item.index"
                           required
+                          class="completer-field"
+                          :rel="'Env_Value_' + props.item.index"
                         ></v-text-field>
                       </td>
                       <td>
@@ -263,10 +351,10 @@
                     </template>
                   </v-data-table>
                 </v-flex>
-                <v-flex xs12 mt-5>
+                <v-flex xs12 mt-4>
                   <v-divider></v-divider>
                   <v-card-title>
-                    <v-subheader>端口映射</v-subheader>
+                    <v-subheader>端口申明</v-subheader>
                     <v-spacer></v-spacer>
                     <v-btn icon class="blue--text text--lighten-2" @click.native="addPort(item)">
                       <v-icon light>add</v-icon>
@@ -275,6 +363,7 @@
                   <v-data-table
                     :headers="headers_ports"
                     :items="item.Ports"
+                    :customSort="nosort"
                     hide-actions
                     class="elevation-1"
                     no-data-text=""
@@ -291,7 +380,7 @@
                       </td>
                       <td>
                         <v-text-field
-                          v-model="props.item.LoadBalancerId"
+                          v-model="props.item.TargetGroupArn"
                           placeholder="若无需负载均衡则留空"
                         ></v-text-field>
                       </td>
@@ -321,6 +410,7 @@
                   <v-data-table
                     :headers="headers_volumns"
                     :items="item.Volumns"
+                    :customSort="nosort"
                     hide-actions
                     class="elevation-1"
                     no-data-text=""
@@ -328,20 +418,54 @@
                     <template slot="items" scope="props">
                       <td>
                         <v-text-field
-                          v-model="props.item.Name"
-                          :ref="'Volumn_Name_' + props.item.index"
+                          v-model="props.item.ContainerPath"
+                          :ref="'Volumn_ContainerPath_' + props.item.index"
                           required
-                          :rules="rules.Services[item.Id].Volumns[props.item.Id].Name"
-                          @input="rules.Services[item.Id].Volumns[props.item.Id].Name = rules0.Services.Volumns.Name"
+                          :rules="rules.Services[item.Id].Volumns[props.item.Id].ContainerPath"
+                          @input="rules.Services[item.Id].Volumns[props.item.Id].ContainerPath = rules0.Services.Volumns.ContainerPath"
                         ></v-text-field>
                       </td>
                       <td>
+                        <v-select
+                          :items="MountTypeList"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.MountType"
+                          dark></v-select>
+                      </td>
+                      <td>
+                        <v-select
+                          :items="MediaTypeList"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.MediaType"
+                          dark
+                          @input="mediaTypeChanged(props.item)"></v-select>
+                      </td>
+                      <td v-if="props.item.MediaType=='SATA'">
+                        <v-select
+                          :items="IopsClassList_SATA"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.IopsClass"
+                          dark></v-select>
+                      </td>
+                      <td v-if="props.item.MediaType=='SSD'">
+                        <v-select
+                          :items="IopsClassList_SSD"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.IopsClass"
+                          dark></v-select>
+                      </td>
+                      <td>
                         <v-text-field
-                          v-model="props.item.Mount"
-                          :ref="'Volumn_Mount_' + props.item.index"
+                          v-model="props.item.Size"
+                          :ref="'Volumn_Size_' + props.item.index"
                           required
-                          :rules="rules.Services[item.Id].Volumns[props.item.Id].Mount"
-                          @input="rules.Services[item.Id].Volumns[props.item.Id].Mount = rules0.Services.Volumns.Mount"
+                          :rules="rules.Services[item.Id].Volumns[props.item.Id].Size"
+                          @input="rules.Services[item.Id].Volumns[props.item.Id].Size = rules0.Services.Volumns.Size"
+                          placeholder="0表示不限制大小"
                         ></v-text-field>
                       </td>
                       <td>
@@ -370,6 +494,7 @@
                   <v-data-table
                     :headers="headers_labels"
                     :items="item.Labels"
+                    :customSort="nosort"
                     hide-actions
                     class="elevation-1"
                     no-data-text=""
@@ -409,8 +534,8 @@
             </v-container>
           </div>
         </v-card>
-        <div style="text-decoration:italic;color:#9F9F9F;">
-          提示：环境变量、端口映射、数据卷以及标签中的值可以引用参数目录中的参数名，例如：一个表示域名的环境变量可以定义为“eureka1.${DOMAIN_SUFFIX}”。
+        <div style="color:#9F9F9F;">
+          提示：环境变量及标签中的值可以引用参数目录中的参数名，例如：一个表示域名的环境变量可以定义为“eureka1.${DOMAIN_SUFFIX}”。
         </div>
       </div>
     </v-flex>
@@ -435,6 +560,9 @@
 <script>
   import store, { mapGetters } from 'vuex'
   import api from '../api/api'
+  import jQuery from 'jquery'
+  import caret from '../caret'
+  import completer from '../completer'
   import * as ui from '../util/ui'
 
   export default {
@@ -447,18 +575,47 @@
         ],
         headers_ports: [
           { text: '容器端口', sortable: false, left: true },
-          { text: '负载均衡ID', sortable: false, left: true },
+          { text: '负载均衡目标群组ARN', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
         headers_volumns: [
-          { text: '数据卷名', sortable: false, left: true },
           { text: '容器挂载路径', sortable: false, left: true },
+          { text: '卷类型', sortable: false, left: true },
+          { text: '磁盘介质', sortable: false, left: true },
+          { text: '读写频率', sortable: false, left: true },
+          { text: '卷大小 (MB)', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
         headers_labels: [
           { text: '标签名', sortable: false, left: true },
           { text: '标签值', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
+        ],
+
+        MountTypeList: [
+          { 'Label': '宿主机目录', Value: 'Directory' },
+          { 'Label': '独占磁盘', Value: 'Disk' }
+        ],
+
+        MediaTypeList: [
+          { 'Label': 'SATA', Value: 'SATA' },
+          { 'Label': 'SSD', Value: 'SSD' }
+        ],
+
+        IopsClassList_SATA: [
+          { 'Label': '很少', Value: 1 },
+          { 'Label': '较少', Value: 2 },
+          { 'Label': '中等', Value: 3 },
+          { 'Label': '较重', Value: 4 },
+          { 'Label': '很重', Value: 5 }
+        ],
+
+        IopsClassList_SSD: [
+          { 'Label': '很少', Value: 6 },
+          { 'Label': '较少', Value: 7 },
+          { 'Label': '中等', Value: 8 },
+          { 'Label': '较重', Value: 9 },
+          { 'Label': '很重', Value: 10 }
         ],
 
         svcIdStart: 0,
@@ -474,6 +631,20 @@
         Description: '',
         Services: [],
 
+        Importing: false,
+
+        TemplateData: '',
+        TemplateDataDlg: false,
+
+        EnvList: '',
+        EnvListDlg: false,
+        CurrentService: null,
+
+        ApplicationNameWarning: false,
+        ServiceNameWarning: false,
+        NetworkModeWarning: false,
+        OriginalValue: '',
+
         rules: {
           Services: []
         },
@@ -483,7 +654,7 @@
             v => (v && v.length > 0 ? true : '请输入应用名称')
           ],
           Name: [
-            v => (v && v.length > 0 ? (v.match(/\s/) ? "应用ID不允许包含空格" : (/^[a-zA-Z]+\w*$/.test(v) ? true : '应用ID只能由英文字母、数字及下划线组成，并且以英文字母开头')) : '请输入应用ID')
+            v => (v && v.length > 0 ? (v.match(/\s/) ? "应用ID不允许包含空格" : (/^[a-z]+[a-z0-9\-]*$/.test(v) ? true : '应用ID只能由小写英文字母、减号、数字组成，并且以英文字母开头')) : '请输入应用ID')
           ],
           Version: [
             v => (v && v.length > 0 ? true : '请输入应用版本号')
@@ -493,7 +664,7 @@
               v => (v && v.length > 0 ? true : '请输入服务名称')
             ],
             Name: [
-              v => (v && v.length > 0 ? (v.match(/\s/) ? '服务ID不允许包含空格' : (/^[a-zA-Z]+\w*$/.test(v) ? true : '服务ID只能由英文字母、数字及下划线组成，并且以英文字母开头')) : '请输入应用ID')
+              v => (v && v.length > 0 ? (v.match(/\s/) ? "服务ID不允许包含空格" : (/^[a-z]+[a-z0-9\-]*$/.test(v) ? true : '服务ID只能由小写英文字母、减号、数字组成，并且以英文字母开头')) : '请输入应用ID')
             ],
             ImageName: [
               v => (v && v.length > 0 ? (v.match(/\s/) ? '镜像名称不允许包含空格' : true) : '请输入镜像名称')
@@ -533,11 +704,14 @@
               ]
             },
             Volumns: {
-              Name: [
-                v => (v && v.length > 0 ? (v.match(/\s/) ? '数据卷名称不允许包含空格' : true) : '请输入数据卷名称')
-              ],
-              Mount: [
+              ContainerPath: [
                 v => (v && v.length > 0 ? (v.match(/\s/) ? '数据卷挂载路径不允许包含空格' : true) : '请输入数据卷挂载路径')
+              ],
+              Size: [
+                function(o) {
+                  let v = o ? o.toString() : '';
+                  return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) >= 0 && parseInt(v) <= 4000000 ? true : '卷大小必须为0-4000000的整数') : '请输入卷大小')
+                }
               ]
             },
             Labels: {
@@ -582,106 +756,158 @@
         }
 
         api.Template(this.Id).then(data => {
-          this.svcIdStart = 0;
-          this.envIdStart = 0;
-          this.portIdStart = 0;
-          this.volumnIdStart = 0;
-          this.labelIdStart = 0;
-
-          this.Id = data.Id;
-          this.Title = data.Title;
-          this.Name = data.Name;
-          this.Version = data.Version;
-          this.Description = data.Description;
-
-          let rules = {
-            Title: this.rules0.Title,
-            Name: this.rules0.Name,
-            Version: this.rules0.Version,
-            Services: []
-          };
-
-          if (!data.Services) {
-            data.Services = [];
-          } else {
-            for (let st of data.Services) {
-              st.index = st.Id = this.svcIdStart++;
-              st.hidden = true;
-
-              let r = {
-                Title: this.rules0.Services.Title,
-                Name: this.rules0.Services.Name,
-                ImageName: this.rules0.Services.ImageName,
-                ImageTag: this.rules0.Services.ImageTag,
-                CPU: this.rules0.Services.CPU,
-                Memory: this.rules0.Services.Memory,
-                ReplicaCount: this.rules0.Services.ReplicaCount,
-                Envs: [],
-                Ports: [],
-                Volumns: [],
-                Labels: []
-              };
-
-              if (!st.Envs) {
-                st.Envs = [];
-              } else {
-                let i = 0;
-                for (let e of st.Envs) {
-                  e.index = i++;
-                  e.Id = this.envIdStart++;
-                  r.Envs[e.Id] = this.rules0.Services.Envs;
-                }
-              }
-
-              if (!st.Ports) {
-                st.Ports = [];
-              } else {
-                let i = 0;
-                for (let e of st.Ports) {
-                  e.index = i++;
-                  e.Id = this.portIdStart++;
-                  r.Ports[e.Id] = this.rules0.Services.Ports;
-                }
-              }
-
-              if (!st.Volumns) {
-                st.Volumns = [];
-              } else {
-                let i = 0;
-                for (let e of st.Volumns) {
-                  e.index = i++;
-                  e.Id = this.volumnIdStart++;
-                  r.Volumns[e.Id] = this.rules0.Services.Volumns;
-                }
-              }
-
-              if (!st.Labels) {
-                st.Labels = [];
-              } else {
-                let i = 0;
-                for (let e of st.Labels) {
-                  e.index = i++;
-                  e.Id = this.labelIdStart++;
-                  r.Labels[e.Id] = this.rules0.Services.Labels;
-                }
-              }
-
-              rules.Services[st.Id] = r; 
-            }
-          }
-
-          this.rules = rules;
-          this.Services = data.Services;
-
-          if (this.$route.params && this.$route.params.title) {
-            this.Id = null;
-            this.Title = this.$route.params.title;
-          }
+          this.initWithTemplateData(data);
         })
+      },
+
+      initWithTemplateData(data) {
+        this.svcIdStart = 0;
+        this.envIdStart = 0;
+        this.portIdStart = 0;
+        this.volumnIdStart = 0;
+        this.labelIdStart = 0;
+
+        this.Id = data.Id;
+        this.Title = data.Title;
+        this.Name = data.Name;
+        this.Version = data.Version;
+        this.Description = data.Description;
+
+        let rules = {
+          Title: this.rules0.Title,
+          Name: this.rules0.Name,
+          Version: this.rules0.Version,
+          Services: []
+        };
+
+        if (!data.Services) {
+          data.Services = [];
+        } else {
+          for (let st of data.Services) {
+            st.index = st.Id = this.svcIdStart++;
+            st.hidden = true;
+            st.NetworkModeWarning = false;
+
+            let r = {
+              Title: this.rules0.Services.Title,
+              Name: this.rules0.Services.Name,
+              ImageName: this.rules0.Services.ImageName,
+              ImageTag: this.rules0.Services.ImageTag,
+              CPU: this.rules0.Services.CPU,
+              Memory: this.rules0.Services.Memory,
+              ReplicaCount: this.rules0.Services.ReplicaCount,
+              Envs: [],
+              Ports: [],
+              Volumns: [],
+              Labels: []
+            };
+
+            if (!st.Envs) {
+              st.Envs = [];
+            } else {
+              let i = 0;
+              for (let e of st.Envs) {
+                e.index = i++;
+                e.Id = this.envIdStart++;
+                r.Envs[e.Id] = this.rules0.Services.Envs;
+              }
+            }
+
+            if (!st.Ports) {
+              st.Ports = [];
+            } else {
+              let i = 0;
+              for (let e of st.Ports) {
+                e.index = i++;
+                e.Id = this.portIdStart++;
+                r.Ports[e.Id] = this.rules0.Services.Ports;
+              }
+            }
+
+            if (!st.Volumns) {
+              st.Volumns = [];
+            } else {
+              let i = 0;
+              for (let e of st.Volumns) {
+                e.index = i++;
+                e.Id = this.volumnIdStart++;
+                r.Volumns[e.Id] = this.rules0.Services.Volumns;
+              }
+            }
+
+            if (!st.Labels) {
+              st.Labels = [];
+            } else {
+              let i = 0;
+              for (let e of st.Labels) {
+                e.index = i++;
+                e.Id = this.labelIdStart++;
+                r.Labels[e.Id] = this.rules0.Services.Labels;
+              }
+            }
+
+            rules.Services[st.Id] = r; 
+          }
+        }
+
+        this.rules = rules;
+        this.Services = data.Services;
+
+        if (this.$route.params && this.$route.params.title) {
+          this.Id = null;
+          this.Title = this.$route.params.title;
+        }
+
+        this.initCompleters(); 
       },
 
       goback() {
         this.$router.go(-1);
+      },
+
+      initCompleters() {
+        this.$nextTick(function() {
+            let that = this;
+            jQuery('.completer-field').find('input').completer({
+              url: this.$axios.defaults.baseURL + '/envs/values/search',
+              completeSuggestion: function(e, v) {
+                let rel = e.parents('.completer-field').attr('rel');
+                Object.keys(that.$refs).forEach(k => {
+                  if (k != rel) {
+                    return;
+                  }
+
+                  let r = that.$refs[k];
+                  if (Array.isArray(r)) {
+                    r = r[0];
+                  }
+
+                  r.value = v;
+                  r.inputValue = v;
+                });
+              }
+            });
+          });
+      },
+
+      showApplicationNameWarning(v) {
+        if (v != this.OriginalValue) {
+          this.ApplicationNameWarning = true;
+        }
+      },
+
+      showServiceNameWarning(v) {
+        if (v != this.OriginalValue) {
+          this.ServiceNameWarning = true;
+        }
+      },
+
+      mediaTypeChanged(item) {
+        if (item.MediaType == 'SATA') {
+          item.IopsClass = 3;
+        } else if (item.MediaType == 'SSD') {
+          item.IopsClass = 8;
+        }
       },
 
       addService() {
@@ -697,6 +923,7 @@
           ExclusiveCPU: false,
           Memory: '',
           ReplicaCount: '',
+          NetworkMode: 'bridge',
           Description: '',
           Command: '',
           Restart: 'always',
@@ -708,16 +935,25 @@
         });
       },
 
-      addEnv(s) {
+      addEnv(s, e) {
         let id = this.envIdStart++;
         if (!this.rules.Services[s.Id].Envs) {
           this.rules.Services[s.Id].Envs = [];
         }
 
         this.$set(this.rules.Services[s.Id].Envs, id, {});
-        
-        s.Envs.push({ index: s.Envs.length, Id: id, Name: '', Value: '' });
+
+        if (!e) {
+          e = { Name: '', Value: '' };
+        }
+
+        e.index = s.Envs.length;
+        e.Id = id;
+
+        s.Envs.push(e);
         this.patch(s.Envs);
+
+        this.initCompleters();
       },
 
       addPort(s) {
@@ -728,7 +964,7 @@
 
         this.$set(this.rules.Services[s.Id].Ports, id, {});
         
-        s.Ports.push({ index: s.Ports.length, Id: id, SourcePort: '', LoadBalancerId: '' });
+        s.Ports.push({ index: s.Ports.length, Id: id, SourcePort: '', TargetGroupArn: '' });
         this.patch(s.Ports);
       },
 
@@ -740,7 +976,7 @@
 
         this.$set(this.rules.Services[s.Id].Volumns, id, {});
         
-        s.Volumns.push({ index: s.Volumns.length, Id: id, Name: '', Mount: '' });
+        s.Volumns.push({ index: s.Volumns.length, Id: id, ContainerPath: '', MountType: 'Directory', MediaType: 'SATA', IopsClass: 3, Size: 0 });
         this.patch(s.Volumns);
       },
 
@@ -754,6 +990,8 @@
         
         s.Labels.push({ index: s.Labels.length, Id: id, Name: '', Value: '' });
         this.patch(s.Labels);
+
+        this.initCompleters();
       },
 
       downward(items, i) {
@@ -787,6 +1025,75 @@
         for (let item of items) {
           item.index = i++;
         }
+      },
+
+      exportEnvs(item) {
+        let s = "";
+        for (let e of item.Envs) {
+          if (s.length > 0) {
+            s += "\n";
+          }
+
+          s += e.Name + "=" + e.Value;
+        }
+
+        this.EnvList = s;
+        this.Importing = false;
+        this.EnvListDlg = true;
+      },
+
+      importEnvs(item) {
+        this.EnvList = '';
+        this.Importing = true;
+        this.CurrentService = item;
+        this.EnvListDlg = true;
+      },
+
+      doImportEnvs() {
+        let lines = this.EnvList.split(/\n/);
+        for (let line of lines) {
+          let p = line.indexOf('=');
+          if (p > 0) {
+            let n = line.substring(0, p);
+            let v = line.substring(p + 1);
+            this.addEnv(this.CurrentService, { Name: n, Value: v });
+          }
+        }
+
+        this.EnvListDlg = false;
+      },
+
+      exportTemplate() {
+        let t = {
+          Title: this.Title,
+          Name: this.Name,
+          Version: this.Version,
+          Description: this.Description,
+          Services: this.Services
+        };
+
+        this.TemplateData = JSON.stringify(t);
+        this.Importing = false;
+        this.TemplateDataDlg = true;
+      },
+
+      importTemplate() {
+        this.TemplateData = '';
+        this.Importing = true;
+        this.TemplateDataDlg = true;
+      },
+
+      doImportTemplate() {
+        let t;
+        try {
+          t = JSON.parse(this.TemplateData);
+        } catch (e) {
+          ui.alert('模板数据格式不正确');
+          return;
+        }
+
+        this.initWithTemplateData(t);
+        this.TemplateDataDlg = false;
       },
 
       save() {
@@ -866,5 +1173,39 @@
 </script>
 
 <style lang="stylus">
+.completer-container
+  font-family: inherit;
+  font-size: 14px;
+  line-height: normal;
+  position: absolute;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid #ccc;
+  border-bottom-color: #39f;
+  background-color: #fff;
 
+.completer-container li
+  overflow: hidden;
+  margin: 0;
+  padding: .5em .8em;
+  cursor: pointer;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid #eee;
+  background-color: #fff;
+
+.completer-container 
+  .completer-selected, li:hover
+    margin-left: -1px;
+    border-left: 1px solid #39f;
+    background-color: #eee;
+
+.input-group--text-field
+  &.env-list
+    textarea
+      font-size: 12px;
 </style>

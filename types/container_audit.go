@@ -56,12 +56,12 @@ type ContainerAuditTrace struct {
 
 type ContainerAuditLogOperationDetail struct {
 	Command   string
-	Arguments []string
-	Stderr    string
-	Stdout    string
-	Stdin     string
-	ExitCode  int8
-	Reason    string // 记录登录失败原因
+	Arguments []string `json:",omitempty"`
+	Stderr    string   `json:",omitempty"`
+	Stdout    string   `json:",omitempty"`
+	Stdin     string   `json:",omitempty"`
+	ExitCode  int8     `json:",omitempty"`
+	Reason    string   `json:",omitempty"` // 记录登录失败原因
 }
 
 //容器审计
@@ -71,6 +71,8 @@ type ContainerAuditLog struct {
 	IP string
 	//跟踪ID，用于某次会话的统计，就是TOKEN
 	Token string
+	//UserId跟Trace中的一样，用于Log表的分页查询
+	UserId bson.ObjectId `bson:",omitempty"`
 
 	//操作类型
 	//分三种，LoginFailed，Logined，ExecCmd

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/gpmgo/gopm/modules/log"
 	"github.com/zanecloud/apiserver/types"
@@ -13,6 +14,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
 	"sort"
+	"strconv"
 	"time"
 )
 
@@ -48,6 +50,7 @@ type EnvTreeNodeParamValueRequest struct {
 type EnvTreeNodeParamKVRequest struct {
 	Id          string `json:",omitempty"`
 	Name        string
+	Mask        bool
 	Value       string
 	Description string
 	DirId       string `json:",omitempty"`
@@ -563,7 +566,29 @@ func getTreeValues(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		for _, k := range keys {
 			kv_rlt := &EnvTreeNodeParamKVResponse{}
 			kv_rlt.Id = k.Id.Hex()
-			kv_rlt.Value = k.Default
+
+			//根据规则决定是否允许用户看到明文
+			kv_rlt.Value = "********"
+			if !k.Mask {
+				//如果不是敏感数据
+				kv_rlt.Value = k.Default
+			} else {
+				//如果是敏感数据
+				//则根据用户是否是管理员，来决定返回内容是否是8个星号
+				user, err := getCurrentUser(ctx)
+				if err != nil {
+					//如果找不到当前用户，则返回星号
+					kv_rlt.Value = "********"
+				}
+				//检查当前用户是否有权限操作该容器
+				if user.RoleSet&types.ROLESET_SYSADMIN != types.ROLESET_SYSADMIN {
+					//如果不是管理员
+					kv_rlt.Value = "********"
+				} else {
+					kv_rlt.Value = k.Default
+				}
+			}
+
 			kv_rlt.Name = k.Name
 			kv_rlt.Description = k.Description
 
@@ -597,6 +622,7 @@ type EnvValuesDetailsResponse struct {
 	Name        string
 	Value       string
 	Description string
+	Mask        bool
 	Values      []*EnvValuesDetailsValueResponse
 }
 
@@ -609,7 +635,7 @@ type EnvValuesDetailsValueResponse struct {
 //根据参数KEY的id
 //查询所有该KEY的使用情况
 func getTreeValueDetails(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_param_key", "env_tree_node_param_value", "pool"}, func(cs map[string]*mgo.Collection) {
+	utils.GetMgoCollections(ctx, w, []string{"team", "env_tree_node_param_key", "env_tree_node_param_value", "pool"}, func(cs map[string]*mgo.Collection) {
 		//得到某个KEY的id
 		id := mux.Vars(r)["id"]
 
@@ -647,7 +673,7 @@ func getTreeValueDetails(ctx context.Context, w http.ResponseWriter, r *http.Req
 		//用户所有pool中查找跟该dir对应的tree建立关系的poll
 		//建立关系的pool中如果存在没有创建实际VALUE的情况
 		//则使用KEY中的default代替
-		user, err := utils.GetCurrentUser(ctx)
+		user, err := getCurrentUser(ctx)
 		if err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -720,39 +746,72 @@ func getTreeValueDetails(ctx context.Context, w http.ResponseWriter, r *http.Req
 		//整理成每个KEY对应的每个集群信息
 		for _, pool := range pools {
 			value, ok := m_pid[pool.Id.Hex()]
+			var result *EnvValuesDetailsValueResponse
 			//如果找的到对应关系
 			//说明这个VALUE跟某个具体的POOL是绑定的
 			//该POOL使用了这个VALUE的值
 			if ok {
 				//返回每个集群的当前值
-				result := &EnvValuesDetailsValueResponse{
+				result = &EnvValuesDetailsValueResponse{
 					PoolId:   pool.Id.Hex(),
 					PoolName: pool.Name,
 					Value:    value.Value,
 				}
-
-				results = append(results, result)
 			} else {
 				//说明在此KEY下
 				//这个POOL并没有VALUE实例
 				//那么该POOL将使用KEY的默认值
-				result := &EnvValuesDetailsValueResponse{
+				result = &EnvValuesDetailsValueResponse{
 					PoolId:   pool.Id.Hex(),
 					PoolName: pool.Name,
 					Value:    key.Default,
 				}
-
-				results = append(results, result)
 			}
+
+			//根据规则决定是否允许用户看到明文
+			if key.Mask {
+				//如果是敏感数据
+				//则根据用户是否是管理员，来决定返回内容是否是8个星号
+				user, err := getCurrentUser(ctx)
+				if err != nil {
+					//如果找不到当前用户，则返回星号
+					result.Value = "********"
+				}
+				//检查当前用户是否有权限操作该容器
+				if user.RoleSet&types.ROLESET_SYSADMIN != types.ROLESET_SYSADMIN {
+					//如果不是管理员
+					result.Value = "********"
+				}
+			}
+
+			results = append(results, result)
 		}
 
 		rlt := EnvValuesDetailsResponse{
 			Id:          id,
 			Name:        key.Name,
+			Mask:        key.Mask,
 			Value:       key.Default,
 			Description: key.Description,
 			Values:      results,
 		}
+
+		//根据规则决定是否允许用户看到明文
+		if key.Mask {
+			//如果是敏感数据
+			//则根据用户是否是管理员，来决定返回内容是否是8个星号
+			user, err := getCurrentUser(ctx)
+			if err != nil {
+				//如果找不到当前用户，则返回星号
+				rlt.Value = "********"
+			}
+			//检查当前用户是否有权限操作该容器
+			if user.RoleSet&types.ROLESET_SYSADMIN != types.ROLESET_SYSADMIN {
+				//如果不是管理员
+				rlt.Value = "********"
+			}
+		}
+
 		HttpOK(w, rlt)
 	})
 }
@@ -837,6 +896,7 @@ func createValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		key = &types.EnvTreeNodeParamKey{
 			Id:          bson.NewObjectId(),
 			Name:        req.Name,
+			Mask:        req.Mask,
 			Default:     req.Value,
 			Dir:         dir.Id,
 			Tree:        tree.Id,
@@ -891,13 +951,28 @@ func updateValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	//校验入参
 	if len(id) <= 0 {
-		HttpError(w, "Params error!", http.StatusBadRequest)
+		HttpError(w, "请提供参数ID.", http.StatusBadRequest)
 		return
 	}
 	req.Id = id
 
 	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_param_key"}, func(cs map[string]*mgo.Collection) {
 		data := bson.M{}
+
+		/*
+			系统审计
+		*/
+		oldEnvKey := &types.EnvTreeNodeParamKey{}
+
+		if err := cs["env_tree_node_param_key"].FindId(bson.ObjectIdHex(id)).One(oldEnvKey); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		//如果需要更新KEY
 		if req.Name != "" {
@@ -912,6 +987,10 @@ func updateValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		//如果需要更新Description
 		if req.Description != "" {
 			data["description"] = req.Description
+		}
+
+		if req.Mask {
+			data["mask"] = req.Mask
 		}
 
 		data["updatedtime"] = time.Now().Unix()
@@ -930,6 +1009,31 @@ func updateValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		}
 
 		HttpOK(w, req)
+
+		/*
+			系统审计
+		*/
+		newEnvKey := &types.EnvTreeNodeParamKey{}
+
+		if err := cs["env_tree_node_param_key"].FindId(bson.ObjectIdHex(id)).One(newEnvKey); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		/*
+			系统审计
+		*/
+
+		logData := map[string]interface{}{
+			"OldEnvValue": oldEnvKey,
+			"NewEnvValue": newEnvKey,
+		}
+		utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeEnv, types.SystemAuditModuleOperationTypeUpdateEnvValue, "", "", logData)
 	})
 }
 
@@ -1010,8 +1114,25 @@ func updateValueAttributes(ctx context.Context, w http.ResponseWriter, r *http.R
 	//KEY的ID
 	id := mux.Vars(r)["id"]
 
-	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_param_value"}, func(cs map[string]*mgo.Collection) {
+	utils.GetMgoCollections(ctx, w, []string{"env_tree_node_param_value", "env_tree_node_param_key", "pool"}, func(cs map[string]*mgo.Collection) {
 		bulk := cs["env_tree_node_param_value"].Bulk()
+
+		/*
+			系统审计
+		*/
+		auditData := make([]*types.SystemAuditModuleEnvUpdatePoolValueItem, 0, 20)
+
+		//找到key
+		key := &types.EnvTreeNodeParamKey{}
+
+		if err := cs["env_tree_node_param_key"].FindId(bson.ObjectIdHex(id)).One(key); err != nil {
+			if err == mgo.ErrNotFound {
+				HttpError(w, err.Error(), http.StatusNotFound)
+				return
+			}
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		for _, req := range reqs {
 			//如果这个请求参数结构中
@@ -1025,6 +1146,40 @@ func updateValueAttributes(ctx context.Context, w http.ResponseWriter, r *http.R
 				"key":  bson.ObjectIdHex(id),
 				"pool": bson.ObjectIdHex(req.PoolId),
 			}
+
+			/*
+				系统审计
+			*/
+
+			//找到pool
+			pool := &types.PoolInfo{}
+
+			if err := cs["pool"].FindId(bson.ObjectIdHex(req.PoolId)).One(pool); err != nil {
+				logrus.Errorf(err.Error())
+			}
+
+			//找到老版本的value
+			v := &types.EnvTreeNodeParamValue{}
+			if err := cs["env_tree_node_param_value"].Find(selector).One(v); err != nil {
+				logrus.Errorf(err.Error())
+			}
+
+			auditItem := &types.SystemAuditModuleEnvUpdatePoolValueItem{
+				EnvValue: map[string]string{
+					"Id":    key.Id.Hex(),
+					"Name":  key.Name,
+					"Value": key.Default,
+				},
+				Pool: map[string]string{
+					"Id":   pool.Id.Hex(),
+					"Name": pool.Name,
+				},
+				ValueId:  v.Id,
+				OldValue: v,
+			}
+
+			auditData = append(auditData, auditItem)
+
 			//更新目标实例的value值
 			data := bson.M{
 				"value": req.Value,
@@ -1036,7 +1191,7 @@ func updateValueAttributes(ctx context.Context, w http.ResponseWriter, r *http.R
 
 		if rlts, err := bulk.Run(); err != nil {
 			if err == mgo.ErrNotFound {
-				HttpError(w, "no such a tree dir", http.StatusNotFound)
+				HttpError(w, err.Error(), http.StatusNotFound)
 				return
 			}
 			HttpError(w, err.Error(), http.StatusInternalServerError)
@@ -1046,6 +1201,29 @@ func updateValueAttributes(ctx context.Context, w http.ResponseWriter, r *http.R
 		}
 
 		HttpOK(w, nil)
+
+		/*
+			系统审计
+		*/
+
+		//整理数据
+		//找出每条Value的最新值
+		for _, item := range auditData {
+			if item.ValueId != "" {
+				vId := item.ValueId
+				v := &types.EnvTreeNodeParamValue{}
+				//找到Value的最新值
+				//存放到系统审计日志中
+				if err := cs["env_tree_node_param_value"].FindId(vId).One(v); err != nil {
+					logrus.Errorln(err.Error())
+				} else {
+					item.NewValue = v
+					//每条变更都要单独入库
+					utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeEnv, types.SystemAuditModuleOperationTypeUpdateEnvValue, item.Pool["Id"], "", item)
+				}
+			}
+
+		}
 	})
 }
 
@@ -1075,6 +1253,150 @@ func getValue(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		HttpOK(w, rsp)
+	})
+
+}
+
+type EnvGetEnvKeyNameWithPrefixResponse struct {
+	Total     int
+	PageCount int
+	PageSize  int
+	Page      int
+	Data      []types.EnvTreeNodeParamKey
+}
+
+/*
+	前缀匹配，查询当前用户有权限访问的集群关联的Tree下面的参数名称（KEY）
+*/
+func getEnvKeyNameWithPrefix(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		HttpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var prefix = r.Form.Get("Keyword")
+
+	//允许prefix为空的情况
+	//if prefix == "" {
+	//	HttpError(w, "入参Keyword不可为空", http.StatusBadRequest)
+	//	return
+	//}
+
+	var pageSize int
+	s_pageSize := r.Form.Get("PageSize")
+	if s_pageSize == "" {
+		pageSize = 20
+	} else {
+		s, err := strconv.Atoi(s_pageSize)
+		if err != nil {
+			HttpError(w, err.Error(), http.StatusBadRequest)
+			return
+		} else {
+			pageSize = s
+		}
+	}
+
+	var page int
+	s_page := r.Form.Get("Page")
+	if s_page == "" {
+		page = 0
+	} else {
+		page, err := strconv.Atoi(s_page)
+		if err != nil {
+			HttpError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		page -= 1
+	}
+	if page < 0 {
+		page = 0
+	}
+
+	user, err := getCurrentUser(ctx)
+
+	if err != nil {
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	utils.GetMgoCollections(ctx, w, []string{"pool", "team", "env_tree_meta", "env_tree_node_param_key"}, func(cs map[string]*mgo.Collection) {
+		eids := make([]bson.ObjectId, 0, 20) // EnvTreeMeta的ID
+
+		var treeId = r.Form.Get("TreeId")
+		if treeId != "" {
+			//如果调用方提供了某个参数目录树的ID
+			//则只查找该目录树的参数名称
+			//缩小了查找范围
+			//不需要考虑权限问题
+			eids = append(eids, bson.ObjectIdHex(treeId))
+		} else {
+			pids, err := utils.PoolIdsOfUser(cs["pool"], cs["team"], user)
+			if err != nil {
+				HttpError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			//找到当前用户可访问的集群
+			pools := make([]types.PoolInfo, 0, 20)
+
+			if err := cs["pool"].Find(bson.M{"_id": bson.M{"$in": pids}}).All(&pools); err != nil {
+				HttpError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			for _, pool := range pools {
+				eids = append(eids, bson.ObjectIdHex(pool.EnvTreeId))
+			}
+		}
+
+		keys := make([]types.EnvTreeNodeParamKey, 0, 20)
+
+		selector := bson.M{
+			"tree": bson.M{
+				"$in": eids,
+			},
+		}
+		if prefix != "" {
+			selector["name"] = bson.M{
+				"$regex": bson.RegEx{
+					Pattern: fmt.Sprintf("^%s", prefix),
+					Options: "i",
+				},
+			}
+		}
+
+		//按照name降序输出参数名称模型结果
+		if err := cs["env_tree_node_param_key"].Find(selector).Sort("name").Skip(page * pageSize).Limit(pageSize).All(&keys); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		var total int
+		if t, err := cs["env_tree_node_param_key"].Find(selector).Count(); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else {
+			total = t
+		}
+
+		//返回分页后，根据前缀查询的KEYS
+
+		var pageCount int
+		if total%pageSize == 0 {
+			pageCount = total / pageSize
+		} else {
+			pageCount = total/pageSize + 1
+		}
+
+		rsp := EnvGetEnvKeyNameWithPrefixResponse{
+			Total:     total,
+			PageSize:  len(keys),
+			PageCount: pageCount,
+			Page:      page + 1,
+			Data:      keys,
 		}
 
 		HttpOK(w, rsp)

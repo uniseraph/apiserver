@@ -18,6 +18,9 @@ const (
 	DEPLOYMENT_OPERATION_CREATE   = "create"
 	DEPLOYMENT_OPERATION_UPGRADE  = "upgrade"
 	DEPLOYMENT_OPERATION_ROLLBACK = "rollback"
+
+	LABEL_CONTAINER_CPUS      = "com.zanecloud.omega.container.cpus"
+	LABEL_CONTAINER_EXCLUSIVE = "com.zanecloud.omega.container.cpu.exclusive"
 )
 
 type APIServerConfig struct {
@@ -61,6 +64,7 @@ type PoolInfo struct {
 	TunneldPort      int
 	Labels           []string `json:",omitempty"`
 	ProxyEndpoint    string   `json:",omitempty"`
+	Containers       int
 	UpdatedTime      int64
 	CreatedTime      int64
 }
@@ -112,8 +116,8 @@ type ClusterInfo struct {
 
 type Node struct {
 	//Id             bson.ObjectId "_id"
-	PoolId         string
-	PoolName       string
+	PoolId string
+	//PoolName       string
 	Hostname       string
 	Endpoint       string
 	NodeId         string
@@ -137,6 +141,7 @@ type Service struct {
 	CPU          string
 	ExclusiveCPU bool
 	Memory       string
+	NetworkMode  string
 	ReplicaCount int `json:",string"`
 	Description  string
 	Restart      string
@@ -152,8 +157,9 @@ type Service struct {
 }
 
 type Port struct {
-	SourcePort     int `json:",string"`
-	LoadBalancerId string
+	SourcePort int `json:",string"`
+	//LoadBalancerId string
+	TargetGroupArn string
 }
 type Env struct {
 	Label
@@ -163,10 +169,14 @@ type Label struct {
 	Value string
 }
 type Volumne struct {
-	Name          string
+	//Name          string
 	Driver        string
 	ContainerPath string
 	HostPath      string
+	MountType     string
+	MediaType     string
+	IopsClass     int
+	Size          int `json:",string"`
 }
 
 type Template struct {

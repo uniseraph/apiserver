@@ -6,11 +6,11 @@ import store from '../vuex/store'
 
 // axios默认配置
 axios.defaults.timeout = 60000;
-axios.defaults.baseURL = 'http://localhost:8080/api';
+axios.defaults.baseURL = '/api';
 
 // 仅测试用
 /*
-axios.defaults.baseURL = 'http://localhost:8080/public/mock';
+axios.defaults.baseURL = '/public/mock';
 axios.interceptors.request.use((config) => {
     if(config.method === 'post'){
         config.method = 'get';
@@ -21,15 +21,23 @@ axios.interceptors.request.use((config) => {
 });
 //*/
 
-export function fetch(url, params) {
+export function fetch(url, params, silient) {
     return new Promise((resolve, reject) => {
         axios.post(url, params)
             .then(response => {
                 resolve(response.data);
             }, error => {
-                let res = error.response;
-                if (res && res.status != 403) {
-                    ui.alert(res.data);
+                if (!silient) {
+                    let res = error.response;
+                    if (res) {
+                        if (res.status == 401) {
+                            window.location.reload(true);
+                        } else {
+                            ui.alert(res.data);
+                        }
+                    } else {
+                        ui.alert('系统错误: ' + error);
+                    }
                 }
 
                 reject(error);
@@ -44,7 +52,7 @@ export function fetch(url, params) {
 export default {
 
     Me() {
-        return fetch('/users/current');
+        return fetch('/users/current', null, true);
     },
 
     Login(params) {
@@ -53,6 +61,10 @@ export default {
 
     Logout() {
         return fetch('/session/logout');
+    },
+
+    Stat(params) {
+        return fetch('/dashboard', params);
     },
 
     Pools(params) {
@@ -204,7 +216,7 @@ export default {
     },
 
     ResetPassword(params) {
-        return fetch('/users/' + params.Id + '/resetpass?Pass=' + encodeURIComponent(params.Pass), params);
+        return fetch('/users/' + params.Id + '/resetpass?NewPass=' + encodeURIComponent(params.NewPass), params);
     },
 
     Templates(params) {
@@ -266,6 +278,10 @@ export default {
 
     ContainerSSHInfo(id) {
         return fetch('/audit/ssh?ContainerId=' + id);
+    },
+
+    ContainerLogs(params) {
+        return fetch('/containers/' + params.Id + '/logs?Timestamps=' + params.Timestamps + "&Tail="+ params.Tail, params);
     },
 
     ScaleService(params) {

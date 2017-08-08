@@ -10,20 +10,19 @@ GIT_NOTES     = $(shell git log -1 --oneline)
 
 
 IMAGE_NAME     = registry.cn-hangzhou.aliyuncs.com/zanecloud/apiserver
-BUILD_IMAGE     = golang:1.8.3
+BUILD_IMAGE     = golang:1.8.3-onbuild
 
 install:
 	brew install mongodb redis npm
 
 init:
-	bash scripts/init.sh
+	bash scripts/sbin/init.sh
 
 apiserver:clean
 	CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}" -o ${TARGET}
 
-apicli:
-	@rm -rf apicli
-	CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}"  -o ${CLI_TARGET}  client/client.go
+autodeploy:clean-deploy
+	cd tools && CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}" -o autodeploy && cd ..
 
 portal:
 	cd static && npm install && npm run build && cd ..
@@ -44,14 +43,31 @@ shell:
 run:apiserver
 	MONGO_URLS=127.0.0.1 MONGO_DB=zanecloud  ROOT_DIR=./static ./apiserver -l debug start
 
-compose:
-	docker-compose up -d
+release:portal build
+	rm -rf release && mkdir -p release/apiserver/bin
+	cp -r static/public     release/apiserver/
+	cp -r static/dist       release/apiserver/
+	cp -r scripts/sbin     release/apiserver/
+	cp -r scripts/systemd     release/apiserver/
+	cp static/index.html release/apiserver/
+	cp apiserver release/apiserver/bin/
+	cp tools/autodeploy release/apiserver/bin/
+	cd release && tar zcvf apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz apiserver && cd ..
+
+
+publish:release
+	ssh -q root@${TARGET_HOST}  "mkdir -p /opt/zanecloud"
+	scp release/apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz  root@${TARGET_HOST}:/opt/zanecloud
+	ssh -q root@${TARGET_HOST}  "cd /opt/zanecloud && rm -rf apiserver && tar zxvf apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz"
+	ssh -q root@${TARGET_HOST}  "systemctl stop apiserver"
+	ssh -q root@${TARGET_HOST}  "systemctl start apiserver"
 
 clean:
 	rm -rf apiserver
 
-cleancli:
-	rm -rf apicli
+clean-deploy:
+	rm -rf autodeploy
+
 
 test:
 	mongo zanecloud --eval "db.user.remove({'name':'sadan'})"

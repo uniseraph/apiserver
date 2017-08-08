@@ -14,7 +14,7 @@ import (
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	store "github.com/zanecloud/apiserver/types"
+	apiserver "github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"io"
 	"net"
@@ -220,40 +220,8 @@ func hijack(tlsConfig *tls.Config, endpoint string, w http.ResponseWriter, r *ht
 
 type Handler func(c context.Context, w http.ResponseWriter, r *http.Request)
 
-func NewHandler(p *Proxy) (http.Handler, error) {
+func NewPoolHandler(ctx context.Context, poolInfo * apiserver.PoolInfo ) (http.Handler, error) {
 
-	poolInfo := p.PoolInfo
-	logrus.Debugf("NewHandler::before starting a pool proxy , poolInfo is %#v  ", poolInfo)
-
-	var client *http.Client
-	if poolInfo.DriverOpts.TlsConfig != nil {
-		tlsc, err := tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
-		if err != nil {
-			return nil, err
-		}
-		client = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: tlsc,
-			},
-			CheckRedirect: client.CheckRedirect,
-		}
-	}
-	cli, err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint, poolInfo.DriverOpts.APIVersion, client, nil)
-	if err != nil {
-		return nil, err
-	}
-	//defer func() {
-	//	logrus.Debug("close the docker cli in proxy ctx")
-	//	cli.Close()
-	//}()
-
-	session, err := mgo.Dial(p.APIServerConfig.MgoURLs)
-	if err != nil {
-		return nil, err
-	}
-	//TODO 非常重要不能加defer，否则该session就会被释放
-	//defer session.Close()
-	session.SetMode(mgo.Monotonic, true)
 
 	r := mux.NewRouter()
 	for method, mappings := range routers {
@@ -263,8 +231,10 @@ func NewHandler(p *Proxy) (http.Handler, error) {
 			localRoute := route
 			localFct := fct
 			wrap := func(w http.ResponseWriter, r *http.Request) {
-				logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI}).Debug("HTTP request received in proxy")
-				ctx := prepareContext(r, p, session, cli)
+				logrus.WithFields(logrus.Fields{"method": r.Method,
+					"uri":                      r.RequestURI,
+					"pool.Name":                poolInfo.Name,
+					"pool.DriverOpts.Endpoint": poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in proxy")
 				localFct(ctx, w, r)
 			}
 			localMethod := method
@@ -277,10 +247,9 @@ func NewHandler(p *Proxy) (http.Handler, error) {
 	// 作为swarm的代理，默认逻辑是所有请求都是转发给后端的swarm集群
 	rootfunc := func(w http.ResponseWriter, req *http.Request) {
 		logrus.WithFields(logrus.Fields{"method": req.Method,
-			"uri":           req.RequestURI,
-			"pool endpoint": poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in proxy rootfunc")
-
-		ctx := prepareContext(req, p, session, cli)
+			"uri":                      req.RequestURI,
+			"pool.Name":                poolInfo.Name,
+			"pool.DriverOpts.Endpoint": poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in proxy rootfunc")
 
 		if err := proxyAsync(ctx, w, req, nil); err != nil {
 			httpError(w, err.Error(), http.StatusInternalServerError)
@@ -291,13 +260,13 @@ func NewHandler(p *Proxy) (http.Handler, error) {
 
 	return r, nil
 }
-func prepareContext(r *http.Request, p *Proxy, session *mgo.Session, cli *dockerclient.Client) context.Context {
-	ctx := context.WithValue(r.Context(), utils.KEY_PROXY_SELF, p)
-	ctx = context.WithValue(ctx, utils.KEY_APISERVER_CONFIG, p.APIServerConfig)
-	ctx = context.WithValue(ctx, utils.KEY_MGO_SESSION, session)
-	ctx = context.WithValue(ctx, utils.KEY_POOL_CLIENT, cli)
-	return ctx
-}
+//func preparePoolContext(p *Proxy, session *mgo.Session, cli *dockerclient.Client)  {
+//	p.ctx = context.WithValue(p.ctx, utils.KEY_PROXY_SELF, p)
+//	p.ctx = context.WithValue(p.ctx, utils.KEY_APISERVER_CONFIG, p.APIServerConfig)
+//	p.ctx = context.WithValue(p.ctx, utils.KEY_MGO_SESSION, session)
+//	p.ctx = context.WithValue(p.ctx, utils.KEY_POOL_CLIENT, cli)
+//
+//}
 
 func proxyAsyncWithCallBack(callback func(context.Context, *http.Request, *http.Response)) Handler {
 
@@ -316,11 +285,14 @@ func proxyAsyncWithCallBack(callback func(context.Context, *http.Request, *http.
 }
 
 func getMgoDB(ctx context.Context) (string, error) {
-	config := utils.GetAPIServerConfig(ctx)
-	return config.MgoDB, nil
+
+	p, _ := ctx.Value(utils.KEY_PROXY_SELF).(*Proxy)
+
+
+	return p.APIServerConfig.MgoDB, nil
 }
 
-func getPoolInfo(ctx context.Context) (*store.PoolInfo, error) {
+func getPoolInfo(ctx context.Context) (*apiserver.PoolInfo, error) {
 	p, ok := ctx.Value(utils.KEY_PROXY_SELF).(*Proxy)
 
 	if !ok {
@@ -399,11 +371,20 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 	resp, err := cli.ContainerCreate(ctx, &config.Config, &config.HostConfig, &config.NetworkingConfig, name)
 	if err != nil {
+		logrus.WithFields(logrus.Fields{"resp": resp, "err": err}).Debug("postContainersCreate:create container err")
+
+		resp.ID = ""
+		resp.Warnings = []string{}
+		respBody, _ := json.Marshal(resp)
+
+		//TODO imageNotFoundError 需要处理
 		if strings.HasPrefix(err.Error(), "Conflict") {
-			httpError(w, err.Error(), http.StatusConflict)
+
+			//httpError(w, "postContainersCreate:create container name conflict"+err.Error(), http.StatusConflict)
+			httpError(w, string(respBody), http.StatusConflict)
 			return
 		} else {
-			httpError(w, err.Error(), http.StatusInternalServerError)
+			httpError(w, string(respBody), http.StatusInternalServerError)
 			return
 		}
 	}
@@ -506,7 +487,7 @@ func flushContainerInfo(ctx context.Context, container *Container) {
 func OptionsHandler(c context.Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
-func buildContainerInfoForSave(name string, containerId string, poolInfo *store.PoolInfo, config *ContainerCreateConfig) *Container {
+func buildContainerInfoForSave(name string, containerId string, poolInfo *apiserver.PoolInfo, config *ContainerCreateConfig) *Container {
 
 	var cpuCount int64
 	var exclusive bool
@@ -590,7 +571,7 @@ func buildContainerInfoForSave(name string, containerId string, poolInfo *store.
 //	return &http.Client{}, "http"
 //}
 
-func newClientAndSchemeOR(poolInfo *store.PoolInfo) (*http.Client, string, string, error) {
+func newClientAndSchemeOR(poolInfo *apiserver.PoolInfo) (*http.Client, string, string, error) {
 	protoAddrParts := strings.SplitN(poolInfo.DriverOpts.EndPoint, "://", 2)
 
 	var proto, addr string

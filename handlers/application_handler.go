@@ -40,7 +40,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	mgoSession, _ := utils.GetMgoSessionClone(ctx)
 	defer mgoSession.Close()
 	config := utils.GetAPIServerConfig(ctx)
-	currentuser, _ := utils.GetCurrentUser(ctx)
+	currentuser, _ := getCurrentUser(ctx)
 
 	colPool := mgoSession.DB(config.MgoDB).C("pool")
 	pool := &types.PoolInfo{}
@@ -73,7 +73,7 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	if n >= 1 {
-		HttpError(w, "该集群中存在同名应用", http.StatusInternalServerError)
+		HttpError(w, "在一个集群中，一个模版只能创建一个应用", http.StatusInternalServerError)
 		return
 	}
 
@@ -100,24 +100,24 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if err := colApplication.Insert(app); err != nil {
-		HttpError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	m := make(map[string]int)
 	for _, service := range app.Services {
 		m[service.Name] = service.ReplicaCount
 	}
 
-	if err := application.ScaleApplication(ctx, app, pool, m); err != nil {
-		//TODO 需要删除所有已创建成功的容器？？？
-
-		HttpError(w, err.Error(), http.StatusInternalServerError)
+	if err := colApplication.Insert(app); err != nil {
+		HttpError(w, "保存应用信息失败："+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	currentUser, _ := utils.GetCurrentUser(ctx)
+	if err := application.ScaleApplication(ctx, app, pool, m); err != nil {
+		//TODO 需要删除所有已创建成功的容器？？？
+
+		HttpError(w, "发布应用失败"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	currentUser, _ := getCurrentUser(ctx)
 
 	if err := application.AddDeploymentLog(ctx, app, pool, currentUser, types.DEPLOYMENT_OPERATION_CREATE, nil); err != nil {
 		logrus.WithFields(logrus.Fields{"app": app, "pool": pool, "user": currentUser, "err": err.Error()}).Debug("create app success, save to db err")
@@ -126,28 +126,45 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	HttpOK(w, app)
+
+	/*
+		系统审计
+	*/
+	logData := &types.Application{}
+	if err := colApplication.FindId(app.Id).One(logData); err != nil {
+		logrus.Errorln(err.Error())
+	} else {
+		utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeCreate, app.PoolId, app.Id.Hex(), map[string]interface{}{"Application": logData})
+	}
 }
 
 func replaceEnv(ctx context.Context, l *types.Label, pool *types.PoolInfo) error {
 
-	re := regexp.MustCompile(`\$\{(.+)\}`)
+	re := regexp.MustCompile(`\$\{(.+?)\}`)
 
-	loc := re.FindStringIndex(l.Value)
+	value := l.Value
 
-	if loc == nil {
-		return nil
+	for {
+		loc := re.FindStringIndex(value)
+
+		if loc == nil {
+			//匹配不到
+			break
+		}
+
+		key := value[loc[0]+2 : loc[1]-1]
+
+		logrus.WithFields(logrus.Fields{"key": key, "label": value}).Debugf("replace Env for label")
+		pvalue, err := GetEnvValueByName(ctx, pool.EnvTreeId, pool.Id.Hex(), key)
+
+		if err != nil {
+			return err
+		}
+
+		value = re.ReplaceAllString(value, pvalue.Value)
 	}
 
-	key := l.Value[loc[0]+2 : loc[1]-1]
-
-	value, err := GetEnvValueByName(ctx, pool.EnvTreeId, pool.Id.Hex(), key)
-
-	if err != nil {
-		return err
-	}
-
-	l.Value = re.ReplaceAllString(l.Value, value.Value)
-
+	l.Value = value
 	return nil
 }
 
@@ -228,9 +245,10 @@ func getApplicationHistory(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	deployments := make([]*types.Deployment, 0, 100)
 
-	utils.GetMgoCollections(ctx, w, []string{"deployment"}, func(cs map[string]*mgo.Collection) {
+	utils.GetMgoCollections(ctx, w, []string{"deployment", "user"}, func(cs map[string]*mgo.Collection) {
 
 		colDeployment, _ := cs["deployment"]
+		colUser, _ := cs["user"]
 
 		selector := bson.M{"applicationid": id}
 
@@ -247,7 +265,7 @@ func getApplicationHistory(ctx context.Context, w http.ResponseWriter, r *http.R
 			return
 		}
 
-		currentUser, _ := utils.GetCurrentUser(ctx)
+		//currentUser, _ := utils.GetCurrentUser(ctx)
 
 		result.Total = total
 		result.Keyword = req.Keyword
@@ -262,12 +280,18 @@ func getApplicationHistory(ctx context.Context, w http.ResponseWriter, r *http.R
 				Id:            deployments[i].Id.Hex(),
 				ApplicationId: deployments[i].ApplicationId,
 				Version:       deployments[i].App.Version,
-
 				OperationType: deployments[i].OperationType,
-				CreatorId:     currentUser.Id.Hex(),
-				CreatorName:   currentUser.Name,
-				CreatedTime:   deployments[i].App.CreatedTime,
+				CreatorId:     deployments[i].CreatorId,
+				CreatedTime:   deployments[i].CreatedTime,
 			}
+
+			user := &types.User{}
+
+			if err := colUser.FindId(bson.ObjectIdHex(deployments[i].CreatorId)).One(user); err != nil {
+				result.Data[i].CreatorName = deployments[i].CreatorId
+			}
+
+			result.Data[i].CreatorName = user.Name
 
 		}
 
@@ -342,7 +366,7 @@ func getApplicationList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		*/
 		appIds := make([]bson.ObjectId, 0, 20)
 
-		user, err := utils.GetCurrentUser(ctx)
+		user, err := getCurrentUser(ctx)
 		if err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -487,7 +511,7 @@ func scaleApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		//
 		//}
 
-		if err := application.ScaleApplication(ctx, app, pool, map[string]int{
+		if err := application.ScaleApplication(context.Background(), app, pool, map[string]int{
 			req.ServiceName: req.ReplicaCount,
 		}); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
@@ -540,6 +564,8 @@ func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			return
 		}
 
+		logrus.WithFields(logrus.Fields{"app": app}).Debugf("current app ...")
+
 		colTemplate, _ := cs["template"]
 		if err := colTemplate.FindId(bson.ObjectIdHex(req.ApplicationTemplateId)).One(template); err != nil {
 			if err == mgo.ErrNotFound {
@@ -549,6 +575,8 @@ func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		logrus.WithFields(logrus.Fields{"template": template}).Debugf("current template ...")
 
 		if app.Name != template.Name {
 			HttpError(w, "升级应用时，应用Id必须一致！", http.StatusBadRequest)
@@ -567,27 +595,43 @@ func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 		app.TemplateId = req.ApplicationTemplateId
 		app.Version = template.Version
-		currentUser, _ := utils.GetCurrentUser(ctx)
+		currentUser, _ := getCurrentUser(ctx)
 		app.UpdatedTime = time.Now().Unix()
 		app.UpdaterId = currentUser.Id.Hex()
 		app.UpdaterName = currentUser.Name
 		app.Status = "running"
 
-		services, err := mergeServices(ctx, template.Services, pool)
+		//merge  template 中的label和环境变量
+		ms, err := mergeServices(ctx, template.Services, pool)
 		if err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		app.Services = services
+		logrus.WithFields(logrus.Fields{"ms": ms}).Debugf("after merged , ms is  ...")
+
+		scaleMap := make(map[string]int)
+		for i, _ := range app.Services {
+			scaleMap[app.Services[i].Name] = app.Services[i].ReplicaCount
+		}
+
+		app.Services = ms
+
+		for i, _ := range app.Services {
+			if count, ok := scaleMap[app.Services[i].Name]; ok {
+				app.Services[i].ReplicaCount = count
+			}
+		}
+
+		logrus.WithFields(logrus.Fields{"app": app}).Debugf("after get ms , app is ...")
 
 		if err := colApplication.UpdateId(bson.ObjectIdHex(id), app); err != nil {
-			HttpError(w, err.Error(), http.StatusInternalServerError)
+			HttpError(w, "保存应用信息失败:"+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		if err := application.UpgradeApplication(ctx, app, pool); err != nil {
-			HttpError(w, err.Error(), http.StatusInternalServerError)
+			HttpError(w, "升级失败:"+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -598,6 +642,18 @@ func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		}
 
 		HttpOK(w, "")
+
+		/*
+			系统审计
+		*/
+
+		newApp := &types.Application{}
+		if err := cs["application"].FindId(app.Id).One(newApp); err != nil {
+			logrus.Errorln(err.Error())
+		} else {
+			utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeUpgrade, pool.Id.Hex(), app.Id.Hex(), map[string]interface{}{"OldApplication": app, "NewApplication": newApp})
+		}
+
 	})
 
 }
@@ -644,6 +700,10 @@ func removeApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 		HttpOK(w, "")
 
+		/*
+			系统审计
+		*/
+		utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeDelete, app.PoolId, app.Id.Hex(), map[string]interface{}{"Application": app})
 	})
 }
 func stopApplication(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -687,7 +747,7 @@ func stopApplication(ctx context.Context, w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		currentUser, _ := utils.GetCurrentUser(ctx)
+		currentUser, _ := getCurrentUser(ctx)
 
 		app.UpdatedTime = time.Now().Unix()
 		app.UpdaterId = currentUser.Id.Hex()
@@ -750,7 +810,7 @@ func startApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 			return
 		}
 
-		currentUser, _ := utils.GetCurrentUser(ctx)
+		currentUser, _ := getCurrentUser(ctx)
 
 		app.UpdatedTime = time.Now().Unix()
 		app.UpdaterId = currentUser.Id.Hex()
@@ -875,16 +935,17 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 		HttpError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	//id := mux.Vars(r)["id"]
+	id := mux.Vars(r)["id"]
 
 	deployment := &types.Deployment{}
 	pool := &types.PoolInfo{}
 
-	currentUser, _ := utils.GetCurrentUser(ctx)
-	utils.GetMgoCollections(ctx, w, []string{"deployment", "pool"}, func(cs map[string]*mgo.Collection) {
+	currentUser, _ := getCurrentUser(ctx)
+	utils.GetMgoCollections(ctx, w, []string{"deployment", "pool", "application"}, func(cs map[string]*mgo.Collection) {
 
 		colDeployment, _ := cs["deployment"]
 		colPool, _ := cs["pool"]
+		colApplication, _ := cs["application"]
 
 		if err := colDeployment.FindId(bson.ObjectIdHex(req.DeploymentHistoryId)).One(deployment); err != nil {
 			if err == mgo.ErrNotFound {
@@ -897,7 +958,21 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return
 		}
 
+		currentApp := &types.Application{}
+		if err := colApplication.FindId(bson.ObjectIdHex(id)).One(currentApp); err != nil {
+			HttpError(w, fmt.Sprintf("no such a application:%s", id), http.StatusBadRequest)
+			return
+		}
+
 		app := deployment.App
+
+		for i, _ := range app.Services {
+
+			app.Services[i].ReplicaCount = currentApp.Services[i].ReplicaCount
+
+		}
+
+		//TODO rollback时候不改变现有服务的ReplicaCount
 
 		if err := colPool.FindId(bson.ObjectIdHex(deployment.PoolId)).One(pool); err != nil {
 			if err == mgo.ErrNotFound {
@@ -913,6 +988,11 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return
 		}
 
+		if err := colApplication.UpdateId(app.Id, app); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		if err := application.AddDeploymentLog(ctx, app, pool, currentUser, types.DEPLOYMENT_OPERATION_ROLLBACK, nil); err != nil {
 			logrus.WithFields(logrus.Fields{"app": app, "pool": pool, "user": currentUser, "err": err.Error()}).
 				Debug("rollback app success, save to db err")
@@ -920,7 +1000,7 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		currentUser, _ := utils.GetCurrentUser(ctx)
+		currentUser, _ := getCurrentUser(ctx)
 		result := ApplicationRollbackResponse{
 			Id:                    app.Id.Hex(),
 			PoolId:                pool.Id.Hex(),
@@ -935,6 +1015,17 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 			UpdatedTime: time.Now().Unix(),
 		}
 		HttpOK(w, result)
+
+		/*
+			系统审计
+		*/
+
+		newApp := &types.Application{}
+		if err := cs["application"].FindId(currentApp.Id).One(newApp); err != nil {
+			logrus.Errorln(err.Error())
+		} else {
+			utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeRollback, pool.Id.Hex(), app.Id.Hex(), map[string]interface{}{"OldApplication": currentApp, "NewApplication": newApp})
+		}
 	})
 
 }
@@ -967,16 +1058,14 @@ func addApplicationTeam(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	utils.GetMgoCollections(ctx, w, []string{"team", "application"}, func(cs map[string]*mgo.Collection) {
 		//检查PoolId合法性
-		if c, err := cs["application"].FindId(bson.ObjectIdHex(appId)).Count(); err != nil {
+		app := &types.Application{}
+		if err := cs["application"].FindId(bson.ObjectIdHex(appId)).One(app); err != nil {
 			if err == mgo.ErrNotFound {
 				HttpError(w, err.Error(), http.StatusNotFound)
 				return
 			}
 
 			HttpError(w, err.Error(), http.StatusInternalServerError)
-			return
-		} else if c <= 0 {
-			HttpError(w, "", http.StatusNotFound)
 			return
 		}
 
@@ -986,6 +1075,27 @@ func addApplicationTeam(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		}
 
 		HttpOK(w, nil)
+
+		/*
+			系统审计
+		*/
+
+		t := &types.Team{}
+		if err := cs["team"].FindId(bson.ObjectIdHex(teamId)).One(t); err != nil {
+			logrus.Errorln(err.Error())
+		} else {
+			logData := map[string]interface{}{
+				"Application": map[string]string{
+					"Id":   app.Id.Hex(),
+					"Name": app.Name,
+				},
+				"Team": map[string]string{
+					"Id":   t.Id.Hex(),
+					"Name": t.Name,
+				},
+			}
+			utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeAuthTeam, "", app.Id.Hex(), logData)
+		}
 	})
 
 }
@@ -1018,16 +1128,15 @@ func removeApplicationTeam(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	utils.GetMgoCollections(ctx, w, []string{"team", "application"}, func(cs map[string]*mgo.Collection) {
 		//检查PoolId合法性
-		if c, err := cs["application"].FindId(bson.ObjectIdHex(appId)).Count(); err != nil {
+		app := &types.Application{}
+
+		if err := cs["application"].FindId(bson.ObjectIdHex(appId)).One(app); err != nil {
 			if err == mgo.ErrNotFound {
 				HttpError(w, err.Error(), http.StatusNotFound)
 				return
 			}
 
 			HttpError(w, err.Error(), http.StatusInternalServerError)
-			return
-		} else if c <= 0 {
-			HttpError(w, "", http.StatusNotFound)
 			return
 		}
 
@@ -1037,6 +1146,27 @@ func removeApplicationTeam(ctx context.Context, w http.ResponseWriter, r *http.R
 		}
 
 		HttpOK(w, nil)
+
+		/*
+			系统审计
+		*/
+
+		t := &types.Team{}
+		if err := cs["team"].FindId(bson.ObjectIdHex(teamId)).One(t); err != nil {
+			logrus.Errorln(err.Error())
+		} else {
+			logData := map[string]interface{}{
+				"Application": map[string]string{
+					"Id":   app.Id.Hex(),
+					"Name": app.Name,
+				},
+				"Team": map[string]string{
+					"Id":   t.Id.Hex(),
+					"Name": t.Name,
+				},
+			}
+			utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeRevokeTeam, "", app.Id.Hex(), logData)
+		}
 	})
 }
 
@@ -1069,16 +1199,14 @@ func addApplicationMember(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 	utils.GetMgoCollections(ctx, w, []string{"user", "application"}, func(cs map[string]*mgo.Collection) {
 		//检查PoolId合法性
-		if c, err := cs["application"].FindId(bson.ObjectIdHex(appId)).Count(); err != nil {
+		app := &types.Application{}
+		if err := cs["application"].FindId(bson.ObjectIdHex(appId)).One(app); err != nil {
 			if err == mgo.ErrNotFound {
 				HttpError(w, err.Error(), http.StatusNotFound)
 				return
 			}
 
 			HttpError(w, err.Error(), http.StatusInternalServerError)
-			return
-		} else if c <= 0 {
-			HttpError(w, "", http.StatusNotFound)
 			return
 		}
 
@@ -1088,6 +1216,27 @@ func addApplicationMember(ctx context.Context, w http.ResponseWriter, r *http.Re
 		}
 
 		HttpOK(w, nil)
+
+		/*
+			系统审计
+		*/
+
+		u := &types.User{}
+		if err := cs["user"].FindId(bson.ObjectIdHex(userId)).One(u); err != nil {
+			logrus.Errorln(err.Error())
+		} else {
+			logData := map[string]interface{}{
+				"Application": map[string]string{
+					"Id":   app.Id.Hex(),
+					"Name": app.Name,
+				},
+				"User": map[string]string{
+					"Id":   u.Id.Hex(),
+					"Name": u.Name,
+				},
+			}
+			utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeAddUser, "", app.Id.Hex(), logData)
+		}
 	})
 }
 
@@ -1120,16 +1269,14 @@ func removeApplicationMember(ctx context.Context, w http.ResponseWriter, r *http
 
 	utils.GetMgoCollections(ctx, w, []string{"user", "application"}, func(cs map[string]*mgo.Collection) {
 		//检查PoolId合法性
-		if c, err := cs["application"].FindId(bson.ObjectIdHex(appId)).Count(); err != nil {
+		app := &types.Application{}
+		if err := cs["application"].FindId(bson.ObjectIdHex(appId)).One(app); err != nil {
 			if err == mgo.ErrNotFound {
 				HttpError(w, err.Error(), http.StatusNotFound)
 				return
 			}
 
 			HttpError(w, err.Error(), http.StatusInternalServerError)
-			return
-		} else if c <= 0 {
-			HttpError(w, "", http.StatusNotFound)
 			return
 		}
 
@@ -1139,5 +1286,26 @@ func removeApplicationMember(ctx context.Context, w http.ResponseWriter, r *http
 		}
 
 		HttpOK(w, nil)
+
+		/*
+			系统审计
+		*/
+
+		u := &types.User{}
+		if err := cs["user"].FindId(bson.ObjectIdHex(userId)).One(u); err != nil {
+			logrus.Errorln(err.Error())
+		} else {
+			logData := map[string]interface{}{
+				"Application": map[string]string{
+					"Id":   app.Id.Hex(),
+					"Name": app.Name,
+				},
+				"User": map[string]string{
+					"Id":   u.Id.Hex(),
+					"Name": u.Name,
+				},
+			}
+			utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeAddUser, app.PoolId, app.Id.Hex(), logData)
+		}
 	})
 }

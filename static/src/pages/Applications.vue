@@ -50,7 +50,7 @@
         no-data-text=""
       >
         <template slot="items" scope="props">
-          <td><router-link :to="'/applications/' + props.item.Id">{{ props.item.Title }}</router-link></td>
+          <td><router-link :to="'/applications/' + props.item.Id + '/' + encodeURIComponent(PoolMap[props.item.PoolId])">{{ props.item.Title }}</router-link></td>
           <td>{{ props.item.Name }}</td>
           <td>{{ props.item.Version }}</td>
           <td>{{ props.item.Description }}</td>
@@ -105,6 +105,7 @@
         },
 
         PoolList: [],
+        PoolMap: {},
         PoolId: this.$route.query ? (this.$route.query.PoolId || '') : '', 
         Keyword: this.$route.query ? (this.$route.query.Keyword || '') : '',
 
@@ -130,6 +131,11 @@
           this.PoolList = data;
           if (!this.PoolId && data.length > 0) {
             this.PoolId = data[0].Id;
+          }
+
+          this.PoolMap = {};
+          for (let p of data) {
+            this.PoolMap[p.Id] = p.Name;
           }
 
           this.getDataFromApi();

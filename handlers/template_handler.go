@@ -169,7 +169,7 @@ func createTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	//	return
 	//}
 
-	user, err := utils.GetCurrentUser(ctx)
+	user, err := getCurrentUser(ctx)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusForbidden)
 		return
@@ -196,6 +196,19 @@ func createTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	HttpOK(w, rsp)
 
+	/*
+		系统审计
+	*/
+
+	auditTemplate := &types.Template{}
+	if err := c.FindId(req.Template.Id).One(auditTemplate); err != nil {
+		logrus.Errorln(err.Error())
+	} else {
+		logData := map[string]*types.Template{
+			"ApplicationTemplate": auditTemplate,
+		}
+		utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplicationTemplate, types.SystemAuditModuleOperationTypeCreate, "", "", logData)
+	}
 }
 
 type TemplateCopyRequest struct {
@@ -239,7 +252,7 @@ func copyTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := utils.GetCurrentUser(ctx)
+	user, err := getCurrentUser(ctx)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusForbidden)
 		return
@@ -310,7 +323,7 @@ func updateTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	user, err := utils.GetCurrentUser(ctx)
+	user, err := getCurrentUser(ctx)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusForbidden)
 		return
@@ -337,6 +350,20 @@ func updateTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	HttpOK(w, rsp)
 
+	/*
+		系统审计
+	*/
+
+	auditTemplate := &types.Template{}
+	if err := c.FindId(bson.ObjectIdHex(id)).One(auditTemplate); err != nil {
+		logrus.Errorln(err.Error())
+	} else {
+		logData := map[string]*types.Template{
+			"OldApplicationTemplate": result,
+			"NewApplicationTemplate": auditTemplate,
+		}
+		utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplicationTemplate, types.SystemAuditModuleOperationTypeUpdate, "", "", logData)
+	}
 }
 
 func removeTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -354,6 +381,20 @@ func removeTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	c := mgoSession.DB(config.MgoDB).C("template")
 
+	/*
+		系统审计
+	*/
+
+	oldTemplate := &types.Template{}
+	if err := c.FindId(bson.ObjectIdHex(id)).One(oldTemplate); err != nil {
+		if err == mgo.ErrNotFound {
+			HttpError(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		HttpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	if err := c.RemoveId(bson.ObjectIdHex(id)); err != nil {
 		if err == mgo.ErrNotFound {
 			HttpError(w, err.Error(), http.StatusNotFound)
@@ -364,4 +405,13 @@ func removeTemplate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	}
 
 	w.WriteHeader(http.StatusOK)
+
+	/*
+		系统审计
+	*/
+
+	logData := map[string]*types.Template{
+		"ApplicationTemplate": oldTemplate,
+	}
+	utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplicationTemplate, types.SystemAuditModuleOperationTypeDelete, "", "", logData)
 }

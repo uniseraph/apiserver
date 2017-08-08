@@ -2,7 +2,7 @@
   <v-card>
     <v-card-title>
       <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
-      容器列表 / {{ ServiceTitle }}
+      &nbsp;&nbsp;应用管理&nbsp;&nbsp;/&nbsp;&nbsp;{{ PoolName }}&nbsp;&nbsp;/&nbsp;&nbsp;{{ ApplicationTitle }}&nbsp;&nbsp;/&nbsp;&nbsp;{{ ServiceTitle }}&nbsp;&nbsp;/&nbsp;&nbsp;容器列表
       <v-spacer></v-spacer>
     </v-card-title>
     <div>
@@ -59,11 +59,16 @@
         <template slot="items" scope="props">
           <td>{{ props.item.Id }}</td>
           <td>{{ props.item.Name }}</td>
-          <td :class="applicationClass(props.item.Status)">{{ applicationStatus(props.item.Status) }}</td>
+          <td><router-link :to="'/applications/logs/' + ApplicationId + '/' + ServiceName + '/' + props.item.Id + '/' + encodeURIComponent(PoolName) + '/' + encodeURIComponent(ApplicationTitle) + '/' + encodeURIComponent(ServiceTitle)" style="text-decoration:none;"><span :class="applicationClass(props.item.Status)">{{ applicationStatus(props.item.Status) }}</span></router-link></td>
           <td>{{ props.item.IP }}</td>
           <td>{{ props.item.Node ? props.item.Node.Name : '' }}</td>
           <td>{{ props.item.Node ? props.item.Node.IP : '' }}</td>
           <td>
+            <router-link :to="'/applications/logs/' + ApplicationId + '/' + ServiceName + '/' + props.item.Id + '/' + encodeURIComponent(PoolName) + '/' + encodeURIComponent(ApplicationTitle) + '/' + encodeURIComponent(ServiceTitle)">
+              <v-btn outline small icon class="blue blue--text" title="容器日志">
+                  <v-icon>description</v-icon>
+              </v-btn>
+            </router-link>
             <v-btn outline small icon class="green green--text" @click.native="displaySSHInfo(props.item)" title="登录信息">
               <v-icon>lock_outline</v-icon>
             </v-btn>
@@ -108,6 +113,8 @@
 
         ApplicationId: this.$route.params.applicationId,
         ServiceName: this.$route.params.serviceName,
+        PoolName: this.$route.params.poolName,
+        ApplicationTitle: this.$route.params.applicationTitle,
         ServiceTitle: this.$route.params.serviceTitle,
 
         Keyword: this.$route.query ? (this.$route.query.Keyword || '') : '',

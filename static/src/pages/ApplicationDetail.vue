@@ -4,14 +4,14 @@
       <v-card>
         <v-card-title>
           <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
-          &nbsp;&nbsp;应用管理&nbsp;&nbsp;/&nbsp;&nbsp;{{ Title }}
+          &nbsp;&nbsp;应用管理&nbsp;&nbsp;/&nbsp;&nbsp;{{ PoolName }}&nbsp;&nbsp;/&nbsp;&nbsp;{{ Title }}
           <v-spacer></v-spacer>
-          <router-link :to="'/applications/' + Id + '/upgrade'" style="text-decoration:none;">
+          <router-link :to="'/applications/' + Id + '/upgrade/' + encodeURIComponent(PoolName)" style="text-decoration:none;">
             <v-btn class="green darken-2 white--text" small>
               <v-icon light left>open_in_browser</v-icon>升级
             </v-btn>
           </router-link>
-          <router-link :to="'/applications/' + Id + '/rollback'" style="text-decoration:none;">
+          <router-link :to="'/applications/' + Id + '/rollback/' + encodeURIComponent(PoolName)" style="text-decoration:none;">
             <v-btn class="orange darken-2 white--text ml-4" small>
               <v-icon light left>replay</v-icon>回滚
             </v-btn>
@@ -74,7 +74,10 @@
         <v-card v-for="(item, index) in Services" :key="item.Id" class="mb-2">
           <v-card-title>
             服务{{ index + 1 }}: {{ item.Title }}&nbsp;&nbsp;&nbsp;&nbsp;
-            [&nbsp;<router-link :to="'/applications/containers/' + Id + '/' + item.Name + '/' + encodeURIComponent(item.Title)" style="text-decoration:none;">容器列表</router-link>&nbsp;]
+            <span style="color:#9F9F9F;">
+              域名: {{ Name }}-{{ item.Name }}.${DOMAIN_SUFFIX}
+            </span>&nbsp;&nbsp;&nbsp;&nbsp;
+            [&nbsp;<router-link :to="'/applications/containers/' + Id + '/' + item.Name + '/' + encodeURIComponent(PoolName) + '/' + encodeURIComponent(Title) + '/' + encodeURIComponent(item.Title)" style="text-decoration:none;">容器列表</router-link>&nbsp;]
             <v-spacer></v-spacer>
             <v-btn v-if="item.hidden" outline small icon class="blue blue--text mr-2" @click.native="hideService(item, false)" title="展开">
               <v-icon>arrow_drop_down</v-icon>
@@ -119,13 +122,11 @@
                 <v-flex xs2>
                   <v-subheader>镜像名称</v-subheader>
                 </v-flex>
-                <v-flex xs3>
+                <v-flex xs5>
                   <v-text-field
                     v-model="item.ImageName"
                     readonly
                   ></v-text-field>
-                </v-flex>
-                <v-flex xs2>
                 </v-flex>
                 <v-flex xs2>
                   <v-subheader>镜像Tag</v-subheader>
@@ -179,12 +180,13 @@
                 <v-flex xs2 v-if="Scaling">
                   <v-progress-linear v-bind:indeterminate="true"></v-progress-linear>
                 </v-flex>
-                <v-flex xs2>
+                <v-flex xs7>
+                  <v-checkbox label="使用宿主机网络" v-model="item.NetworkMode" true-value="host" false-value="bridge" dark disabled></v-checkbox>
                 </v-flex>
                 <v-flex xs2>
                   <v-subheader>说明</v-subheader>
                 </v-flex>
-                <v-flex xs3>
+                <v-flex xs10>
                   <v-text-field
                     v-model="item.Description"
                     readonly
@@ -235,10 +237,10 @@
                     </template>
                   </v-data-table>
                 </v-flex>
-                <v-flex xs12 mt-5 v-if="item.Ports && item.Ports.length > 0">
+                <v-flex xs12 mt-4 v-if="item.Ports && item.Ports.length > 0">
                   <v-divider></v-divider>
                   <v-card-title>
-                    <v-subheader>端口映射</v-subheader>
+                    <v-subheader>端口申明</v-subheader>
                     <v-spacer></v-spacer>
                   </v-card-title>
                   <v-data-table
@@ -257,7 +259,7 @@
                       </td>
                       <td>
                         <v-text-field
-                          v-model="props.item.LoadBalancerId"
+                          v-model="props.item.TargetGroupArn"
                           readonly
                         ></v-text-field>
                       </td>
@@ -280,13 +282,49 @@
                     <template slot="items" scope="props">
                       <td>
                         <v-text-field
-                          v-model="props.item.Name"
+                          v-model="props.item.ContainerPath"
                           readonly
                         ></v-text-field>
                       </td>
                       <td>
+                        <v-select
+                          :items="MountTypeList"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.MountType"
+                          dark
+                          disabled></v-select>
+                      </td>
+                      <td>
+                        <v-select
+                          :items="MediaTypeList"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.MediaType"
+                          dark
+                          disabled></v-select>
+                      </td>
+                      <td v-if="props.item.MediaType=='SATA'">
+                        <v-select
+                          :items="IopsClassList_SATA"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.IopsClass"
+                          dark
+                          disabled></v-select>
+                      </td>
+                      <td v-if="props.item.MediaType=='SSD'">
+                        <v-select
+                          :items="IopsClassList_SSD"
+                          item-text="Label"
+                          item-value="Value"
+                          v-model="props.item.IopsClass"
+                          dark
+                          disabled></v-select>
+                      </td>
+                      <td>
                         <v-text-field
-                          v-model="props.item.Mount"
+                          v-model="props.item.Size"
                           readonly
                         ></v-text-field>
                       </td>
@@ -439,16 +477,45 @@
         ],
         headers_ports: [
           { text: '容器端口', sortable: false, left: true },
-          { text: '负载均衡ID', sortable: false, left: true },
+          { text: '负载均衡目标群组ARN', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
         headers_volumns: [
-          { text: '数据卷名', sortable: false, left: true },
-          { text: '容器挂载路径', sortable: false, left: true }
+          { text: '容器挂载路径', sortable: false, left: true },
+          { text: '卷类型', sortable: false, left: true },
+          { text: '磁盘介质', sortable: false, left: true },
+          { text: '读写频率', sortable: false, left: true },
+          { text: '卷大小 (MB)', sortable: false, left: true }
         ],
         headers_labels: [
           { text: '标签名', sortable: false, left: true },
           { text: '标签值', sortable: false, left: true }
+        ],
+
+        MountTypeList: [
+          { 'Label': '宿主机目录', Value: 'Directory' },
+          { 'Label': '独占磁盘', Value: 'Disk' }
+        ],
+
+        MediaTypeList: [
+          { 'Label': 'SATA', Value: 'SATA' },
+          { 'Label': 'SSD', Value: 'SSD' }
+        ],
+
+        IopsClassList_SATA: [
+          { 'Label': '很少', Value: 1 },
+          { 'Label': '较少', Value: 2 },
+          { 'Label': '中等', Value: 3 },
+          { 'Label': '较重', Value: 4 },
+          { 'Label': '很重', Value: 5 }
+        ],
+
+        IopsClassList_SSD: [
+          { 'Label': '很少', Value: 6 },
+          { 'Label': '较少', Value: 7 },
+          { 'Label': '中等', Value: 8 },
+          { 'Label': '较重', Value: 9 },
+          { 'Label': '很重', Value: 10 }
         ],
 
         svcIdStart: 0,
@@ -457,6 +524,7 @@
         labelIdStart: 0,
 
         Id: this.$route.params.id,
+        PoolName: this.$route.params.poolName,
         Title: '',
         Name: '',
         Version: '',

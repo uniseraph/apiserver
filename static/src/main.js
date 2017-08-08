@@ -11,6 +11,8 @@ Vue.use(Vuetify)
 Vue.use(common)
 Vue.use(constants)
 
+Vue.prototype.$axios = axios
+
 Vue.filter('formatDate', function(value) {
 	if (!value || value.length == 0) {
 		return '';
@@ -27,16 +29,17 @@ Vue.filter('formatDateTime', function(value) {
     return new Date(value * 1000).toLocaleString();
 });
 
-Vue.filter('dividedBy1024', function(value) {
+Vue.filter('dividedBy1024', function(value, scale=2) {
 	if (!value || value.length == 0) {
 		return '';
 	}
 
 	if (typeof value !== 'number') {
-		value = parseInt(value.toString());
+		value = parseFloat(value.toString());
 	}
-	
-    return Math.floor(value / 1024);
+
+	let e = Math.pow(10, scale);
+    return Math.round(value * e / 1024) / e;
 });
 
 new Vue({

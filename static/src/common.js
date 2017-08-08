@@ -149,6 +149,10 @@ export default {
       });
 
       return result;
+    },
+
+    Vue.prototype.nosort = function(items) {
+      return items;
     }
   }
 }

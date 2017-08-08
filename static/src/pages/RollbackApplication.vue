@@ -2,7 +2,7 @@
   <v-card>
     <v-card-title>
       <i class="material-icons ico_back" @click="goback">keyboard_arrow_left</i>
-      &nbsp;&nbsp;应用管理&nbsp;&nbsp;/&nbsp;&nbsp;应用回滚
+      &nbsp;&nbsp;应用管理&nbsp;&nbsp;/&nbsp;&nbsp;{{ PoolName }}&nbsp;&nbsp;/&nbsp;&nbsp;{{ Title }}&nbsp;&nbsp;/&nbsp;&nbsp;应用回滚
       <v-spacer></v-spacer>
     </v-card-title>
     <div>
@@ -141,6 +141,7 @@
         DeploymentHistoryId: null,
 
         Id: this.$route.params.id,
+        PoolName: this.$route.params.poolName,
         Title: '',
         Name: '',
         Version: '',

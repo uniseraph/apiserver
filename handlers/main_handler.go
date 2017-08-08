@@ -8,13 +8,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Sirupsen/logrus"
-	"github.com/go-redis/redis"
 	"github.com/gorilla/mux"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"strings"
 )
 
 type ResponseBody struct {
@@ -30,9 +28,13 @@ type MyHandler struct {
 	roleset   types.Roleset            // 只有拥有这些角色的用户才有权限
 }
 
-var routes = map[string]map[string]*MyHandler{
+var routers = map[string]map[string]*MyHandler{
 	"HEAD": {},
 	"GET": {
+
+		"/containers/{id:.*}/inspect": &MyHandler{h: getContainerJSON, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/containers/{id:.*}/logs":    &MyHandler{h: getContainerLogs, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+
 		"/users/{name:.*}/login": &MyHandler{h: postSessionCreate},
 		"/users/current":         &MyHandler{h: getUserCurrent, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/users/{id:.*}/inspect": &MyHandler{h: getUserInspect, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
@@ -63,6 +65,7 @@ var routes = map[string]map[string]*MyHandler{
 		"/envs/values/{id:.*}/remove":        &MyHandler{h: deleteValue, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/envs/values/{id:.*}/update-values": &MyHandler{h: updateValueAttributes, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/envs/value/get":                    &MyHandler{h: getValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/search":                &MyHandler{h: getEnvKeyNameWithPrefix, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 
 		/*
 			容器日志审计
@@ -89,6 +92,9 @@ var routes = map[string]map[string]*MyHandler{
 		"/applications/{id:.*}/remove-user": &MyHandler{h: removeApplicationMember, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 	},
 	"POST": {
+
+		"/dashboard": &MyHandler{h: poolDashboard, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+
 		"/pools/{id:.*}/refresh":     &MyHandler{h: postPoolsFlush, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/pools/{id:.*}/inspect":     &MyHandler{h: getPoolJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/pools/register":            &MyHandler{h: postPoolsRegister, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
@@ -148,6 +154,7 @@ var routes = map[string]map[string]*MyHandler{
 		"/envs/values/{id:.*}/remove":        &MyHandler{h: deleteValue, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/envs/values/{id:.*}/update-values": &MyHandler{h: updateValueAttributes, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/envs/value/get":                    &MyHandler{h: getValue, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
+		"/envs/values/search":                &MyHandler{h: getEnvKeyNameWithPrefix, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 
 		/*
 			容器日志审计
@@ -165,7 +172,10 @@ var routes = map[string]map[string]*MyHandler{
 
 		"/logs/list": &MyHandler{h: getSystemAuditList, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 
-		"/containers/list":                         &MyHandler{h: getContainerList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/containers/{id:.*}/inspect": &MyHandler{h: getContainerJSON, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/containers/{id:.*}/logs":    &MyHandler{h: getContainerLogs, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/containers/list":            &MyHandler{h: getContainerList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+
 		"/applications/list":                       &MyHandler{h: getApplicationList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 		"/applications/{id:.*}/history":            &MyHandler{h: getApplicationHistory, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 		"/applications/{id:.*}/inspect":            &MyHandler{h: getApplication, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
@@ -209,7 +219,7 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 		//则err不为空
 		//则认为禁止登陆
 		if err != nil {
-			HttpError(w, "please login", http.StatusForbidden)
+			HttpError(w, "please login", http.StatusUnauthorized)
 			return
 		}
 
@@ -224,27 +234,27 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 		// - uid
 		// - roleSet
 		//来判断当前登录用户是否有权限
-		content := redisClient.HGetAll(utils.RedisSessionKey(sessionID))
-		logrus.Debugf("HGETALL content: %#v", content)
+		//content := redisClient.HGetAll(utils.RedisSessionKey(sessionID))
+		//logrus.Debugf("HGETALL content: %#v", content)
 		sessionContent, err := redisClient.HGetAll(utils.RedisSessionKey(sessionID)).Result()
-		logrus.Infof("SessionContent: %#v", sessionContent)
+		//logrus.Infof("SessionContent: %#v", sessionContent)
 		//如果没有找到或者redis出错
 		//则认证失败
 		if err != nil {
-			HttpError(w, err.Error(), http.StatusForbidden)
+			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		//如果session在redis中内容为空
 		//则认证失败
 		if len(sessionContent) == 0 {
-			HttpError(w, "sessionContent is empty", http.StatusForbidden)
+			HttpError(w, "sessionContent is empty", http.StatusUnauthorized)
 			return
 		}
 		//如果session中uid字段为空
 		//则认证失败
 		var uid = string(sessionContent["uid"])
 		if len(uid) == 0 {
-			HttpError(w, err.Error(), http.StatusForbidden)
+			HttpError(w, "session data error for uid field.", http.StatusInternalServerError)
 			return
 		}
 		//校验权限是否满足要求
@@ -271,8 +281,6 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 		//如果鉴权成功
 		//根据uid把当前用户信息load到context中
 		//以便request的剩余生命周期里，可以通过context直接得到用户信息
-		//TODO
-		//留不留都行，不是每个API都需要拿到用户全部信息
 		mgoSession, err := utils.GetMgoSessionClone(ctx)
 		if err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
@@ -298,6 +306,10 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 		}
 
 		c1 := utils.PutCurrentUser(ctx, &result)
+		//设置session5分钟超时
+		//如果5分钟之内没有操作
+		//会找不到redis中的key，导致认证不再可以通过，需要重新登录
+		redisClient.Expire(utils.RedisSessionKey(sessionID), sessionTimeout)
 
 		h(c1, w, r)
 
@@ -306,49 +318,9 @@ func checkUserPermission(h Handler, rs types.Roleset) Handler {
 	return wrap
 }
 
-func NewMainHandler(ctx context.Context) (http.Handler, error) {
-
-	config := utils.GetAPIServerConfig(ctx)
-
-	session, err := mgo.Dial(config.MgoURLs)
-	if err != nil {
-		return nil, err
-	}
-	session.SetMode(mgo.Monotonic, true)
-	c := utils.PutMgoSession(ctx, session)
-
-	logrus.Infof("redis address is : %s", config.RedisAddr)
-	client := redis.NewClient(&redis.Options{
-		Addr:     config.RedisAddr,
-		Password: "", // no password set
-		DB:       0,  // use default DB
-	})
-	if _, err := client.Ping().Result(); err != nil {
-		return nil, err
-	}
-	c1 := utils.PutRedisClient(c, client)
-
+func NewMainHandler(ctx context.Context, config *types.APIServerConfig) (http.Handler, error) {
 	r := mux.NewRouter()
 
-	//TODO using request context
-	SetupPrimaryRouter(r, c1, routes)
-
-	r.Path("/api/actions/check").Methods(http.MethodPost).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		checkUserPermission(postActionsCheck, types.ROLESET_NORMAL|types.ROLESET_SYSADMIN)(c1, w, r)
-	})
-
-	fsh := http.StripPrefix("/", http.FileServer(http.Dir(config.RootDir)))
-	//r.Path("/").Methods(http.MethodGet).Handler(http.StripPrefix("/",fsh))
-
-	r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI}).Debug("HTTP request received")
-		fsh.ServeHTTP(w, r)
-	})
-
-	return r, nil
-}
-
-func SetupPrimaryRouter(r *mux.Router, ctx context.Context, routers map[string]map[string]*MyHandler) {
 	for method, mappings := range routers {
 		for route, myHandler := range mappings {
 			logrus.WithFields(logrus.Fields{"method": method, "route": route}).Debug("Registering HTTP route")
@@ -365,21 +337,24 @@ func SetupPrimaryRouter(r *mux.Router, ctx context.Context, routers map[string]m
 				}
 			}
 			localMethod := method
-
 			//r.Path("/v{version:[0-9.]+}" + localRoute).Methods(localMethod).HandlerFunc(wrap)
 			r.Path("/api" + localRoute).Methods(localMethod).HandlerFunc(wrap)
 		}
 	}
-}
 
-func BoolValue(r *http.Request, k string) bool {
-	s := strings.ToLower(strings.TrimSpace(r.FormValue(k)))
-	return !(s == "" || s == "0" || s == "no" || s == "false" || s == "none")
-}
+	r.Path("/api/actions/check").Methods(http.MethodPost).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		checkUserPermission(postActionsCheck, types.ROLESET_NORMAL|types.ROLESET_SYSADMIN)(ctx, w, r)
+	})
 
-// Default handler for methods not supported by clustering.
-func notImplementedHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	utils.HttpError(w, "Not supported in clustering mode.", http.StatusNotImplemented)
+	fsh := http.StripPrefix("/", http.FileServer(http.Dir(config.RootDir)))
+	//r.Path("/").Methods(http.MethodGet).Handler(http.StripPrefix("/",fsh))
+
+	r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logrus.WithFields(logrus.Fields{"method": r.Method, "uri": r.RequestURI}).Debug("HTTP request received")
+		fsh.ServeHTTP(w, r)
+	})
+
+	return r, nil
 }
 
 func OptionsHandler(c context.Context, w http.ResponseWriter, r *http.Request) {
@@ -391,11 +366,6 @@ func HttpError(w http.ResponseWriter, err string, status int) {
 
 }
 
-//func HttpErrorAndPanic(w http.ResponseWriter, err string, status int) {
-//	utils.HttpError(w, err, status)
-//	panic(err)
-//}
-
 func HttpOK(w http.ResponseWriter, result interface{}) {
 	utils.HttpOK(w, result)
 }
@@ -403,7 +373,7 @@ func HttpOK(w http.ResponseWriter, result interface{}) {
 //"/actions/check" : &MyHandler{h: postActionsCheck } ,
 func postActionsCheck(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
-	currentUser, err := utils.GetCurrentUser(ctx)
+	currentUser, err := getCurrentUser(ctx)
 	if err != nil {
 		HttpError(w, err.Error(), http.StatusForbidden)
 		return
@@ -421,7 +391,7 @@ func postActionsCheck(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	}
 
 	//这是系统初始化的变量，所以不需要判断是否存在
-	action2MyHandler, _ := routes["POST"]
+	action2MyHandler, _ := routers["POST"]
 
 	for _, action := range req.Actions {
 
@@ -445,7 +415,4 @@ func postActionsCheck(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	}
 
 	HttpOK(w, result)
-	//w.Header().Set("Content-Type", "application/json")
-	//w.WriteHeader(http.StatusOK)
-	//json.NewEncoder(w).Encode(result)
 }

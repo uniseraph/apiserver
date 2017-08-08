@@ -71,7 +71,6 @@
             no-data-text=""
           >
             <template slot="items" scope="props">
-              <td>{{ props.item.Id }}</td>
               <td>{{ props.item.Name }}</td>
               <td>{{ props.item.Email }}</td>
               <td>{{ props.item.Tel }}</td>
@@ -108,7 +107,6 @@
         Description: '',
         LeaderId: false,
         headers: [
-          { text: 'ID', sortable: false, left: true },
           { text: '用户名', sortable: false, left: true },
           { text: '邮箱', sortable: false, left: true },
           { text: '电话', sortable: false, left: true },

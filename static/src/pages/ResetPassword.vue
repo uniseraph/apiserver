@@ -101,7 +101,7 @@
 
           api.ResetPassword({
             Id: this.Id,
-            Pass: this.Password1
+            NewPass: this.Password1
           }).then(data => {
             ui.alert('密码修改成功', 'success');
             let that = this;

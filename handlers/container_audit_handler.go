@@ -11,8 +11,6 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
-	//"strconv"
-	"strings"
 	"time"
 )
 
@@ -58,7 +56,7 @@ func createSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Reques
 			return
 		}
 
-		user, err := utils.GetCurrentUser(ctx)
+		user, err := getCurrentUser(ctx)
 		if err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -198,10 +196,10 @@ func validateSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	if len(info) <= 0 {
 		utils.GetMgoCollections(ctx, w, []string{"container_audit_log"}, func(cs map[string]*mgo.Collection) {
 			if err := validateSSHSessionFailedLog(cs, fmt.Sprintf("Token is invalid: %s", token), log); err != nil {
-				HttpError(w, err.Error(), http.StatusInternalServerError)
-				return
+				logrus.Errorln("Token is invalid, save login failed log error:", err.Error())
 			}
 		})
+		logrus.Errorln("Token is invalid, validate failed! ", req)
 		HttpError(w, "验证登录失败，Token已失效。", http.StatusInternalServerError)
 		return
 	}
@@ -220,6 +218,10 @@ func validateSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	pid := info["pid"]     //集群ID
 	aid := info["aid"]     //应用ID
 	sname := info["sname"] //Service名称
+
+	//得到用户ID后
+	//要在操作日志中记录该ID
+	log.UserId = bson.ObjectIdHex(uid)
 
 	//当前操作用户
 	u := types.ContainerAuditUser{
@@ -340,6 +342,8 @@ func validateSSHSession(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			Container: scid,
 		}
 
+		logrus.Infoln("Validate SSH Session Success. trace: ", trace)
+
 		HttpOK(w, rlt)
 	})
 }
@@ -351,6 +355,7 @@ func validateSSHSessionFailedLog(cs map[string]*mgo.Collection, msg string, log 
 	log.Operation = "LoginFailed"
 	log.CreatedTime = time.Now().Unix()
 	if err := cs["container_audit_log"].Insert(log); err != nil {
+		logrus.Errorln("Create Validate SSH Session Failed Log failed:", log)
 		return err
 	}
 	return nil
@@ -362,6 +367,7 @@ func validateSSHSessionSuccessLog(cs map[string]*mgo.Collection, log types.Conta
 	log.Operation = "Logined"
 	log.CreatedTime = time.Now().Unix()
 	if err := cs["container_audit_log"].Insert(log); err != nil {
+		logrus.Errorln("Create Validate SSH Session Success Log failed:", log)
 		return err
 	}
 	return nil
@@ -399,43 +405,43 @@ func createAuditLog(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	logrus.Infoln(req)
+
 	if len(req.Token) <= 0 || len(req.IP) <= 0 || len(req.Command) <= 0 {
 		HttpError(w, "request with invalidate params.", http.StatusBadRequest)
 		return
 	}
 
-	utils.GetMgoCollections(ctx, w, []string{"container_audit", "container_audit_trace"}, func(cs map[string]*mgo.Collection) {
+	utils.GetMgoCollections(ctx, w, []string{"container_audit_trace", "container_audit_log"}, func(cs map[string]*mgo.Collection) {
 
+		trace := &types.ContainerAuditTrace{}
 		//验证是否Token的合法性
 		//考虑性能的话，可以不做校验，但会增加垃圾数据
-		if c, err := cs["container_audit_trace"].Find(bson.M{"token": req.Token}).Count(); err != nil {
+		if err := cs["container_audit_trace"].Find(bson.M{"token": req.Token}).One(trace); err != nil {
 			if err == mgo.ErrNotFound {
 				HttpError(w, "no such a trace", http.StatusNotFound)
 				return
 			}
 			HttpError(w, err.Error(), http.StatusNotFound)
 			return
-		} else if c <= 0 {
-			HttpError(w, "no such a trace", http.StatusNotFound)
-			return
 		}
 
 		//将调用方上传过来的命令行
 		//解析为命令文件和参数数组
-		cmds := strings.Split(req.Command, " ")
-		var cmd string
-		args := make([]string, 0, 10)
-		for _, c := range cmds {
-			if len(c) > 0 {
-				//如果CMD没有被初始化过
-				if len(cmd) <= 0 {
-					cmd = c
-				} else {
-					//保存到参数
-					args = append(args, c)
-				}
-			}
-		}
+		//cmds := strings.Split(req.Command, " ")
+		//var cmd string
+		//args := make([]string, 0, 10)
+		//for _, c := range cmds {
+		//	if len(c) > 0 {
+		//		//如果CMD没有被初始化过
+		//		if len(cmd) <= 0 {
+		//			cmd = c
+		//		} else {
+		//			//保存到参数
+		//			args = append(args, c)
+		//		}
+		//	}
+		//}
 
 		var output string
 		//处理输入字符串特别长的情况
@@ -454,17 +460,19 @@ func createAuditLog(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 		audit := types.ContainerAuditLog{
 			Id:        bson.NewObjectId(),
+			UserId:    trace.UserId,
 			IP:        req.IP,
 			Token:     req.Token,
 			Operation: "ExecCmd",
 			Detail: types.ContainerAuditLogOperationDetail{
-				Command:   cmd,
-				Arguments: args,
-				Stdout:    output,
+				Command: req.Command,
+				//Arguments: args,
+				Stdout: output,
 			},
 
 			CreatedTime: time.Now().Unix(),
 		}
+		logrus.Infoln(audit)
 
 		if err := cs["container_audit_log"].Insert(audit); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
@@ -509,11 +517,11 @@ type GetAuditListResponseData struct {
 	*/
 	Id            string
 	UserId        string
-	User          types.ContainerAuditUser
+	User          *types.ContainerAuditUser `json:",omitempty"`
 	PoolId        string
-	Pool          types.ContainerAuditPool
+	Pool          *types.ContainerAuditPool `json:",omitempty"`
 	ApplicationId string
-	Application   types.ContainerAuditApplication
+	Application   *types.ContainerAuditApplication `json:",omitempty"`
 	Service       types.ContainerAuditService
 	ContainerId   string
 	Container     types.ContainerAuditContainer
@@ -532,7 +540,7 @@ type GetAuditListResponse struct {
 	PageCount int
 	PageSize  int
 	Page      int
-	Data      []GetAuditListResponseData
+	Data      []*GetAuditListResponseData
 }
 
 func getContainerAuditList(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -547,18 +555,15 @@ func getContainerAuditList(ctx context.Context, w http.ResponseWriter, r *http.R
 	selector := bson.M{}
 
 	//设定时间查询条件
-	//if len(req.StartTime) > 0 || len(req.EndTime) > 0 {
 	if req.StartTime > 0 || req.EndTime > 0 {
 		createdtime := bson.M{}
 
 		if req.StartTime > 0 {
-			tm := time.Unix(req.StartTime, 0)
-			createdtime["$gte"] = tm
+			createdtime["$gte"] = req.StartTime
 		}
 
 		if req.EndTime > 0 {
-			tm := time.Unix(req.EndTime, 0)
-			createdtime["$lt"] = tm
+			createdtime["$lt"] = req.EndTime
 		}
 
 		selector["createdtime"] = createdtime
@@ -656,34 +661,55 @@ func getContainerAuditList(ctx context.Context, w http.ResponseWriter, r *http.R
 			tracesMap[t.Token] = t
 		}
 
-		data := make([]GetAuditListResponseData, 0, len(logs))
+		data := make([]*GetAuditListResponseData, 0, len(logs))
 
 		//整理数据
 		//每条数据由如下组成：一条log信息，及log对应的trace信息
 		for _, log := range logs {
 			t, ok := tracesMap[log.Token]
-			if !ok {
-				logrus.Errorf("no trace found for token: %s", log.Token)
-				continue
-			}
-			d := GetAuditListResponseData{
-				Id:            log.Id.Hex(),
-				UserId:        t.UserId.Hex(),
-				User:          t.User,
-				PoolId:        t.PoolId.Hex(),
-				Pool:          t.Pool,
-				ApplicationId: t.ApplicationId.Hex(),
-				Application:   t.Application,
-				Service:       t.Service,
-				ContainerId:   t.ContainerId.Hex(),
-				Container:     t.Container,
+			var d *GetAuditListResponseData
+			if ok {
+				d = &GetAuditListResponseData{
+					Id:            log.Id.Hex(),
+					UserId:        t.UserId.Hex(),
+					User:          &t.User,
+					PoolId:        t.PoolId.Hex(),
+					Pool:          &t.Pool,
+					ApplicationId: t.ApplicationId.Hex(),
+					Application:   &t.Application,
+					Service:       t.Service,
+					ContainerId:   t.ContainerId.Hex(),
+					Container:     t.Container,
 
-				IP:        log.IP,
-				Operation: log.Operation,
-				Detail:    log.Detail,
-
-				CreatedTime: log.CreatedTime,
+					IP:          log.IP,
+					Operation:   log.Operation,
+					Detail:      log.Detail,
+					CreatedTime: log.CreatedTime,
+				}
+				/*
+					User, Pool, Application没有的时候，不要填对象到结果中
+				*/
+				if t.ApplicationId == "" {
+					d.Application = nil
+				}
+				if t.PoolId == "" {
+					d.Pool = nil
+				}
+				if t.UserId == "" {
+					d.User = nil
+				}
+			} else {
+				//没有登录成功过的token，产生的登录失败的log没有对应的trace
+				//登录成功过的token，再次使用会产生登录失败的log，有对应的trace
+				d = &GetAuditListResponseData{
+					Id:          log.Id.Hex(),
+					IP:          log.IP,
+					Operation:   log.Operation,
+					Detail:      log.Detail,
+					CreatedTime: log.CreatedTime,
+				}
 			}
+
 			data = append(data, d)
 		}
 
@@ -691,8 +717,8 @@ func getContainerAuditList(ctx context.Context, w http.ResponseWriter, r *http.R
 		rlt := GetAuditListResponse{
 			Total:     total,
 			PageCount: pageCount,
-			PageSize:  pageSize,
-			Page:      page,
+			PageSize:  len(data),
+			Page:      req.Page,
 			Data:      data,
 		}
 

@@ -158,6 +158,7 @@
                           :rules="rules.Value.Name"
                           @input="rules.Value.Name = rules0.Value.Name"
                         ></v-text-field>
+                        <v-checkbox label="敏感数据" v-model="NewValue.Mask" dark></v-checkbox>
                         <v-text-field 
                           v-model="NewValue.Value" 
                           ref="NewValue_Value" 
@@ -165,7 +166,8 @@
                           required 
                           :rules="rules.Value.Value" 
                           @input="rules.Value.Value = rules0.Value.Value"
-                          class="mt-4"
+                          rel="NewValue_Value"
+                          class="completer-field mt-4"
                         ></v-text-field>
                         <v-text-field 
                           label="说明" 
@@ -192,7 +194,7 @@
               no-data-text=""
             >
               <template slot="items" scope="props">
-                <td><router-link :to="'/env/trees/values/' + props.item.Id">{{ props.item.Name }}</router-link></td>
+                <td><router-link :to="'/env/trees/values/' + props.item.Id + '/' + TreeId">{{ props.item.Name }}</router-link></td>
                 <td>{{ props.item.Value }}</td>
                 <td>{{ props.item.Description }}</td>
                 <td>
@@ -215,6 +217,9 @@
 <script>
   import store, { mapGetters } from 'vuex'
   import api from '../api/api'
+  import jQuery from 'jquery'
+  import caret from '../caret'
+  import completer from '../completer'
   import * as ui from '../util/ui'
   import Tree from '../components/tree/tree.vue'
 
@@ -257,7 +262,7 @@
         SelectedValue: {},
 
         CreateValueDlg: false,
-        NewValue: { Name: '', Value: '', Description: '' },
+        NewValue: { Name: '', Mask: false, Value: '', Description: '' },
 
         rules: { Dir: {}, Value: {} },
 
@@ -297,6 +302,10 @@
 
         CreateValueDlg(v) {
           (v ? ui.showAlertAt('CreateValueDlg') : ui.showAlertAt())
+
+          if (v) {
+            this.initCompleters();
+          }
         }
     },
 
@@ -335,6 +344,31 @@
             }
           });
         });
+      },
+
+      initCompleters() {
+        this.$nextTick(function() {
+            let that = this;
+            jQuery('.completer-field').find('input').completer({
+              url: this.$axios.defaults.baseURL + '/envs/values/search?TreeId=' + this.TreeId,
+              completeSuggestion: function(e, v) {
+                let rel = e.parents('.completer-field').attr('rel');
+                Object.keys(that.$refs).forEach(k => {
+                  if (k != rel) {
+                    return;
+                  }
+
+                  let r = that.$refs[k];
+                  if (Array.isArray(r)) {
+                    r = r[0];
+                  }
+
+                  r.value = v;
+                  r.inputValue = v;
+                });
+              }
+            });
+          });
       },
 
       goback() {
@@ -441,6 +475,7 @@
 
           let params = {
             Name: this.NewValue.Name,
+            Mask: this.NewValue.Mask,
             Value: this.NewValue.Value,
             Description: this.NewValue.Description,
             DirId: this.SelectedDir.Id,

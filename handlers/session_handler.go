@@ -18,6 +18,12 @@ type SessionCreateResp struct {
 	Role uint64
 }
 
+//session的保持时间
+//校验身份成功后
+//每次操作，都会使得
+//当前session的超时时间，更新为未来30分钟内有效
+var sessionTimeout = time.Minute * 30
+
 //当前用户登录接口
 func postSessionCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
@@ -59,7 +65,7 @@ func postSessionCreate(ctx context.Context, w http.ResponseWriter, r *http.Reque
 			系统审计
 		*/
 		opUser := user
-		_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeUserLoginFailed, "", "", map[string]interface{}{"Name": name})
+		_ = utils.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeLoginFailed, "", "", map[string]interface{}{"Name": name})
 
 		HttpError(w, "pass is error", http.StatusForbidden)
 		return
@@ -89,17 +95,17 @@ func postSessionCreate(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		logrus.Fatalf("Redis hmset error: %#v", err)
 		panic(err)
 	}
-	age := time.Hour * 24 * 7
-	//设置session一周超时
-	//一周后再登录，会找不到redis中的key，导致认证不再可以通过，需要重新登录
-	client.Expire(utils.RedisSessionKey(sessionKey), age)
+	//设置session5分钟超时
+	//如果5分钟之内没有操作
+	//会找不到redis中的key，导致认证不再可以通过，需要重新登录
+	client.Expire(utils.RedisSessionKey(sessionKey), sessionTimeout)
 
 	sessionIDCookie := &http.Cookie{
 		Name:     "sessionID",
 		Value:    sessionKey,
 		Path:     "/",
 		HttpOnly: false,
-		MaxAge:   int(age),
+		MaxAge:   int(sessionTimeout),
 	}
 
 	logrus.Debugf("getUserLogin::get the cookie %#v", sessionIDCookie)
@@ -115,7 +121,7 @@ func postSessionCreate(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		系统审计
 	*/
 	opUser := user
-	_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeUserLoginFailed, "", "", map[string]interface{}{"Name": name})
+	_ = utils.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeUser, types.SystemAuditModuleOperationTypeLogined, "", "", map[string]interface{}{"Name": name})
 }
 
 //当前用户登出接口

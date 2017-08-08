@@ -25,25 +25,36 @@
               <v-flex xs2>
               </v-flex>
               <v-flex xs2>
-                <v-subheader>默认值<span class="required-star">*</span></v-subheader>
+                <v-checkbox label="敏感数据" v-model="Mask" dark></v-checkbox>
               </v-flex>
               <v-flex xs3>
+              </v-flex>
+              <v-flex xs2>
+                <v-subheader>默认值<span class="required-star">*</span></v-subheader>
+              </v-flex xs2>
+              <v-flex xs7>
                 <v-text-field
                   v-model="Value"
                   ref="Env_Value"
                   required
                   :rules="rules.Env.Value"
                   @input="rules.Env.Value = rules0.Env.Value"
+                  class="completer-field"
+                  rel="Env_Value"
                 ></v-text-field>
+              </v-flex>
+              <v-flex xs3>
               </v-flex>
               <v-flex xs2>
                 <v-subheader>说明</v-subheader>
               </v-flex>
-              <v-flex xs3>
+              <v-flex xs7>
                 <v-text-field
                   v-model="Description"
                   ref="Name"
                 ></v-text-field>
+              </v-flex>
+              <v-flex xs3>
               </v-flex>
               <v-flex xs12 mt-4 class="text-xs-center">
                 <v-btn class="orange darken-2 white--text" @click.native="saveEnvValue">
@@ -56,6 +67,16 @@
       </v-card>
     </v-flex>
     <v-flex xs12 mt-4>
+      <v-alert 
+            v-if="alertArea==='PoolValueAlert'"
+            v-bind:success="alertType==='success'" 
+            v-bind:info="alertType==='info'" 
+            v-bind:warning="alertType==='warning'" 
+            v-bind:error="alertType==='error'" 
+            v-model="alertMsg" 
+            dismissible>{{ alertMsg }}</v-alert>
+    </v-flex>
+    <v-flex xs12>
       <v-card>
         <v-card-title>
           各集群当前参数值
@@ -78,6 +99,8 @@
                   required
                   :rules="rules.Pool.Values"
                   @input="rules.Pool.Values = rules0.Pool.Values"
+                  class="completer-field"
+                  :rel="'Pool_' + props.item.PoolId"
                 ></v-text-field>
               </td>
               <td>
@@ -94,7 +117,11 @@
 </template>
 
 <script>
+  import store, { mapGetters } from 'vuex'
   import api from '../api/api'
+  import jQuery from 'jquery'
+  import caret from '../caret'
+  import completer from '../completer'
   import * as ui from '../util/ui'
 
   export default {
@@ -107,7 +134,9 @@
         ],
 
         Id: this.$route.params.id,
+        TreeId: this.$route.params.treeId,
         Name: '',
+        Mask: false,
         Value: '',
         Description: '',
         Values: [],
@@ -134,8 +163,20 @@
       }
     },
 
+    computed: {
+      ...mapGetters([
+          'alertArea',
+          'alertType',
+          'alertMsg'
+      ])
+    },
+
     mounted() {
       this.init();
+    },
+
+    destroyed() {
+      ui.showAlertAt();
     },
 
     methods: {
@@ -143,10 +184,38 @@
         api.EnvValue(this.Id).then(data => {
           this.Id = data.Id;
           this.Name = data.Name;
+          this.Mask = data.Mask;
           this.Value = data.Value;
           this.Description = data.Description;
           this.Values = data.Values;
+
+          this.initCompleters();
         })
+      },
+
+      initCompleters() {
+        this.$nextTick(function() {
+            let that = this;
+            jQuery('.completer-field').find('input').completer({
+              url: this.$axios.defaults.baseURL + '/envs/values/search?TreeId=' + this.TreeId,
+              completeSuggestion: function(e, v) {
+                let rel = e.parents('.completer-field').attr('rel');
+                Object.keys(that.$refs).forEach(k => {
+                  if (k != rel) {
+                    return;
+                  }
+
+                  let r = that.$refs[k];
+                  if (Array.isArray(r)) {
+                    r = r[0];
+                  }
+
+                  r.value = v;
+                  r.inputValue = v;
+                });
+              }
+            });
+          });
       },
 
       goback() {
@@ -154,6 +223,8 @@
       },
 
       saveEnvValue() {
+        ui.showAlertAt();
+
         this.rules.Env = this.rules0.Env;
         this.$nextTick(_ => {
           if (!this.validateForm('Env_')) {
@@ -164,6 +235,7 @@
           api.UpdateEnvValue({
             Id: this.Id,
             Name: this.Name,
+            Mask: this.Mask,
             Value: this.Value,
             Description: this.Description
           }).then(data => {
@@ -173,6 +245,8 @@
       },
 
       savePoolValue(item) {
+        ui.showAlertAt('PoolValueAlert');
+
         this.rules.Pool = this.rules0.Pool;
         this.$nextTick(_ => {
           if (!this.validateForm('Pool_')) {

@@ -230,9 +230,9 @@ func postTeamRemove(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		系统审计
 	*/
 
-	opUser, _ := utils.GetCurrentUser(ctx)
+	opUser, _ := getCurrentUser(ctx)
 	if opUser != nil {
-		_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeTeam, types.SystemAuditModuleOperationTypeTeamDelete, "", "", map[string]interface{}{"Team": deletedTeam})
+		_ = utils.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeTeam, types.SystemAuditModuleOperationTypeDelete, "", "", map[string]interface{}{"Team": deletedTeam})
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -323,9 +323,9 @@ func postTeamsCreate(ctx context.Context, w http.ResponseWriter, r *http.Request
 		系统审计
 	*/
 
-	user, _ := utils.GetCurrentUser(ctx)
+	user, _ := getCurrentUser(ctx)
 	if user != nil {
-		_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, user.Id.Hex(), types.SystemAuditModuleTypeTeam, types.SystemAuditModuleOperationTypeTeamCreate, "", "", map[string]interface{}{"Team": team})
+		_ = utils.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, user.Id.Hex(), types.SystemAuditModuleTypeTeam, types.SystemAuditModuleOperationTypeCreate, "", "", map[string]interface{}{"Team": team})
 	}
 }
 
@@ -418,9 +418,9 @@ func postTeamUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		系统审计
 	*/
 
-	opUser, _ := utils.GetCurrentUser(ctx)
+	opUser, _ := getCurrentUser(ctx)
 	if opUser != nil {
-		_ = types.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeTeam, types.SystemAuditModuleOperationTypeTeamUpdate, "", "", map[string]interface{}{"OldTeam": oldTeam, "NewTeam": newTeam})
+		_ = utils.CreateSystemAuditLog(mgoSession.DB(mgoDB), r, opUser.Id.Hex(), types.SystemAuditModuleTypeTeam, types.SystemAuditModuleOperationTypeUpdate, "", "", map[string]interface{}{"OldTeam": oldTeam, "NewTeam": newTeam})
 	}
 
 }

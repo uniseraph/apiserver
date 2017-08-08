@@ -9,7 +9,6 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
-	"time"
 )
 
 type GetSystemAuditListRequest struct {
@@ -64,11 +63,11 @@ type GetSystemAuditListResponseData struct {
 	RequestURI    string
 	CreatedTime   int64 `json:",omitempty"`
 	UserId        string
-	User          GetSystemAuditListResponseUserData
+	User          *GetSystemAuditListResponseUserData `json:",omitempty"`
 	PoolId        string
-	Pool          GetSystemAuditListResponsePoolData
+	Pool          *GetSystemAuditListResponsePoolData `json:",omitempty"`
 	ApplicationId string
-	Application   GetSystemAuditListResponseApplicationData
+	Application   *GetSystemAuditListResponseApplicationData `json:",omitempty"`
 	IP            string
 	Module        types.SystemAuditModuleType
 	Operation     types.SystemAuditModuleOperationType
@@ -94,18 +93,15 @@ func getSystemAuditList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	selector := bson.M{}
 
 	//设定时间查询条件
-	//if len(req.StartTime) > 0 || len(req.EndTime) > 0 {
 	if req.StartTime > 0 || req.EndTime > 0 {
 		createdtime := bson.M{}
 
 		if req.StartTime > 0 {
-			tm := time.Unix(req.StartTime, 0)
-			createdtime["$gte"] = tm
+			createdtime["$gte"] = req.StartTime
 		}
 
 		if req.EndTime > 0 {
-			tm := time.Unix(req.EndTime, 0)
-			createdtime["$lt"] = tm
+			createdtime["$lt"] = req.EndTime
 		}
 
 		selector["createdtime"] = createdtime
@@ -123,11 +119,11 @@ func getSystemAuditList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		selector["ip"] = req.IP
 	}
 
-	if req.Module > 0 {
+	if req.Module != "" {
 		selector["module"] = req.Module
 	}
 
-	if req.Operation > 0 {
+	if req.Operation != "" {
 		selector["operation"] = req.Operation
 	}
 
@@ -198,7 +194,7 @@ func getSystemAuditList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 				user, ok := userCache[log.UserId]
 				if ok {
-					d.User = GetSystemAuditListResponseUserData{
+					d.User = &GetSystemAuditListResponseUserData{
 						Id:   user.Id.Hex(),
 						Name: user.Name,
 					}
@@ -208,7 +204,7 @@ func getSystemAuditList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 					} else {
 						userCache[log.UserId] = user
 
-						d.User = GetSystemAuditListResponseUserData{
+						d.User = &GetSystemAuditListResponseUserData{
 							Id:   user.Id.Hex(),
 							Name: user.Name,
 						}
@@ -222,7 +218,7 @@ func getSystemAuditList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 				pool, ok := poolCache[log.PoolId]
 				if ok {
-					d.Pool = GetSystemAuditListResponsePoolData{
+					d.Pool = &GetSystemAuditListResponsePoolData{
 						Id:   pool.Id.Hex(),
 						Name: pool.Name,
 					}
@@ -232,7 +228,7 @@ func getSystemAuditList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 					} else {
 						poolCache[log.PoolId] = pool
 
-						d.Pool = GetSystemAuditListResponsePoolData{
+						d.Pool = &GetSystemAuditListResponsePoolData{
 							Id:   pool.Id.Hex(),
 							Name: pool.Name,
 						}
@@ -246,7 +242,7 @@ func getSystemAuditList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 				app, ok := appCache[log.ApplicationId]
 				if ok {
-					d.Application = GetSystemAuditListResponseApplicationData{
+					d.Application = &GetSystemAuditListResponseApplicationData{
 						Id:      app.Id.Hex(),
 						Title:   app.Title,
 						Name:    app.Name,
@@ -258,7 +254,7 @@ func getSystemAuditList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 					} else {
 						appCache[log.ApplicationId] = app
 
-						d.Application = GetSystemAuditListResponseApplicationData{
+						d.Application = &GetSystemAuditListResponseApplicationData{
 							Id:      app.Id.Hex(),
 							Title:   app.Title,
 							Name:    app.Name,
@@ -268,6 +264,20 @@ func getSystemAuditList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 				}
 
 			}
+
+			/*
+				User, Pool, Application没有的时候，不要填对象到结果中
+			*/
+			if d.ApplicationId == "" {
+				d.Application = nil
+			}
+			if d.PoolId == "" {
+				d.Pool = nil
+			}
+			if d.UserId == "" {
+				d.User = nil
+			}
+
 			data = append(data, d)
 		}
 
@@ -275,8 +285,8 @@ func getSystemAuditList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		rlt := GetSystemAuditListResponse{
 			Total:     total,
 			PageCount: pageCount,
-			PageSize:  pageSize,
-			Page:      page,
+			PageSize:  len(logs),
+			Page:      req.Page,
 			Data:      data,
 		}
 
