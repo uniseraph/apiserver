@@ -64,6 +64,26 @@
               </v-card>
             </v-dialog>
           </v-layout>
+          <v-layout row justify-center>
+            <v-snackbar
+                v-model="ApplicationNameWarning"
+                timeout="1500"
+                top
+                error
+              >应用ID改动将会影响到后续升级，请慎重</v-snackbar>
+            <v-snackbar
+                v-model="ServiceNameWarning"
+                timeout="1500"
+                top
+                error
+              >服务ID改动将会影响到后续升级，请慎重</v-snackbar>
+            <v-snackbar
+                v-model="NetworkModeWarning"
+                timeout="1500"
+                top
+                error
+              >切换网络会导致容器IP变动，可能会影响应用运行</v-snackbar>
+          </v-layout>
           <v-container fluid>
             <v-layout row wrap>
               <v-flex xs2>
@@ -88,10 +108,9 @@
                   ref="Name"
                   v-model="Name"
                   required
-                  hint="应用ID改动将会影响到后续升级，请慎重"
-                  persistent-hint
                   :rules="rules.Name"
                   @input="rules.Name = rules0.Name"
+                  @change="ApplicationNameWarning = true"
                 ></v-text-field>
               </v-flex>
               <v-flex xs2>
@@ -178,10 +197,9 @@
                     :ref="'Service_Name_' + item.Id"
                     v-model="item.Name"
                     required
-                    hint="服务ID改动将会影响到后续升级，请慎重"
-                    persistent-hint
                     :rules="rules.Services[item.Id].Name"
                     @input="rules.Services[item.Id].Name = rules0.Services.Name"
+                    @change="ServiceNameWarning = true"
                   ></v-text-field>
                 </v-flex>
                 <v-flex xs2>
@@ -240,7 +258,7 @@
                 <v-flex xs2>
                   <v-subheader>容器个数<span class="required-star">*</span></v-subheader>
                 </v-flex>
-                <v-flex xs3>
+                <v-flex xs2>
                   <v-text-field
                     :ref="'Service_ReplicaCount_' + item.Id"
                     v-model="item.ReplicaCount"
@@ -249,9 +267,8 @@
                     @input="rules.Services[item.Id].ReplicaCount = rules0.Services.ReplicaCount"
                   ></v-text-field>
                 </v-flex>
-                <v-flex xs7>
-                  <v-checkbox label="使用宿主机网络" v-model="item.NetworkMode" true-value="host" false-value="bridge" dark></v-checkbox>
-                  <span style="color:#9F9F9F;">(切换网络会导致IP变动，可能会影响应用运行)</span>
+                <v-flex xs8>
+                  <v-checkbox label="使用宿主机网络" v-model="item.NetworkMode" true-value="host" false-value="bridge" dark @change="NetworkModeWarning = true"></v-checkbox>
                 </v-flex>
                 <v-flex xs2>
                   <v-subheader>说明</v-subheader>
@@ -621,6 +638,10 @@
         EnvListDlg: false,
         CurrentService: null,
 
+        ApplicationNameWarning: false,
+        ServiceNameWarning: false,
+        NetworkModeWarning: false,
+
         rules: {
           Services: []
         },
@@ -762,6 +783,7 @@
           for (let st of data.Services) {
             st.index = st.Id = this.svcIdStart++;
             st.hidden = true;
+            st.NetworkModeWarning = false;
 
             let r = {
               Title: this.rules0.Services.Title,
