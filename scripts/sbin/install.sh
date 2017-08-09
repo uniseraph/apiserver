@@ -4,7 +4,7 @@
 
 if type apt-get >/dev/null 2>&1; then
   echo 'using apt-get '
-  sudo apt-get update && apt-get install -y mongodb mongodb-server redis
+  sudo apt-get update && apt-get install -y mongodb mongodb-server redis-server
 
 elif type yum >/dev/nul 2>&1; then
   echo 'using yum'
