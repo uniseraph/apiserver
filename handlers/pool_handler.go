@@ -12,6 +12,7 @@ import (
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"io/ioutil"
 	"net/http"
 	regexp "regexp"
 	"strings"
@@ -349,6 +350,11 @@ func getTunneldInfo(ctx context.Context, pool *types.PoolInfo) error {
 		return err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		buf, _ := ioutil.ReadAll(resp.Body)
+		return errors.Errorf(string(buf))
+	}
 
 	tunneld := &types.AgentService{}
 	if err := json.NewDecoder(resp.Body).Decode(tunneld); err != nil {
