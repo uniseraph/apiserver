@@ -333,8 +333,10 @@
                           v-model="props.item.Value"
                           :ref="'Env_Value_' + props.item.index"
                           required
-                          class="completer-field"
+                          :class="{ 'completer-field' : true, 'last-field': item.Envs.length == (props.item.index + 1) }"
                           :rel="'Env_Value_' + props.item.index"
+                          add_func="addEnv"
+                          :add_params="item.Id"
                         ></v-text-field>
                       </td>
                       <td>
@@ -382,6 +384,9 @@
                         <v-text-field
                           v-model="props.item.TargetGroupArn"
                           placeholder="若无需负载均衡则留空"
+                          :class="{ 'last-field': item.Ports.length == (props.item.index + 1) }"
+                          add_func="addPort"
+                          :add_params="item.Id"
                         ></v-text-field>
                       </td>
                       <td>
@@ -466,6 +471,9 @@
                           :rules="rules.Services[item.Id].Volumns[props.item.Id].Size"
                           @input="rules.Services[item.Id].Volumns[props.item.Id].Size = rules0.Services.Volumns.Size"
                           placeholder="0表示不限制大小"
+                          :class="{ 'last-field': item.Volumns.length == (props.item.index + 1) }"
+                          add_func="addVolumn"
+                          :add_params="item.Id"
                         ></v-text-field>
                       </td>
                       <td>
@@ -514,6 +522,10 @@
                           v-model="props.item.Value"
                           :ref="'Label_Value_' + props.item.index"
                           required
+                          :class="{ 'completer-field' : true, 'last-field': item.Labels.length == (props.item.index + 1) }"
+                          :rel="'Label_Value_' + props.item.index"
+                          add_func="addLabel"
+                          :add_params="item.Id"
                         ></v-text-field>
                       </td>
                       <td>
@@ -868,24 +880,49 @@
       initCompleters() {
         this.$nextTick(function() {
             let that = this;
-            jQuery('.completer-field').find('input').completer({
-              url: this.$axios.defaults.baseURL + '/envs/values/search',
-              completeSuggestion: function(e, v) {
-                let rel = e.parents('.completer-field').attr('rel');
-                Object.keys(that.$refs).forEach(k => {
-                  if (k != rel) {
-                    return;
-                  }
-
-                  let r = that.$refs[k];
-                  if (Array.isArray(r)) {
-                    r = r[0];
-                  }
-
-                  r.value = v;
-                  r.inputValue = v;
-                });
+            jQuery('.completer-field').each(function(e) {
+              let input = jQuery(this).find('input');
+              if (input.hasClass('with-completer')) {
+                return;
               }
+
+              input.addClass('with-completer');
+              input.completer({
+                url: that.$axios.defaults.baseURL + '/envs/values/search',
+                completeSuggestion: function(e, v) {
+                  let rel = e.parents('.completer-field').attr('rel');
+                  Object.keys(that.$refs).forEach(k => {
+                    if (k != rel) {
+                      return;
+                    }
+
+                    let r = that.$refs[k];
+                    if (Array.isArray(r)) {
+                      r = r[0];
+                    }
+
+                    r.value = v;
+                    r.inputValue = v;
+                  });
+                }
+              });
+            });
+
+            jQuery('.last-field').each(function() {
+              let input = jQuery(this).find('input');
+              if (input.hasClass('with-hotkey')) {
+                return;
+              }
+
+              input.addClass('with-hotkey');
+              input.keydown(function(e) {
+                if (e.keyCode == 9) {
+                  let j = jQuery(this).parents('.last-field');
+                  let f = j.attr('add_func');
+                  let s = that.Services[j.attr('add_params')];
+                  that[f](s);
+                }
+              });
             });
           });
       },
@@ -966,6 +1003,8 @@
         
         s.Ports.push({ index: s.Ports.length, Id: id, SourcePort: '', TargetGroupArn: '' });
         this.patch(s.Ports);
+
+        this.initCompleters();
       },
 
       addVolumn(s) {
@@ -978,6 +1017,8 @@
         
         s.Volumns.push({ index: s.Volumns.length, Id: id, ContainerPath: '', MountType: 'Directory', MediaType: 'SATA', IopsClass: 3, Size: 0 });
         this.patch(s.Volumns);
+
+        this.initCompleters();
       },
 
       addLabel(s) {
