@@ -291,6 +291,7 @@
       for (let i = p - 1; i >= 0; i--) {
         if (v.charAt(i) == '{' && i > 0 && v.charAt(i - 1) == '$') {
           s1 = v.substring(0, i + 1);
+          break;
         }
       }
 
