@@ -222,8 +222,9 @@
       if (keyCode === 13 || keyCode === 38 || keyCode === 40) {
         this.toggle(keyCode);
       } else {
+        let v = this.$element.val();
         let p = this.$element.getCaretPosition();
-        let s = this.$element.val().substring(0, p);
+        let s = v.substring(0, p);
         let prefix = null;
         for (let i = s.length - 1; i >= 0; i--) {
           let c = s.charAt(i);
@@ -234,6 +235,9 @@
             break;
           }
         }
+
+        this._value = v;
+        this._caretPosition = p;
 
         this.hide();
         if (prefix !== null) {
@@ -281,8 +285,8 @@
     },
 
     selectValue: function (sv) {
-      let v = this.$element.val();
-      let p = this.$element.getCaretPosition();
+      let v = this.$_value;
+      let p = this.$_caretPosition;
       let s1 = '';
       for (let i = p - 1; i >= 0; i--) {
         if (v.charAt(i) == '{' && i > 0 && v.charAt(i - 1) == '$') {
