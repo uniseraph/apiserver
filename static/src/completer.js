@@ -285,8 +285,8 @@
     },
 
     selectValue: function (sv) {
-      let v = this.$_value;
-      let p = this.$_caretPosition;
+      let v = this._value;
+      let p = this._caretPosition;
       let s1 = '';
       for (let i = p - 1; i >= 0; i--) {
         if (v.charAt(i) == '{' && i > 0 && v.charAt(i - 1) == '$') {
