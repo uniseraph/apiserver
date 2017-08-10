@@ -4,9 +4,15 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/types"
+	"sync"
+	"fmt"
 )
 
 var driver2FactoryFunc = make(map[string]FactoryFunc)
+
+var id2Proxy = make(map[string]Proxy)
+
+var mux sync.Mutex
 
 type StartProxyOpts struct {
 }
@@ -48,5 +54,30 @@ func NewProxyInstanceAndStart(config *types.APIServerConfig, poolInfo *types.Poo
 		return nil, err
 	}
 
+
+	mux.Lock()
+	id2Proxy[proxy.Pool().Id.Hex()] = proxy
+	mux.Unlock()
+
 	return proxy, err
+}
+
+
+func Close(id string) error {
+
+	mux.Lock()
+
+
+	p , ok := id2Proxy[id]
+	if !ok {
+		mux.Unlock()
+		return errors.New( fmt.Sprintf("no such a proxy:%s" ,id ))
+	}
+	mux.Unlock()
+
+
+	return p.Stop()
+
+
+
 }

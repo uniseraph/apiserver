@@ -110,8 +110,14 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if err := application.ScaleApplication(ctx, app, pool, m); err != nil {
+	ctx1, cancel := context.WithCancel(ctx)
+
+	if err := application.ScaleApplication(ctx1, app, pool, m); err != nil {
 		//TODO 需要删除所有已创建成功的容器？？？
+
+		cancel()
+
+		colApplication.RemoveId(app.Id)
 
 		HttpError(w, "发布应用失败"+err.Error(), http.StatusInternalServerError)
 		return
