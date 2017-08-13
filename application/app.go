@@ -15,7 +15,6 @@ import (
 	composeyml "github.com/docker/libcompose/yaml"
 	"github.com/zanecloud/apiserver/proxy/swarm"
 	"gopkg.in/yaml.v2"
-	"k8s.io/kubernetes/test/e2e_node/services"
 	"strconv"
 	"strings"
 )
