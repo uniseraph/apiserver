@@ -15,6 +15,7 @@ import (
 	composeyml "github.com/docker/libcompose/yaml"
 	"github.com/zanecloud/apiserver/proxy/swarm"
 	"gopkg.in/yaml.v2"
+	"k8s.io/kubernetes/test/e2e_node/services"
 	"strconv"
 	"strings"
 )
@@ -147,9 +148,12 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 				capNetAdmin = true
 			}
 
-			if appService.NetworkMode == "host" {
-				composeService.Expose = append(composeService.Expose, composeService.Ports[i])
-			}
+			//expose
+			//Expose ports without publishing them to the host machine - they’ll only be accessible to linked services. Only the internal port can be specified.
+
+			//if appService.NetworkMode == "host" {
+			//	composeService.Expose = append(composeService.Expose, composeService.Ports[i])
+			//}
 		}
 
 		composeService.Labels = map[string]string{}
