@@ -121,6 +121,7 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			Restart:     appService.Restart,
 			NetworkMode: "bridge",
 			CPUSet:      appService.CPU,
+			Expose:      []string{},
 			//Ports:       s.Ports,
 		}
 
@@ -142,7 +143,12 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			composeService.Ports[i] = strconv.Itoa(appService.Ports[i].SourcePort)
 			if appService.Ports[i].SourcePort < 1024 && appService.NetworkMode == "host" && !capNetAdmin {
 				composeService.CapAdd = append(composeService.CapAdd, "NET_ADMIN")
+
 				capNetAdmin = true
+			}
+
+			if appService.NetworkMode == "host" {
+				composeService.Expose = append(composeService.Expose, composeService.Ports[i])
 			}
 		}
 

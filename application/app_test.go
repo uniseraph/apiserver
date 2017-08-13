@@ -12,7 +12,7 @@ import (
 func TestCreateApplication(t *testing.T) {
 
 	logrus.SetOutput(os.Stderr)
-	level, err := logrus.ParseLevel("info")
+	level, err := logrus.ParseLevel("debug")
 	if err != nil {
 		logrus.Fatalf(err.Error())
 	}
@@ -23,11 +23,12 @@ func TestCreateApplication(t *testing.T) {
 		Id:   "applicationidxxxxx000",
 		Services: []types.Service{
 			types.Service{
-				ImageName: "nginx",
-				ImageTag:  "1.8",
-				Restart:   "always",
-				Name:      "nginx",
-				Ports:     []types.Port{{80, "lbidxxxx"}},
+				ImageName:   "nginx",
+				ImageTag:    "1.8",
+				Restart:     "always",
+				NetworkMode: "host",
+				Name:        "nginx",
+				Ports:       []types.Port{{80, "lbidxxxx"}},
 				Envs: []types.Env{{types.Label{Name: "env1", Value: "env1"}},
 					{types.Label{Name: "env2", Value: "env2"}}},
 				Labels: []types.Label{{Name: "key1", Value: "value1"},
@@ -36,7 +37,7 @@ func TestCreateApplication(t *testing.T) {
 		},
 	}
 	pool1 := &types.PoolInfo{
-		ProxyEndpoint: "tcp://127.0.0.1:54963",
+		ProxyEndpoint: "tcp://47.92.142.65:2375",
 		DriverOpts: types.DriverOpts{
 			APIVersion: "v1.23",
 		},
