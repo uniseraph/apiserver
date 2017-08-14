@@ -1187,6 +1187,12 @@
             return;
           }
 
+          for (let s of this.Services) {
+            for (let e of s.Envs) {
+              e.Value = e.Value.trim();
+            }
+          }
+
           let a = {
             Id: this.Id,
             Title: this.Title,
