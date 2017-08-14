@@ -1113,7 +1113,7 @@
           Services: this.Services
         };
 
-        this.TemplateData = JSON.stringify(t);
+        this.TemplateData = JSON.stringify(t, null, 4);
         this.Importing = false;
         this.TemplateDataDlg = true;
       },
