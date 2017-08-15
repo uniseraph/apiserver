@@ -348,6 +348,7 @@
                       <td>
                         <v-text-field
                           v-model="props.item.Name"
+                        ></v-text-field>
                       </td>
                       <td>
                         <v-text-field

@@ -121,6 +121,7 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			Restart:     as.Restart,
 			NetworkMode: "bridge",
 			CPUSet:      as.CPU,
+			Expose:      []string{},
 			//Ports:       s.Ports,
 		}
 		if as.NetworkMode == "host" {
@@ -135,6 +136,7 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 		}
 
 		capNetAdmin := false
+
 		sc.Ports = make([]string, len(as.Ports))
 		for i, _ := range as.Ports {
 			sc.Ports[i] = strconv.Itoa(as.Ports[i].SourcePort)
@@ -143,6 +145,13 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 				capNetAdmin = true
 			}
 
+
+			//expose
+			//Expose ports without publishing them to the host machine - they’ll only be accessible to linked services. Only the internal port can be specified.
+
+			//if appService.NetworkMode == "host" {
+			//	composeService.Expose = append(composeService.Expose, composeService.Ports[i])
+			//}
 		}
 
 		sc.Labels = map[string]string{}

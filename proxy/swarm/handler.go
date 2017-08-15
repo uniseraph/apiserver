@@ -220,8 +220,7 @@ func hijack(tlsConfig *tls.Config, endpoint string, w http.ResponseWriter, r *ht
 
 type Handler func(c context.Context, w http.ResponseWriter, r *http.Request)
 
-func NewPoolHandler(ctx context.Context, poolInfo * apiserver.PoolInfo ) (http.Handler, error) {
-
+func NewPoolHandler(ctx context.Context, poolInfo *apiserver.PoolInfo) (http.Handler, error) {
 
 	r := mux.NewRouter()
 	for method, mappings := range routers {
@@ -260,6 +259,7 @@ func NewPoolHandler(ctx context.Context, poolInfo * apiserver.PoolInfo ) (http.H
 
 	return r, nil
 }
+
 //func preparePoolContext(p *Proxy, session *mgo.Session, cli *dockerclient.Client)  {
 //	p.ctx = context.WithValue(p.ctx, utils.KEY_PROXY_SELF, p)
 //	p.ctx = context.WithValue(p.ctx, utils.KEY_APISERVER_CONFIG, p.APIServerConfig)
@@ -287,7 +287,6 @@ func proxyAsyncWithCallBack(callback func(context.Context, *http.Request, *http.
 func getMgoDB(ctx context.Context) (string, error) {
 
 	p, _ := ctx.Value(utils.KEY_PROXY_SELF).(*Proxy)
-
 
 	return p.APIServerConfig.MgoDB, nil
 }
@@ -374,13 +373,12 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		logrus.WithFields(logrus.Fields{"resp": resp, "err": err}).Debug("postContainersCreate:create container err")
 
 		resp.ID = ""
-		resp.Warnings = []string{}
+		resp.Warnings = []string{err.Error()}
 		respBody, _ := json.Marshal(resp)
 
 		//TODO imageNotFoundError 需要处理
 		if strings.HasPrefix(err.Error(), "Conflict") {
 
-			//httpError(w, "postContainersCreate:create container name conflict"+err.Error(), http.StatusConflict)
 			httpError(w, string(respBody), http.StatusConflict)
 			return
 		} else {

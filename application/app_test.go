@@ -42,7 +42,8 @@ func TestCreateApplication(t *testing.T) {
 		},
 	}
 	pool1 := &types.PoolInfo{
-		ProxyEndpoint: "unix:///var/run/docker.sock",
+
+		ProxyEndpoint: "tcp://47.92.142.65:2375",
 		DriverOpts: types.DriverOpts{
 			APIVersion: "v1.23",
 		},
