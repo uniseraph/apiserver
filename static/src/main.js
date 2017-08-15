@@ -44,6 +44,7 @@ Vue.filter('dividedBy1024', function(value, scale=2) {
 
 router.beforeEach((to, from, next) => {
   store.dispatch('alertArea', null);
+  next();
 });
 
 new Vue({
