@@ -65,8 +65,8 @@
           <td>{{ props.item.Node ? props.item.Node.IP : '' }}</td>
           <td>
             <div v-if="props.item.Ports">
-              <div v-for="p in props.item.Ports">
-                容器{{ p.ContainerPort }} => 节点{{ p.HostPort }}
+              <div v-for="p in props.item.Ports" style="white-space:nowrap;">
+                容器{{ p.ContainerPort }}: 宿主机{{ p.HostPort }}
               </div>
             </div>
           </td>
