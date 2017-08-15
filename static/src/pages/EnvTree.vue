@@ -30,7 +30,7 @@
                     v-bind:info="alertType==='info'" 
                     v-bind:warning="alertType==='warning'" 
                     v-bind:error="alertType==='error'" 
-                    v-model="alertMsg" 
+                    v-model="alertDisplay" 
                     dismissible>{{ alertMsg }}</v-alert>
                   <v-card-row>
                     <v-card-title>修改目录名</v-card-title>
@@ -62,7 +62,7 @@
                     v-bind:info="alertType==='info'" 
                     v-bind:warning="alertType==='warning'" 
                     v-bind:error="alertType==='error'" 
-                    v-model="alertMsg" 
+                    v-model="alertDisplay" 
                     dismissible>{{ alertMsg }}</v-alert>
                   <v-card-row>
                     <v-card-title>新建“{{ SelectedDir.Name }}”的子目录</v-card-title>
@@ -143,7 +143,7 @@
                       v-bind:info="alertType==='info'" 
                       v-bind:warning="alertType==='warning'" 
                       v-bind:error="alertType==='error'" 
-                      v-model="alertMsg" 
+                      v-model="alertDisplay" 
                       dismissible>{{ alertMsg }}</v-alert>
                     <v-card-row>
                       <v-card-title>新增参数</v-card-title>
@@ -314,7 +314,16 @@
           'alertArea',
           'alertType',
           'alertMsg'
-      ])
+      ]),
+
+      alertDisplay: {
+        get() {
+          return this.$store.getters.alertArea != null;
+        },
+        set(v) {
+          this.$store.dispatch('alertArea', null);
+        }
+      }
     },
 
     mounted() {
