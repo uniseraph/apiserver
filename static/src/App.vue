@@ -64,7 +64,7 @@
             v-bind:info="alertType==='info'" 
             v-bind:warning="alertType==='warning'" 
             v-bind:error="alertType==='error'" 
-            v-model="alertMsg" 
+            v-model="alertDisplay"
             dismissible>{{ alertMsg }}</v-alert>
         </v-flex>
         <v-flex xs4>
@@ -237,7 +237,7 @@
                   v-bind:info="alertType==='info'" 
                   v-bind:warning="alertType==='warning'" 
                   v-bind:error="alertType==='error'" 
-                  v-model="alertMsg" 
+                  v-model="alertDisplay"
                   dismissible>{{ alertMsg }}</v-alert>
               </v-flex>
               <v-flex xs12>
@@ -291,7 +291,16 @@
           'alertType',
           'alertMsg',
           'token'
-      ])
+      ]),
+
+      alertDisplay: {
+        get() {
+          return this.$store.getters.alertArea != null;
+        },
+        set(v) {
+          this.$store.dispatch('alertArea', null);
+        }
+      }
     },
 
     mounted() {
