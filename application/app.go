@@ -27,7 +27,7 @@ func UpApplication(ctx context.Context, app *types.Application, pool *types.Pool
 		return err
 	}
 	err = p.Up(ctx, options.Up{
-		options.Create{ForceRecreate: false,
+		Create: options.Create{ForceRecreate: false,
 			NoBuild:    true,
 			ForceBuild: false},
 	})
@@ -41,19 +41,35 @@ func UpApplication(ctx context.Context, app *types.Application, pool *types.Pool
 
 }
 
-func UpgradeApplication(ctx context.Context, app *types.Application, pool *types.PoolInfo) error {
+func UpgradeApplication(ctx context.Context, app *types.Application, pool *types.PoolInfo,
+	existedServices map[string]int, increasedServices map[string]int, expiredServices map[string]int) error {
 	p, err := buildProject(app, pool)
 	if err != nil {
 		return err
 	}
+
+	// 1. scale increased service
+	if err := p.Scale(ctx, 30, increasedServices); err != nil {
+		logrus.WithFields(logrus.Fields{"err": err}).Debug("upgrade scale increased services err")
+		return err
+	}
+
+	// 2. upgrade existed services
 	err = p.Upgrade(ctx, options.Up{
-		options.Create{ForceRecreate: false,
-			NoBuild:    true,
-			ForceBuild: false},
-	})
+		Create: options.Create{
+			ForceRecreate: false,
+			NoBuild:       true,
+			ForceBuild:    false},
+	}, existedServices)
 
 	if err != nil {
-		logrus.WithFields(logrus.Fields{"err": err}).Debug("up application err")
+		logrus.WithFields(logrus.Fields{"err": err}).Debug("upgrade existed services err")
+		return err
+	}
+
+	// 3. scale expired service to zero
+	if err := p.Scale(ctx, 30, expiredServices); err != nil {
+		logrus.WithFields(logrus.Fields{"err": err}).Debug("upgrade scale expired services err")
 		return err
 	}
 

@@ -65,6 +65,7 @@ type ContainerAPIClient interface {
 	ContainerTop(ctx context.Context, container string, arguments []string) (container.ContainerTopOKBody, error)
 	ContainerUnpause(ctx context.Context, container string) error
 	ContainerUpdate(ctx context.Context, container string, updateConfig container.UpdateConfig) (container.ContainerUpdateOKBody, error)
+	ContainerUpgrade(ctx context.Context, containerID string, config container.Config) error
 	ContainerWait(ctx context.Context, container string, condition container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error)
 	CopyFromContainer(ctx context.Context, container, srcPath string) (io.ReadCloser, types.ContainerPathStat, error)
 	CopyToContainer(ctx context.Context, container, path string, content io.Reader, options types.CopyToContainerOptions) error

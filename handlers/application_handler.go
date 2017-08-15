@@ -608,27 +608,60 @@ func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		app.Status = "running"
 
 		//merge  template 中的label和环境变量
-		ms, err := mergeServices(ctx, template.Services, pool)
+		newServices, err := mergeServices(ctx, template.Services, pool)
 		if err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		logrus.WithFields(logrus.Fields{"ms": ms}).Debugf("after merged , ms is  ...")
+		logrus.WithFields(logrus.Fields{"ms": newServices}).Debugf("after merged , ms is  ...")
 
-		scaleMap := make(map[string]int)
-		for i, _ := range app.Services {
-			scaleMap[app.Services[i].Name] = app.Services[i].ReplicaCount
-		}
-
-		app.Services = ms
-
-		for i, _ := range app.Services {
-			if count, ok := scaleMap[app.Services[i].Name]; ok {
-				app.Services[i].ReplicaCount = count
+		increasedServices := make(map[string]int)
+		expiredServices := make(map[string]int)
+		existedServices := make(map[string]int)
+		mergedServices := []types.Service{}
+		finalServices := []types.Service{}
+		for _, newService := range newServices {
+			exist := false
+			for _, oldService := range app.Services {
+				if newService.Name == oldService.Name {
+					exist = true
+					break
+				}
+			}
+			if !exist {
+				mergedServices = append(mergedServices, newService)
+				finalServices = append(finalServices, newService)
+				// record increased service
+				increasedServices[newService.Name] = newService.ReplicaCount
 			}
 		}
 
+		for _, oldService := range app.Services {
+			exist := false
+			for _, newService := range newServices {
+				if oldService.Name == newService.Name {
+					exist = true
+					newService.ReplicaCount = oldService.ReplicaCount
+					mergedServices = append(mergedServices, newService)
+					finalServices = append(finalServices, newService)
+					// record existed services
+					existedServices[newService.Name] = oldService.ReplicaCount
+					break
+				}
+			}
+			if !exist {
+				oldService.ReplicaCount = 0
+				mergedServices = append(mergedServices, oldService)
+				// record expired service
+				expiredServices[oldService.Name] = 0
+			}
+		}
+
+		// reset app.Services with mergedService(include expired services)
+		app.Services = mergedServices
+
+		logrus.WithFields(logrus.Fields{"increased services": increasedServices, "expired services": expiredServices}).Debugf("after merge services, diff services is ...")
 		logrus.WithFields(logrus.Fields{"app": app}).Debugf("after get ms , app is ...")
 
 		if err := colApplication.UpdateId(bson.ObjectIdHex(id), app); err != nil {
@@ -636,8 +669,16 @@ func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		if err := application.UpgradeApplication(ctx, app, pool); err != nil {
+		if err := application.UpgradeApplication(ctx, app, pool, existedServices, increasedServices, expiredServices); err != nil {
 			HttpError(w, "升级失败:"+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// reset app.Service with services without expired services
+		app.Services = finalServices
+		logrus.WithFields(logrus.Fields{"app": app}).Debugf("after upgrade , app is ...")
+		if err := colApplication.UpdateId(bson.ObjectIdHex(id), app); err != nil {
+			HttpError(w, "保存应用信息失败:"+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -970,15 +1011,45 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		app := deployment.App
+		increasedServices := make(map[string]int)
+		expiredServices := make(map[string]int)
+		existedServices := make(map[string]int)
+		mergedServices := []types.Service{}
+		finalServices := []types.Service{}
 
-		for i, _ := range app.Services {
-
-			app.Services[i].ReplicaCount = currentApp.Services[i].ReplicaCount
-
+		for _, newService := range deployment.App.Services {
+			exist := false
+			for _, oldService := range currentApp.Services {
+				if newService.Name == oldService.Name {
+					exist = true
+					break
+				}
+			}
+			if !exist {
+				mergedServices = append(mergedServices, newService)
+				finalServices = append(finalServices, newService)
+				increasedServices[newService.Name] = newService.ReplicaCount
+			}
 		}
 
-		//TODO rollback时候不改变现有服务的ReplicaCount
+		for _, oldService := range currentApp.Services {
+			exist := false
+			for _, newService := range deployment.App.Services {
+				if newService.Name == oldService.Name {
+					exist = true
+					newService.ReplicaCount = oldService.ReplicaCount
+					mergedServices = append(mergedServices, newService)
+					finalServices = append(finalServices, newService)
+					existedServices[newService.Name] = oldService.ReplicaCount
+					break
+				}
+			}
+			if !exist {
+				oldService.ReplicaCount = 0
+				mergedServices = append(mergedServices, oldService)
+				expiredServices[oldService.Name] = 0
+			}
+		}
 
 		if err := colPool.FindId(bson.ObjectIdHex(deployment.PoolId)).One(pool); err != nil {
 			if err == mgo.ErrNotFound {
@@ -989,13 +1060,29 @@ func rollbackApplication(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		if err := application.UpgradeApplication(ctx, app, pool); err != nil {
+		app := deployment.App
+		// reset app.Services with mergedService(include expired services)
+		app.Services = mergedServices
+
+		logrus.WithFields(logrus.Fields{"existed services": existedServices, "increased services": increasedServices,
+			"expired services": expiredServices}).Debugf("after rollback merge services, diff services is ...")
+		logrus.WithFields(logrus.Fields{"app": app}).Debugf("after get rollback ms , app is ...")
+
+		if err := colApplication.UpdateId(bson.ObjectIdHex(id), app); err != nil {
+			HttpError(w, "保存应用信息失败:"+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err := application.UpgradeApplication(ctx, app, pool, existedServices, increasedServices, expiredServices); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		if err := colApplication.UpdateId(app.Id, app); err != nil {
-			HttpError(w, err.Error(), http.StatusInternalServerError)
+		// reset app.Service with services without expired services
+		app.Services = finalServices
+		logrus.WithFields(logrus.Fields{"app": app}).Debugf("after rollback , app is ...")
+		if err := colApplication.UpdateId(bson.ObjectIdHex(id), app); err != nil {
+			HttpError(w, "保存应用信息失败:"+err.Error(), http.StatusInternalServerError)
 			return
 		}
 

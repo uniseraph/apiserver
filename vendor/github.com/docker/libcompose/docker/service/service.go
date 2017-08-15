@@ -9,6 +9,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types"
+	containertypes "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
@@ -82,34 +83,6 @@ func (s *Service) Create(ctx context.Context, options options.Create) error {
 	if len(containers) != 0 {
 		return s.eachContainer(ctx, containers, func(c *container.Container) error {
 			_, err := s.recreateIfNeeded(ctx, c, options.NoRecreate, options.ForceRecreate)
-			return err
-		})
-	}
-
-	namer, err := s.namer(ctx, 1)
-	if err != nil {
-		return err
-	}
-
-	_, err = s.createContainer(ctx, namer, "", nil, false)
-	return err
-}
-
-// UpgradeCreate implements Service.Create. It ensures the image exists or build it
-// if it can and then create a container.
-func (s *Service) UpgradeCreate(ctx context.Context, options options.Create) error {
-	containers, err := s.collectContainers(ctx)
-	if err != nil {
-		return err
-	}
-
-	if err := s.ensureImageExists(ctx, options.NoBuild, options.ForceBuild); err != nil {
-		return err
-	}
-
-	if len(containers) != 0 {
-		return s.eachContainer(ctx, containers, func(c *container.Container) error {
-			_, err := s.upgradeRecreateIfNeeded(ctx, c, options.NoRecreate, options.ForceRecreate)
 			return err
 		})
 	}
@@ -270,7 +243,7 @@ func (s *Service) Up(ctx context.Context, options options.Up) error {
 	return s.up(ctx, imageName, true, options)
 }
 
-// Upgrade implements Service.Up. It builds the image if needed, creates a container
+// Upgrade implements Service.Upgrade. It builds the image if needed, upgrade a container
 // and start it.
 func (s *Service) Upgrade(ctx context.Context, options options.Up) error {
 	containers, err := s.collectContainers(ctx)
@@ -278,14 +251,76 @@ func (s *Service) Upgrade(ctx context.Context, options options.Up) error {
 		return err
 	}
 
-	var imageName = s.imageName()
+	logrus.Debugf("Found %d existing containers for service %s", len(containers), s.name)
+
+	if len(containers) == 0 {
+		// no container exist, do nothing
+		return nil
+	}
+
+	// check image exist
 	if len(containers) == 0 || !options.NoRecreate {
 		if err = s.ensureImageExists(ctx, options.NoBuild, options.ForceBuild); err != nil {
 			return err
 		}
 	}
 
-	return s.upgrade(ctx, imageName, true, options)
+	// start do update and upgrade for each container
+	config, hostConfig, err := Convert(s.serviceConfig, s.context.Context, s.clientFactory)
+
+	return s.eachContainer(ctx, containers, func(c *container.Container) error {
+		// 1. docker update
+		updateLabels := map[string]string{}
+		const LABEL_CPUS = "com.zanecloud.omega.container.cpus"
+		const LABEL_DISKS = "DiskQuota"
+
+		if v, exist := config.Labels[LABEL_CPUS]; exist {
+			updateLabels[LABEL_CPUS] = v
+		}
+		if v, exist := config.Labels[LABEL_DISKS]; exist {
+			updateLabels[LABEL_DISKS] = v
+		}
+		updateConfig := &containertypes.UpdateConfig{
+			Resources: containertypes.Resources{
+				Memory:     hostConfig.Memory,
+				MemorySwap: hostConfig.MemorySwap,
+			},
+			Labels: updateLabels,
+		}
+		if err := c.Update(ctx, updateConfig); err != nil {
+			return fmt.Errorf("upgrade failed when do update container [%s]: %v", c.ID(), err)
+		}
+
+		// 2. docker upgrade
+		if err := c.Stop(ctx, 10); err != nil {
+			return fmt.Errorf("upgrade failed when do stop container [%s]: %v", c.ID(), err)
+		}
+
+		upgradeConfig := &containertypes.Config{
+			User:         config.User,
+			ExposedPorts: config.ExposedPorts,
+			Env:          config.Env,
+			Labels:       config.Labels,
+			Entrypoint:   config.Entrypoint,
+			Cmd:          config.Cmd,
+			WorkingDir:   config.WorkingDir,
+			Volumes:      config.Volumes,
+			StopSignal:   config.StopSignal,
+		}
+		if err := c.Upgrade(ctx, upgradeConfig); err != nil {
+			return fmt.Errorf("upgrade failed when do upgrade container [%s]: %v", c.ID(), err)
+		}
+
+		if err := c.Start(ctx); err != nil {
+			return fmt.Errorf("upgrade failed when do start container [%s]: %v", c.ID(), err)
+		}
+
+		s.project.Notify(events.ContainerStarted, s.name, map[string]string{
+			"name": c.Name(),
+		})
+
+		return nil
+	})
 }
 
 // Run implements Service.Run. It runs a one of command within the service container.
@@ -375,51 +410,6 @@ func (s *Service) up(ctx context.Context, imageName string, create bool, options
 		var err error
 		if create {
 			c, err = s.recreateIfNeeded(ctx, c, options.NoRecreate, options.ForceRecreate)
-			if err != nil {
-				return err
-			}
-		}
-
-		if err := s.connectContainerToNetworks(ctx, c, false); err != nil {
-			return err
-		}
-
-		err = c.Start(ctx)
-
-		if err == nil {
-			s.project.Notify(events.ContainerStarted, s.name, map[string]string{
-				"name": c.Name(),
-			})
-		}
-
-		return err
-	})
-}
-
-func (s *Service) upgrade(ctx context.Context, imageName string, create bool, options options.Up) error {
-	containers, err := s.collectContainers(ctx)
-	if err != nil {
-		return err
-	}
-
-	logrus.Debugf("Found %d existing containers for service %s", len(containers), s.name)
-
-	if len(containers) == 0 && create {
-		namer, err := s.namer(ctx, 1)
-		if err != nil {
-			return err
-		}
-		c, err := s.createContainer(ctx, namer, "", nil, false)
-		if err != nil {
-			return err
-		}
-		containers = []*container.Container{c}
-	}
-
-	return s.eachContainer(ctx, containers, func(c *container.Container) error {
-		var err error
-		if create {
-			c, err = s.upgradeRecreateIfNeeded(ctx, c, options.NoRecreate, options.ForceRecreate)
 			if err != nil {
 				return err
 			}
@@ -539,32 +529,6 @@ func (s *Service) recreateIfNeeded(ctx context.Context, c *container.Container, 
 	return c, err
 }
 
-func (s *Service) upgradeRecreateIfNeeded(ctx context.Context, c *container.Container, noRecreate, forceRecreate bool) (*container.Container, error) {
-	if noRecreate {
-		return c, nil
-	}
-	outOfSync, err := s.OutOfSync(ctx, c)
-	if err != nil {
-		return c, err
-	}
-
-	logrus.WithFields(logrus.Fields{
-		"outOfSync":     outOfSync,
-		"ForceRecreate": forceRecreate,
-		"NoRecreate":    noRecreate}).Debug("Going to decide if recreate is needed")
-
-	if forceRecreate || outOfSync {
-		logrus.Infof("Recreating %s", s.name)
-		newContainer, err := s.upgradeRecreate(ctx, c)
-		if err != nil {
-			return c, err
-		}
-		return newContainer, nil
-	}
-
-	return c, err
-}
-
 func (s *Service) recreate(ctx context.Context, c *container.Container) (*container.Container, error) {
 	name := c.Name()
 	id := c.ID()
@@ -575,30 +539,6 @@ func (s *Service) recreate(ctx context.Context, c *container.Container) (*contai
 		return nil, err
 	}
 	namer := NewSingleNamer(name)
-	newContainer, err := s.createContainer(ctx, namer, id, nil, false)
-	if err != nil {
-		return nil, err
-	}
-	newID := newContainer.ID()
-	logrus.Debugf("Created replacement container %s", newID)
-	if err := c.Remove(ctx, false); err != nil {
-		logrus.Errorf("Failed to remove old container %s", c.Name())
-		return nil, err
-	}
-	logrus.Debugf("Removed old container %s %s", c.Name(), id)
-	return newContainer, nil
-}
-
-func (s *Service) upgradeRecreate(ctx context.Context, c *container.Container) (*container.Container, error) {
-	name := c.Name()
-	id := c.ID()
-	newName := fmt.Sprintf("/old_%s", id[:12])
-	logrus.Debugf("Renaming %s => %s", name, newName)
-	if err := c.Rename(ctx, newName); err != nil {
-		logrus.Errorf("Failed to rename old container %s", c.Name())
-		return nil, err
-	}
-	namer := NewRecreateNamer(name)
 	newContainer, err := s.createContainer(ctx, namer, id, nil, false)
 	if err != nil {
 		return nil, err

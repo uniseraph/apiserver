@@ -395,3 +395,14 @@ func (c *Container) Number() (int, error) {
 	numberStr := c.container.Config.Labels[labels.NUMBER.Str()]
 	return strconv.Atoi(numberStr)
 }
+
+// Update updates the container.
+func (c *Container) Update(ctx context.Context, updateConfig *container.UpdateConfig) error {
+	_, err := c.client.ContainerUpdate(ctx, c.container.ID, *updateConfig)
+	return err
+}
+
+// Upgrade upgrades the container.
+func (c *Container) Upgrade(ctx context.Context, upgradeConfig *container.Config) error {
+	return c.client.ContainerUpgrade(ctx, c.container.ID, *upgradeConfig)
+}

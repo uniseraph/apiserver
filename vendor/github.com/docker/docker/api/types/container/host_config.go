@@ -323,6 +323,8 @@ type UpdateConfig struct {
 	// Contains container's resources (cgroups, ulimits)
 	Resources
 	RestartPolicy RestartPolicy
+	// List of labels set to this container
+	Labels map[string]string
 }
 
 // HostConfig the non-portable Config structure of a container.

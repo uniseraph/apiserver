@@ -1,22 +1,40 @@
 package project
 
 import (
-	"golang.org/x/net/context"
+	"fmt"
 
-	"github.com/docker/libcompose/project/events"
+	log "github.com/Sirupsen/logrus"
 	"github.com/docker/libcompose/project/options"
+	"golang.org/x/net/context"
 )
 
-// Up creates and starts the specified services (kinda like docker run).
-func (p *Project) Upgrade(ctx context.Context, options options.Up, services ...string) error {
+// Upgrade upgrade and create-start the specified services.
+func (p *Project) Upgrade(ctx context.Context, options options.Up, upgradeServices map[string]int) error {
 	if err := p.initialize(ctx); err != nil {
 		return err
 	}
-	return p.perform(events.ProjectUpStart, events.ProjectUpDone, services, wrapperAction(func(wrapper *serviceWrapper, wrappers map[string]*serviceWrapper) {
-		wrapper.Do(wrappers, events.ServiceUpStart, events.ServiceUp, func(service Service) error {
-			return service.Upgrade(ctx, options)
-		})
-	}), func(service Service) error {
-		return service.UpgradeCreate(ctx, options.Create)
-	})
+	order := make([]string, 0, 0)
+	services := make(map[string]Service)
+
+	for name := range upgradeServices {
+		if !p.ServiceConfigs.Has(name) {
+			return fmt.Errorf("%s is not defined in the template", name)
+		}
+
+		service, err := p.CreateService(name)
+		if err != nil {
+			return fmt.Errorf("Failed to lookup service: %s: %v", service, err)
+		}
+		order = append(order, name)
+		services[name] = service
+	}
+
+	for _, name := range order {
+		log.Infof("Start inplace upgrade for service %s...", name)
+		err := services[name].Upgrade(ctx, options)
+		if err != nil {
+			return fmt.Errorf("Failed to inplace upgrade for service %s: %v", name, err)
+		}
+	}
+	return nil
 }
