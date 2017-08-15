@@ -807,6 +807,11 @@ func deletePool(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if err := proxy.Stop(pool.Id.Hex()); err != nil {
+			HttpError(w, "关闭该集群代理失败"+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		//删除集群相应的EnvValue
 		selector = bson.M{
 			"pool": bson.ObjectIdHex(id),

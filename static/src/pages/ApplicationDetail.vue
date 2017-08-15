@@ -93,7 +93,7 @@
                   v-bind:info="alertType==='info'" 
                   v-bind:warning="alertType==='warning'" 
                   v-bind:error="alertType==='error'" 
-                  v-model="alertMsg" 
+                  v-model="alertDisplay"
                   dismissible>{{ alertMsg }}</v-alert>
           </div>
           <div v-show="!item.hidden">
@@ -348,6 +348,7 @@
                       <td>
                         <v-text-field
                           v-model="props.item.Name"
+                        ></v-text-field>
                       </td>
                       <td>
                         <v-text-field
@@ -376,7 +377,7 @@
               v-bind:info="alertType==='info'" 
               v-bind:warning="alertType==='warning'" 
               v-bind:error="alertType==='error'" 
-              v-model="alertMsg" 
+              v-model="alertDisplay"
               dismissible>{{ alertMsg }}</v-alert>
       </div>
       <v-layout row wrap>
@@ -562,7 +563,16 @@
           'alertArea',
           'alertType',
           'alertMsg'
-      ])
+      ]),
+
+      alertDisplay: {
+        get() {
+          return this.$store.getters.alertArea != null;
+        },
+        set(v) {
+          this.$store.dispatch('alertArea', null);
+        }
+      }
     },
 
     mounted() {

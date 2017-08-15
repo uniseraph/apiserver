@@ -558,7 +558,7 @@
             v-bind:info="alertType==='info'" 
             v-bind:warning="alertType==='warning'" 
             v-bind:error="alertType==='error'" 
-            v-model="alertMsg" 
+            v-model="alertDisplay" 
             dismissible>{{ alertMsg }}</v-alert>
     </v-flex>
     <v-flex xs12 class="text-xs-center" mt-4>
@@ -741,7 +741,16 @@
           'alertArea',
           'alertType',
           'alertMsg'
-      ])
+      ]),
+
+      alertDisplay: {
+        get() {
+          return this.$store.getters.alertArea != null;
+        },
+        set(v) {
+          this.$store.dispatch('alertArea', null);
+        }
+      }
     },
 
     // 如果用router.replace做跳转，则需watch route，并且重新获取params中的参数
@@ -1113,7 +1122,7 @@
           Services: this.Services
         };
 
-        this.TemplateData = JSON.stringify(t);
+        this.TemplateData = JSON.stringify(t, null, 4);
         this.Importing = false;
         this.TemplateDataDlg = true;
       },
@@ -1185,6 +1194,12 @@
           if (!this.validateForm()) {
             ui.alert('请正确填写应用模板');
             return;
+          }
+
+          for (let s of this.Services) {
+            for (let e of s.Envs) {
+              e.Value = e.Value.trim();
+            }
           }
 
           let a = {

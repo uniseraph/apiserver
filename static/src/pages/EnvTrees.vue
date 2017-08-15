@@ -13,7 +13,7 @@
               v-bind:info="alertType==='info'" 
               v-bind:warning="alertType==='warning'" 
               v-bind:error="alertType==='error'" 
-              v-model="alertMsg" 
+              v-model="alertDisplay" 
               dismissible>{{ alertMsg }}</v-alert>
             <v-card-row>
               <v-card-title>新增目录</v-card-title>
@@ -53,7 +53,7 @@
               v-bind:info="alertType==='info'" 
               v-bind:warning="alertType==='warning'" 
               v-bind:error="alertType==='error'" 
-              v-model="alertMsg" 
+              v-model="alertDisplay" 
               dismissible>{{ alertMsg }}</v-alert>
             <v-card-row>
               <v-card-title>修改目录</v-card-title>
@@ -168,7 +168,16 @@
           'alertArea',
           'alertType',
           'alertMsg'
-      ])
+      ]),
+
+      alertDisplay: {
+        get() {
+          return this.$store.getters.alertArea != null;
+        },
+        set(v) {
+          this.$store.dispatch('alertArea', null);
+        }
+      }
     },
 
     watch: {

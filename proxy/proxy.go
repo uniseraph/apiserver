@@ -5,7 +5,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/types"
 	"sync"
-	"fmt"
 )
 
 var driver2FactoryFunc = make(map[string]FactoryFunc)
@@ -56,10 +55,27 @@ func NewProxyInstanceAndStart(config *types.APIServerConfig, poolInfo *types.Poo
 
 
 	mux.Lock()
-	id2Proxy[proxy.Pool().Id.Hex()] = proxy
+	id2Proxy[poolInfo.Id.Hex()] = proxy
+	mux.Unlock()
+	return proxy, err
+}
+
+func Stop(id string) error {
+
+	mux.Lock()
+
+	p, ok := id2Proxy[id]
+	if !ok {
+		mux.Unlock()
+		return errors.Errorf("no such a pool id:%s", id)
+	}
 	mux.Unlock()
 
-	return proxy, err
+	if err := p.Stop(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 
@@ -71,7 +87,7 @@ func Close(id string) error {
 	p , ok := id2Proxy[id]
 	if !ok {
 		mux.Unlock()
-		return errors.New( fmt.Sprintf("no such a proxy:%s" ,id ))
+		return errors.Errorf( "no such a proxy:%s" ,id )
 	}
 	mux.Unlock()
 
