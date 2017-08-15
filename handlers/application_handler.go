@@ -266,7 +266,7 @@ func getApplicationHistory(ctx context.Context, w http.ResponseWriter, r *http.R
 
 		logrus.Debugf("getApplication::符合条件的deployment有%d个", total)
 
-		if err := colDeployment.Find(selector).Sort("createdtime").Limit(req.PageSize).Skip(req.PageSize * (req.Page - 1)).All(&deployments); err != nil {
+		if err := colDeployment.Find(selector).Sort("-createdtime").Limit(req.PageSize).Skip(req.PageSize * (req.Page - 1)).All(&deployments); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
