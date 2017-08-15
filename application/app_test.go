@@ -23,12 +23,17 @@ func TestCreateApplication(t *testing.T) {
 		Id:   "applicationidxxxxx000",
 		Services: []types.Service{
 			types.Service{
-				ImageName:   "nginx",
-				ImageTag:    "1.8",
-				Restart:     "always",
-				NetworkMode: "host",
-				Name:        "nginx",
-				Ports:       []types.Port{{80, "lbidxxxx"}},
+				ImageName: "nginx",
+				ImageTag:  "1.8",
+				Restart:   "always",
+				Name:      "nginx",
+				Volumns: []types.Volumne{
+					types.Volumne{
+						ContainerPath: "/var/log/nginx",
+						HostPath:      "aaa",
+					},
+				},
+				Ports: []types.Port{{80, "lbidxxxx"}},
 				Envs: []types.Env{{types.Label{Name: "env1", Value: "env1"}},
 					{types.Label{Name: "env2", Value: "env2"}}},
 				Labels: []types.Label{{Name: "key1", Value: "value1"},
@@ -37,6 +42,7 @@ func TestCreateApplication(t *testing.T) {
 		},
 	}
 	pool1 := &types.PoolInfo{
+
 		ProxyEndpoint: "tcp://47.92.142.65:2375",
 		DriverOpts: types.DriverOpts{
 			APIVersion: "v1.23",
