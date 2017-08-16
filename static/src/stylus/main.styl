@@ -56,3 +56,9 @@ html {
 .required-star
 	color: red
 	padding-left: 5px
+
+table.table
+	thead, tbody
+		td, th
+			&:not(:nth-child(1)), &:first-child
+				padding: 0 12px

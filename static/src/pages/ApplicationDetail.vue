@@ -259,6 +259,12 @@
                       </td>
                       <td>
                         <v-text-field
+                          v-model="props.item.LoadBalancerId"
+                          readonly
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-text-field
                           v-model="props.item.TargetGroupArn"
                           readonly
                         ></v-text-field>
@@ -478,6 +484,7 @@
         ],
         headers_ports: [
           { text: '容器端口', sortable: false, left: true },
+          { text: '负载均衡ID', sortable: false, left: true },
           { text: '负载均衡目标群组ARN', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
