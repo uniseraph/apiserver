@@ -19,6 +19,18 @@ import (
 	"strings"
 )
 
+//from watchdog elbv2
+const LABEL_ELBV2_ENABLE = "com.zanecloud.elbv2.enable"
+const LABEL_ELBV2_TARGET_GROUP_ARN = "com.zanecloud.elbv2.target.grouparn"
+const LABEL_ELBV2_TARGET_PORT = "com.zanecloud.elbv2.target.port"
+
+//from watchdog slb
+
+const LABEL_SLB_ENABLE = "com.zanecloud.slb.enable"
+const LABEL_SLB_LBID = "com.zanecloud.slb.lbid"
+const LABEL_SLB_VSERVER_GROUP_ID = "com.zanecloud.slb.vservergroupid"
+const LABEL_SLB_PORT = "com.zanecloud.slb.port"
+
 //需要根据pool的驱动不同，调用不同的接口创建容器／应用，暂时只管swarm/compose
 func UpApplication(ctx context.Context, app *types.Application, pool *types.PoolInfo) error {
 
@@ -120,8 +132,9 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			Image:       as.ImageName + ":" + as.ImageTag,
 			Restart:     as.Restart,
 			NetworkMode: "bridge",
-			CPUSet:      as.CPU,
-			Expose:      []string{},
+			//CPUSet:      as.CPU,
+			Expose: []string{},
+			Labels: make(map[string]string),
 			//Ports:       s.Ports,
 		}
 		if as.NetworkMode == "host" {
@@ -134,6 +147,10 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 				sc.MemLimit = composeyml.MemStringorInt(mem << 20)
 			}
 		}
+		for i, _ := range as.Labels {
+			sc.Labels[as.Labels[i].Name] = strings.Replace(as.Labels[i].Value, "$", "$$", -1)
+		}
+		sc.Labels[swarm.LABEL_APPLICATION_ID] = app.Id.Hex()
 
 		capNetAdmin := false
 
@@ -145,6 +162,21 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 				capNetAdmin = true
 			}
 
+			if as.Ports[i].TargetGroupArn != "" && as.Ports[i].LbId != "" {
+				// aliyun slb
+				sc.Labels[LABEL_SLB_ENABLE] = "true"
+				sc.Labels[LABEL_SLB_LBID] = as.Ports[i].LbId
+				sc.Labels[LABEL_SLB_VSERVER_GROUP_ID] = as.Ports[i].TargetGroupArn
+				sc.Labels[LABEL_SLB_PORT] = strconv.Itoa(as.Ports[i].SourcePort)
+			}
+
+			if as.Ports[i].TargetGroupArn != "" && as.Ports[i].LbId == "" {
+				// aws elbv2
+				sc.Labels[LABEL_ELBV2_ENABLE] = "true"
+				sc.Labels[LABEL_ELBV2_TARGET_GROUP_ARN] = as.Ports[i].TargetGroupArn
+				sc.Labels[LABEL_ELBV2_TARGET_PORT] = strconv.Itoa(as.Ports[i].SourcePort)
+			}
+
 
 			//expose
 			//Expose ports without publishing them to the host machine - they’ll only be accessible to linked services. Only the internal port can be specified.
@@ -153,12 +185,6 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			//	composeService.Expose = append(composeService.Expose, composeService.Ports[i])
 			//}
 		}
-
-		sc.Labels = map[string]string{}
-		for i, _ := range as.Labels {
-			sc.Labels[as.Labels[i].Name] = strings.Replace(as.Labels[i].Value, "$", "$$", -1)
-		}
-		sc.Labels[swarm.LABEL_APPLICATION_ID] = app.Id.Hex()
 
 		if as.ExclusiveCPU == true {
 			sc.Labels[types.LABEL_CONTAINER_EXCLUSIVE] = "true"

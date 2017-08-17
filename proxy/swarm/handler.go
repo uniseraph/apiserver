@@ -752,12 +752,13 @@ func startContainer(ctx context.Context, r *http.Request, resp *http.Response) {
 		logrus.WithFields(logrus.Fields{"containerid": containerJSON.ID[0:6],
 			"containername": containerJSON.Name,
 			"ports":         ports,
-			"err":           err.Error()}).Debugf("update port mapping")
+			"err":           err.Error()}).Debugf("start container update port mapping")
+		return
 	}
 
 	logrus.WithFields(logrus.Fields{"containerid": containerJSON.ID[0:6],
 		"containername": containerJSON.Name,
-		"ports":         containerJSON.NetworkSettings.Ports}).Debugf("update port mapping success")
+		"ports":         containerJSON.NetworkSettings.Ports}).Debugf("start container update port mapping success")
 
 }
 
@@ -792,22 +793,61 @@ func restartContainer(ctx context.Context, req *http.Request, resp *http.Respons
 
 	c := mgoSession.DB(mgoDB).C("container")
 
-	container := &Container{}
+	//container := &Container{}
 
-	selector1 := bson.M{"poolid": poolInfo.Id.Hex(), "containerid": idorname}
-	selector2 := bson.M{"poolid": poolInfo.Id.Hex(), "name": idorname}
+	dockerclient, _ := utils.GetPoolClient(ctx)
 
-	if err := c.Find(bson.M{"$or": []bson.M{selector1, selector2}}).One(container); err != nil {
-
-		logrus.WithFields(logrus.Fields{"idorname": idorname, "poolid": poolInfo.Id}).Error("nosuch a container")
+	containerJSON, err := dockerclient.ContainerInspect(ctx, idorname)
+	if err != nil {
+		logrus.Errorf("inspect the container:%d in the pool:(%s,%s) error:%s", idorname, poolInfo.Id, poolInfo.Name, err.Error())
 		return
 	}
 
-	container.StartedTime = time.Now().Unix()
+	selector := bson.M{"poolid": poolInfo.Id.Hex(), "containerid": containerJSON.ID}
+
+	ports := []*PortMapping{}
+
+	for port, bindings := range containerJSON.NetworkSettings.Ports {
+
+		if len(bindings) == 0 {
+			continue
+		}
+		s := strings.Split(string(port), "/")
+		if len(s) != 2 {
+			continue
+		}
+
+		for i, _ := range bindings {
+			pm := &PortMapping{
+				ContainerPort: s[0],
+				Proto:         s[1],
+				HostPort:      bindings[i].HostPort,
+				HostIp:        bindings[i].HostIP,
+			}
+			ports = append(ports, pm)
+
+		}
+
+	}
+
+	data := bson.M{
+		"ports":       ports,
+		"status":      "running",
+		"startedtime": time.Now().Unix(),
+	}
 
 	//TODO or 删除
-	if err := c.UpdateId(container.Id, container); err != nil {
-		logrus.WithFields(logrus.Fields{"idorname": idorname, "poolid": poolInfo.Id}).Error("restart  the  container error")
+	if err := c.Update(selector, bson.M{"$set": data}); err != nil {
+
+		logrus.WithFields(logrus.Fields{"containerid": containerJSON.ID[0:6],
+			"containername": containerJSON.Name,
+			"ports":         ports,
+			"err":           err.Error()}).Debugf("restart container update ports  mapping error")
+
 		return
 	}
+
+	logrus.WithFields(logrus.Fields{"containerid": containerJSON.ID[0:6],
+		"containername": containerJSON.Name,
+		"ports":         containerJSON.NetworkSettings.Ports}).Debugf("restarting container , update ports  mapping success")
 }

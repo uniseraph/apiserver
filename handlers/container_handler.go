@@ -251,15 +251,6 @@ func restartContainer(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 	id := mux.Vars(r)["id"]
 
-	//config:=utils.GetAPIServerConfig(ctx)
-	//
-	//poolInfo := config.
-	//cli, err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint, poolInfo.DriverOpts.APIVersion, client, nil)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//defer cli.Close()
-
 	utils.GetMgoCollections(ctx, w, []string{"container", "pool"}, func(cs map[string]*mgo.Collection) {
 
 		container := &swarm.Container{}
@@ -301,7 +292,7 @@ func restartContainer(ctx context.Context, w http.ResponseWriter, r *http.Reques
 			}
 		}
 
-		cli, err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint, poolInfo.DriverOpts.APIVersion, client, nil)
+		cli, err := dockerclient.NewClient(poolInfo.ProxyEndpoint, poolInfo.DriverOpts.APIVersion, client, nil)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
