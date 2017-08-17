@@ -160,7 +160,7 @@ type Port struct {
 	SourcePort int `json:",string"`
 	//LoadBalancerId string
 	TargetGroupArn string //aliyun slb vservergroupId or aws elbv2 targetGroupArn
-	LbId           string `json:LoadbalancerId",omitempty"` //aliyun slb lbid
+	LoadBalancerId string //aliyun slb lbid
 }
 type Env struct {
 	Label

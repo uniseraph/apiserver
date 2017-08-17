@@ -162,15 +162,15 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 				capNetAdmin = true
 			}
 
-			if as.Ports[i].TargetGroupArn != "" && as.Ports[i].LbId != "" {
+			if as.Ports[i].TargetGroupArn != "" && as.Ports[i].LoadBalancerId != "" {
 				// aliyun slb
 				sc.Labels[LABEL_SLB_ENABLE] = "true"
-				sc.Labels[LABEL_SLB_LBID] = as.Ports[i].LbId
+				sc.Labels[LABEL_SLB_LBID] = as.Ports[i].LoadBalancerId
 				sc.Labels[LABEL_SLB_VSERVER_GROUP_ID] = as.Ports[i].TargetGroupArn
 				sc.Labels[LABEL_SLB_PORT] = strconv.Itoa(as.Ports[i].SourcePort)
 			}
 
-			if as.Ports[i].TargetGroupArn != "" && as.Ports[i].LbId == "" {
+			if as.Ports[i].TargetGroupArn != "" && as.Ports[i].LoadBalancerId == "" {
 				// aws elbv2
 				sc.Labels[LABEL_ELBV2_ENABLE] = "true"
 				sc.Labels[LABEL_ELBV2_TARGET_GROUP_ARN] = as.Ports[i].TargetGroupArn
