@@ -112,6 +112,7 @@ type PoolsRegisterRequest struct {
 	Driver     string
 	EnvTreeId  string
 	DriverOpts types.DriverOpts
+	Provider   string
 	Labels     []string `json:",omitempty"`
 }
 

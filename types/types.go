@@ -45,9 +45,9 @@ type DriverOpts struct {
 type PoolInfo struct {
 	Id bson.ObjectId "_id"
 
-	Name   string
-	Status string
-
+	Name             string
+	Status           string
+	Provider         string
 	CPUs             int
 	Memory           int64
 	Disk             int64

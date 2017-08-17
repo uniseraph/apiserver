@@ -27,7 +27,6 @@ const LABEL_ELBV2_TARGET_PORT = "com.zanecloud.elbv2.target.port"
 //from watchdog slb
 
 const LABEL_SLB_ENABLE = "com.zanecloud.slb.enable"
-const LABEL_SLB_LBID = "com.zanecloud.slb.lbid"
 const LABEL_SLB_VSERVER_GROUP_ID = "com.zanecloud.slb.vservergroupid"
 const LABEL_SLB_PORT = "com.zanecloud.slb.port"
 
@@ -165,7 +164,7 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			if as.Ports[i].TargetGroupArn != "" && as.Ports[i].LoadBalancerId != "" {
 				// aliyun slb
 				sc.Labels[LABEL_SLB_ENABLE] = "true"
-				sc.Labels[LABEL_SLB_LBID] = as.Ports[i].LoadBalancerId
+				//sc.Labels[LABEL_SLB_LBID] = as.Ports[i].LoadBalancerId
 				sc.Labels[LABEL_SLB_VSERVER_GROUP_ID] = as.Ports[i].TargetGroupArn
 				sc.Labels[LABEL_SLB_PORT] = strconv.Itoa(as.Ports[i].SourcePort)
 			}
@@ -177,9 +176,9 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 				sc.Labels[LABEL_ELBV2_TARGET_PORT] = strconv.Itoa(as.Ports[i].SourcePort)
 			}
 
-
 			//expose
-			//Expose ports without publishing them to the host machine - they’ll only be accessible to linked services. Only the internal port can be specified.
+			//Expose ports without publishing them to the host machine - they’ll only be accessible to linked services.
+			// Only the internal port can be specified.
 
 			//if appService.NetworkMode == "host" {
 			//	composeService.Expose = append(composeService.Expose, composeService.Ports[i])
