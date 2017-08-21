@@ -318,7 +318,7 @@ func ParseNodes(input [][]string, poolId string) (string, string, []types.Node, 
 		result[i].Labels = parseLabels(input[11+i*10][1])
 
 		//ignore 11-UpdateAt
-		result[i].ServerVersion = input[12+i*10][1]
+		result[i].ServerVersion = input[13+i*10][1]
 
 	}
 
