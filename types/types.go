@@ -21,6 +21,13 @@ const (
 
 	LABEL_CONTAINER_CPUS      = "com.zanecloud.omega.container.cpus"
 	LABEL_CONTAINER_EXCLUSIVE = "com.zanecloud.omega.container.cpu.exclusive"
+
+	LABEL_VOLUME_PREFIX     = "com.zanecloud.omega.disk"
+	LABEL_VOLUME_MOUNTPOINT = "mountPoint"
+	LABEL_VOLUME_MEDIATYPE  = "mediaType"
+	LABEL_VOLUME_SIZE       = "size"
+	LABEL_VOLUME_IOCLASS    = "ioClass"
+	LABEL_VOLUME_EXCLUSIVE  = "exclusive"
 )
 
 type APIServerConfig struct {

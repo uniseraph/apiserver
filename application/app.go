@@ -136,7 +136,6 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			Image:       as.ImageName + ":" + as.ImageTag,
 			Restart:     as.Restart,
 			NetworkMode: "bridge",
-			CPUSet:      as.CPU,
 			Expose:      []string{},
 			//Ports:       s.Ports,
 		}
@@ -148,6 +147,7 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			mem, err := strconv.ParseInt(as.Memory, 10, 64)
 			if err == nil {
 				sc.MemLimit = composeyml.MemStringorInt(mem << 20)
+				sc.MemSwapLimit = sc.MemLimit
 			}
 		}
 
@@ -160,7 +160,6 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 				sc.CapAdd = append(sc.CapAdd, "NET_ADMIN")
 				capNetAdmin = true
 			}
-
 
 			//expose
 			//Expose ports without publishing them to the host machine - they’ll only be accessible to linked services. Only the internal port can be specified.
@@ -193,7 +192,23 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			Volumes: make([]*composeyml.Volume, 0, len(as.Volumns)),
 		}
 
+		index := 0
 		for i, _ := range as.Volumns {
+			if as.Volumns[i].HostPath == "" && as.Volumns[i].Driver == "" {
+				// use multi-volume
+				index++
+				sc.Labels[fmt.Sprintf("%s.%d.%s", types.LABEL_VOLUME_PREFIX, index, types.LABEL_VOLUME_MOUNTPOINT)] = as.Volumns[i].ContainerPath
+				if as.Volumns[i].MediaType == "SATA" {
+					sc.Labels[fmt.Sprintf("%s.%d.%s", types.LABEL_VOLUME_PREFIX, index, types.LABEL_VOLUME_MEDIATYPE)] = "HDD"
+				} else {
+					sc.Labels[fmt.Sprintf("%s.%d.%s", types.LABEL_VOLUME_PREFIX, index, types.LABEL_VOLUME_MEDIATYPE)] = "SSD"
+				}
+				sc.Labels[fmt.Sprintf("%s.%d.%s", types.LABEL_VOLUME_PREFIX, index, types.LABEL_VOLUME_IOCLASS)] = strconv.Itoa(as.Volumns[i].IopsClass)
+				sc.Labels[fmt.Sprintf("%s.%d.%s", types.LABEL_VOLUME_PREFIX, index, types.LABEL_VOLUME_SIZE)] = strconv.FormatInt(int64(as.Volumns[i].Size)*1024*1024, 10)
+				sc.Labels[fmt.Sprintf("%s.%d.%s", types.LABEL_VOLUME_PREFIX, index, types.LABEL_VOLUME_EXCLUSIVE)] = "0"
+				continue
+			}
+
 			if as.Volumns[i].HostPath == "" { // 不指定宿主机目录，随便挂 ,匿名卷
 				sc.Volumes.Volumes = append(sc.Volumes.Volumes, &composeyml.Volume{
 					Destination: as.Volumns[i].ContainerPath,

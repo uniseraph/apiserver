@@ -268,7 +268,8 @@ func (s *Service) Upgrade(ctx context.Context, options options.Up) error {
 	// start do update and upgrade for each container
 	config, hostConfig, err := Convert(s.serviceConfig, s.context.Context, s.clientFactory)
 
-	return s.eachContainer(ctx, containers, func(c *container.Container) error {
+	// loop all containers
+	for _, c := range containers {
 		// 1. docker update
 		updateLabels := map[string]string{}
 		const LABEL_CPUS = "com.zanecloud.omega.container.cpus"
@@ -297,6 +298,7 @@ func (s *Service) Upgrade(ctx context.Context, options options.Up) error {
 		}
 
 		upgradeConfig := &containertypes.Config{
+			Image:        config.Image,
 			User:         config.User,
 			ExposedPorts: config.ExposedPorts,
 			Env:          config.Env,
@@ -318,9 +320,9 @@ func (s *Service) Upgrade(ctx context.Context, options options.Up) error {
 		s.project.Notify(events.ContainerStarted, s.name, map[string]string{
 			"name": c.Name(),
 		})
+	}
 
-		return nil
-	})
+	return nil
 }
 
 // Run implements Service.Run. It runs a one of command within the service container.

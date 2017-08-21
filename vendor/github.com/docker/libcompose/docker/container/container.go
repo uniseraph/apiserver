@@ -396,8 +396,28 @@ func (c *Container) Number() (int, error) {
 	return strconv.Atoi(numberStr)
 }
 
+func updateLabels(adds, removes map[string]string, all *map[string]string) {
+	if all == nil {
+		*all = map[string]string{}
+	}
+
+	for k, v := range adds {
+		(*all)[k] = v
+	}
+
+	for k := range removes {
+		delete((*all), k)
+	}
+}
+
 // Update updates the container.
 func (c *Container) Update(ctx context.Context, updateConfig *container.UpdateConfig) error {
+	for k, v := range c.container.Config.Labels {
+		if _, exists := updateConfig.Labels[k]; !exists {
+			updateConfig.Labels[k] = v
+		}
+	}
+
 	_, err := c.client.ContainerUpdate(ctx, c.container.ID, *updateConfig)
 	return err
 }
