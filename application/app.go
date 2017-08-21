@@ -120,8 +120,8 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			Image:       as.ImageName + ":" + as.ImageTag,
 			Restart:     as.Restart,
 			NetworkMode: "bridge",
-			CPUSet:      as.CPU,
-			Expose:      []string{},
+			//	CPUSet:      as.CPU,
+			Expose: []string{},
 			//Ports:       s.Ports,
 		}
 		if as.NetworkMode == "host" {
@@ -144,7 +144,6 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 				sc.CapAdd = append(sc.CapAdd, "NET_ADMIN")
 				capNetAdmin = true
 			}
-
 
 			//expose
 			//Expose ports without publishing them to the host machine - they’ll only be accessible to linked services. Only the internal port can be specified.
