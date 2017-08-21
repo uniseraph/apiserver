@@ -132,6 +132,7 @@ type Node struct {
 	Containers     string
 	ReservedCPUs   string
 	ReservedMemory string
+	ReservedDisks  string
 
 	//ContainersRunning int
 	//ContainersPaused  int

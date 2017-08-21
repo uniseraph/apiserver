@@ -305,19 +305,20 @@ func ParseNodes(input [][]string, poolId string) (string, string, []types.Node, 
 			//PoolName: poolName,
 		}
 
-		result[i].Hostname = input[4+i*9][0]
-		result[i].Endpoint = input[4+i*9][1]
-		result[i].NodeId = input[5+i*9][1]
-		result[i].Status = input[6+i*9][1]
-		result[i].Containers = input[7+i*9][1]
+		result[i].Hostname = input[4+i*10][0]
+		result[i].Endpoint = input[4+i*10][1]
+		result[i].NodeId = input[5+i*10][1]
+		result[i].Status = input[6+i*10][1]
+		result[i].Containers = input[7+i*10][1]
 
-		result[i].ReservedCPUs = input[8+i*9][1]
-		result[i].ReservedMemory = input[9+i*9][1]
+		result[i].ReservedCPUs = input[8+i*10][1]
+		result[i].ReservedMemory = input[9+i*10][1]
+		result[i].ReservedDisks = input[10+i*10][1]
 
-		result[i].Labels = parseLabels(input[10+i*9][1])
+		result[i].Labels = parseLabels(input[11+i*10][1])
 
 		//ignore 11-UpdateAt
-		result[i].ServerVersion = input[12+i*9][1]
+		result[i].ServerVersion = input[12+i*10][1]
 
 	}
 
