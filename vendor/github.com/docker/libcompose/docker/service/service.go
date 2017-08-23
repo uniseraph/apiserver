@@ -601,6 +601,9 @@ func (s *Service) upgradeRecreate(ctx context.Context, c *container.Container) (
 	namer := NewRecreateNamer(name)
 	newContainer, err := s.createContainer(ctx, namer, id, nil, false)
 	if err != nil {
+		//创建容器失败，原容器名要改回去
+		c.Rename(ctx, name)
+
 		return nil, err
 	}
 	newID := newContainer.ID()
