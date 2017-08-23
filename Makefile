@@ -25,7 +25,7 @@ autodeploy:clean-deploy
 	cd tools && CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}" -o autodeploy && cd ..
 
 portal:
-	cd static && npm install && npm run build && cd ..
+	docker run -ti --rm -v $(shell pwd)/static:/usr/src/app node:8-onbuild bash -c "npm install && npm run build"
 
 build:
 	docker run --rm -v $(shell pwd):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} ${BUILD_IMAGE} make apiserver
