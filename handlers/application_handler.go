@@ -110,8 +110,14 @@ func createApplication(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if err := application.ScaleApplication(ctx, app, pool, m); err != nil {
+	ctx1, cancel := context.WithCancel(ctx)
+
+	if err := application.ScaleApplication(ctx1, app, pool, m); err != nil {
 		//TODO 需要删除所有已创建成功的容器？？？
+
+		cancel()
+
+		colApplication.RemoveId(app.Id)
 
 		HttpError(w, "发布应用失败"+err.Error(), http.StatusInternalServerError)
 		return
@@ -260,7 +266,7 @@ func getApplicationHistory(ctx context.Context, w http.ResponseWriter, r *http.R
 
 		logrus.Debugf("getApplication::符合条件的deployment有%d个", total)
 
-		if err := colDeployment.Find(selector).Sort("createdtime").Limit(req.PageSize).Skip(req.PageSize * (req.Page - 1)).All(&deployments); err != nil {
+		if err := colDeployment.Find(selector).Sort("-createdtime").Limit(req.PageSize).Skip(req.PageSize * (req.Page - 1)).All(&deployments); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

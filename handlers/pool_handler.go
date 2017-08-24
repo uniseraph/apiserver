@@ -12,6 +12,7 @@ import (
 	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"io/ioutil"
 	"net/http"
 	regexp "regexp"
 	"strings"
@@ -349,6 +350,11 @@ func getTunneldInfo(ctx context.Context, pool *types.PoolInfo) error {
 		return err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		buf, _ := ioutil.ReadAll(resp.Body)
+		return errors.Errorf(string(buf))
+	}
 
 	tunneld := &types.AgentService{}
 	if err := json.NewDecoder(resp.Body).Decode(tunneld); err != nil {
@@ -798,6 +804,11 @@ func deletePool(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		} else if c > 0 {
 			//说明还有应用
 			HttpError(w, "该集群还有应用存在，请先删除应用再删除集群", http.StatusInternalServerError)
+			return
+		}
+
+		if err := proxy.Stop(pool.Id.Hex()); err != nil {
+			HttpError(w, "关闭该集群代理失败"+err.Error(), http.StatusInternalServerError)
 			return
 		}
 

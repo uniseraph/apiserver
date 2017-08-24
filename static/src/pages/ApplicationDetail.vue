@@ -93,7 +93,7 @@
                   v-bind:info="alertType==='info'" 
                   v-bind:warning="alertType==='warning'" 
                   v-bind:error="alertType==='error'" 
-                  v-model="alertMsg" 
+                  v-model="alertDisplay"
                   dismissible>{{ alertMsg }}</v-alert>
           </div>
           <div v-show="!item.hidden">
@@ -259,6 +259,12 @@
                       </td>
                       <td>
                         <v-text-field
+                          v-model="props.item.LoadBalancerId"
+                          readonly
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-text-field
                           v-model="props.item.TargetGroupArn"
                           readonly
                         ></v-text-field>
@@ -348,6 +354,7 @@
                       <td>
                         <v-text-field
                           v-model="props.item.Name"
+                        ></v-text-field>
                       </td>
                       <td>
                         <v-text-field
@@ -376,7 +383,7 @@
               v-bind:info="alertType==='info'" 
               v-bind:warning="alertType==='warning'" 
               v-bind:error="alertType==='error'" 
-              v-model="alertMsg" 
+              v-model="alertDisplay"
               dismissible>{{ alertMsg }}</v-alert>
       </div>
       <v-layout row wrap>
@@ -477,6 +484,7 @@
         ],
         headers_ports: [
           { text: '容器端口', sortable: false, left: true },
+          { text: '负载均衡ID', sortable: false, left: true },
           { text: '负载均衡目标群组ARN', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
@@ -562,7 +570,16 @@
           'alertArea',
           'alertType',
           'alertMsg'
-      ])
+      ]),
+
+      alertDisplay: {
+        get() {
+          return this.$store.getters.alertArea != null;
+        },
+        set(v) {
+          this.$store.dispatch('alertArea', null);
+        }
+      }
     },
 
     mounted() {

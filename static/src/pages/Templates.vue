@@ -44,7 +44,6 @@
           <td><router-link :to="'/templates/' + props.item.Id">{{ props.item.Title }}</router-link></td>
           <td>{{ props.item.Name }}</td>
           <td>{{ props.item.Version }}</td>
-          <td>{{ props.item.Description }}</td>
           <td>{{ props.item.UpdatedTime | formatDateTime }}</td>
           <td>{{ props.item.UpdaterName }}</td>
           <td>
@@ -77,7 +76,6 @@
           { text: '应用名称', sortable: false, left: true },
           { text: '应用ID', sortable: false, left: true },
           { text: '应用版本', sortable: false, left: true },
-          { text: '说明', sortable: false, left: true },
           { text: '更新时间', sortable: false, left: true },
           { text: '操作人', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }

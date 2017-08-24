@@ -47,6 +47,9 @@ var routers = map[string]map[string]Handler{
 	"POST": {
 		"/containers/create":                postContainersCreate,
 		"/containers/{idorname:.*}/restart": proxyAsyncWithCallBack(restartContainer),
+		"/containers/{idorname:.*}/start":   proxyAsyncWithCallBack(startContainer),
+		"/containers/{idorname:.*}/stop":   proxyAsyncWithCallBack(stopContainer),
+
 		//"/containers/{name:.*}/kill":   handlers.MgoSessionInject(proxyAsyncWithCallBack(updateContainer)),
 
 		//	"/containers/{name:.*}/start":  handlers.MgoSessionInject(dockerClientInject(postContainersStart)),
@@ -220,8 +223,7 @@ func hijack(tlsConfig *tls.Config, endpoint string, w http.ResponseWriter, r *ht
 
 type Handler func(c context.Context, w http.ResponseWriter, r *http.Request)
 
-func NewPoolHandler(ctx context.Context, poolInfo * apiserver.PoolInfo ) (http.Handler, error) {
-
+func NewPoolHandler(ctx context.Context, poolInfo *apiserver.PoolInfo) (http.Handler, error) {
 
 	r := mux.NewRouter()
 	for method, mappings := range routers {
@@ -260,6 +262,7 @@ func NewPoolHandler(ctx context.Context, poolInfo * apiserver.PoolInfo ) (http.H
 
 	return r, nil
 }
+
 //func preparePoolContext(p *Proxy, session *mgo.Session, cli *dockerclient.Client)  {
 //	p.ctx = context.WithValue(p.ctx, utils.KEY_PROXY_SELF, p)
 //	p.ctx = context.WithValue(p.ctx, utils.KEY_APISERVER_CONFIG, p.APIServerConfig)
@@ -287,7 +290,6 @@ func proxyAsyncWithCallBack(callback func(context.Context, *http.Request, *http.
 func getMgoDB(ctx context.Context) (string, error) {
 
 	p, _ := ctx.Value(utils.KEY_PROXY_SELF).(*Proxy)
-
 
 	return p.APIServerConfig.MgoDB, nil
 }
@@ -374,13 +376,12 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		logrus.WithFields(logrus.Fields{"resp": resp, "err": err}).Debug("postContainersCreate:create container err")
 
 		resp.ID = ""
-		resp.Warnings = []string{}
+		resp.Warnings = []string{err.Error()}
 		respBody, _ := json.Marshal(resp)
 
 		//TODO imageNotFoundError 需要处理
 		if strings.HasPrefix(err.Error(), "Conflict") {
 
-			//httpError(w, "postContainersCreate:create container name conflict"+err.Error(), http.StatusConflict)
 			httpError(w, string(respBody), http.StatusConflict)
 			return
 		} else {
@@ -474,15 +475,6 @@ func flushContainerInfo(ctx context.Context, container *Container) {
 		container.ApplicationId = applicationId
 	}
 
-	//	colApplication, _ := cs["container"]
-	//	if err := colApplication.UpdateId(container.Id, container); err != nil {
-	//		logrus.Errorf("flushContainerInfo::save  container:%#v into db  error:%s", container, err.Error())
-	//		return
-
-	//	}
-
-	//})
-
 }
 func OptionsHandler(c context.Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
@@ -523,8 +515,7 @@ func buildContainerInfoForSave(name string, containerId string, poolInfo *apiser
 		Memory:       config.HostConfig.Memory,
 		CPU:          cpuCount,
 		CPUExclusive: exclusive,
-		Status:       "running", // TODO 需要create/start多个钩子然后设置不同的状态
-
+		Status:       "created",
 	}
 
 	if service, ok := config.Config.Labels[LABEL_COMPOSE_SERVICE]; ok {
@@ -694,6 +685,83 @@ func getEvents(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	eventshandler.Wait(r.RemoteAddr, until)
 }
+
+func startContainer(ctx context.Context, r *http.Request, resp *http.Response) {
+
+	idorname := mux.Vars(r)["idorname"]
+
+	//Status codes:
+
+	//204 – no error
+	//304 – container already started
+	//404 – no such container
+	//500 – server error
+
+	if resp.StatusCode != http.StatusNoContent {
+		return
+	}
+
+	dockerclient, _ := utils.GetPoolClient(ctx)
+
+	poolInfo, _ := getPoolInfo(ctx)
+
+	containerJSON, err := dockerclient.ContainerInspect(ctx, idorname)
+	if err != nil {
+		logrus.Errorf("inspect the container:%d in the pool:(%s,%s) error:%s", idorname, poolInfo.Id, poolInfo.Name, err.Error())
+		return
+	}
+
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	if err != nil {
+		logrus.Errorf("cant get mgo session")
+		return
+	}
+	defer mgoSession.Close()
+
+	mgoDB, _ := getMgoDB(ctx)
+
+	c := mgoSession.DB(mgoDB).C("container")
+
+	selector := bson.M{"poolid": poolInfo.Id.Hex(), "containerid": containerJSON.ID}
+
+	ports := []*PortMapping{}
+
+	for port, bindings := range containerJSON.NetworkSettings.Ports {
+
+		if len(bindings) == 0 {
+			continue
+		}
+		s := strings.Split(string(port), "/")
+		if len(s) != 2 {
+			continue
+		}
+
+		for i, _ := range bindings {
+			pm := &PortMapping{
+				ContainerPort: s[0],
+				Proto:         s[1],
+				HostPort:      bindings[i].HostPort,
+				HostIp:        bindings[i].HostIP,
+			}
+			ports = append(ports, pm)
+
+		}
+
+	}
+
+	if err := c.Update(selector, bson.M{"$set": bson.M{"ports": ports, "status": "running"}}); err != nil {
+		logrus.WithFields(logrus.Fields{"containerid": containerJSON.ID[0:6],
+			"containername": containerJSON.Name,
+			"ports":         ports,
+			"err":           err.Error()}).Debugf("update port mapping")
+	}
+
+	logrus.WithFields(logrus.Fields{"containerid": containerJSON.ID[0:6],
+		"containername": containerJSON.Name,
+		"ports":         containerJSON.NetworkSettings.Ports}).Debugf("update port mapping success")
+
+}
+
 func restartContainer(ctx context.Context, req *http.Request, resp *http.Response) {
 
 	idorname := mux.Vars(req)["idorname"]
@@ -743,4 +811,61 @@ func restartContainer(ctx context.Context, req *http.Request, resp *http.Respons
 		logrus.WithFields(logrus.Fields{"idorname": idorname, "poolid": poolInfo.Id}).Error("restart  the  container error")
 		return
 	}
+}
+
+
+
+func stopContainer(ctx context.Context, r *http.Request, resp *http.Response) {
+
+	idorname := mux.Vars(r)["idorname"]
+
+	//Status codes:
+
+	//204 – no error
+	//304 – container already stopped
+	//404 – no such container
+	//500 – server error
+	if resp.StatusCode != http.StatusNoContent {
+		return
+	}
+
+	dockerclient, _ := utils.GetPoolClient(ctx)
+
+	poolInfo, _ := getPoolInfo(ctx)
+
+	containerJSON, err := dockerclient.ContainerInspect(ctx, idorname)
+	if err != nil {
+		logrus.Errorf("inspect the container:%d in the pool:(%s,%s) error:%s", idorname, poolInfo.Id, poolInfo.Name, err.Error())
+		return
+	}
+
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	if err != nil {
+		logrus.Errorf("cant get mgo session")
+		return
+	}
+	defer mgoSession.Close()
+
+	mgoDB, _ := getMgoDB(ctx)
+
+	c := mgoSession.DB(mgoDB).C("container")
+
+	selector := bson.M{"poolid": poolInfo.Id.Hex(), "containerid": containerJSON.ID}
+
+	ports := []*PortMapping{}
+
+
+
+	if err := c.Update(selector, bson.M{"$set": bson.M{"ports": ports, "status": "stopped"}}); err != nil {
+		logrus.WithFields(logrus.Fields{"containerid": containerJSON.ID[0:6],
+			"containername": containerJSON.Name,
+			"ports":         ports,
+			"err":           err.Error()}).Debugf("stopContainer success , update port mapping")
+		return
+	}
+
+	logrus.WithFields(logrus.Fields{"containerid": containerJSON.ID[0:6],
+		"containername": containerJSON.Name,
+		"ports":         containerJSON.NetworkSettings.Ports}).Debugf("stopContainer success , update port mapping success")
+
 }

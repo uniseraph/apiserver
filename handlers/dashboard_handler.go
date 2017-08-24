@@ -137,7 +137,7 @@ func poolDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 			year, month, day := time.Unix(deployments[i].CreatedTime, 0).Date()
 
 			daystr := buildDayStr(year, month, day)
-			logrus.Debugf("daystr  is %s", daystr)
+			//	logrus.Debugf("daystr  is %s", daystr)
 
 			if deployments[i].OperationType == types.DEPLOYMENT_OPERATION_CREATE {
 				count, ok := creates[daystr]
@@ -169,7 +169,7 @@ func poolDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		rsp.Trend.Upgrades = sortResult(upgrades)
 		rsp.Trend.Rollbacks = sortResult(rollbacks)
 
-		if as, err := getMostApplication(deploymentCol, req.PoolId, types.DEPLOYMENT_OPERATION_UPGRADE); err != nil {
+		if as, err := getMostApplication(deploymentCol, req.PoolId, types.DEPLOYMENT_OPERATION_UPGRADE, from); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		} else {
@@ -182,7 +182,7 @@ func poolDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 			}
 		}
 
-		if as, err := getMostApplication(deploymentCol, req.PoolId, types.DEPLOYMENT_OPERATION_ROLLBACK); err != nil {
+		if as, err := getMostApplication(deploymentCol, req.PoolId, types.DEPLOYMENT_OPERATION_ROLLBACK, from); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		} else {
@@ -262,23 +262,18 @@ func appendDetail(applications []*Application, applicationCol *mgo.Collection) (
 // { $match:{ operationtype:"upgrade"  } },
 //  {  $group : { _id : {  applicationid:"$applicationid" } ,count:{ $sum : 1  }    }  }  ,
 //  {  $project : { _id:0, count:1,  id:"$_id.applicationid"   }   }     ]    )
-func getMostApplication(deploymentCol *mgo.Collection, poolid, operationtype string) ([]*Application, error) {
+func getMostApplication(deploymentCol *mgo.Collection, poolid, operationtype string, from time.Time) ([]*Application, error) {
 
 	matchOp := bson.M{
 		"$match": bson.M{
 			"operationtype": operationtype,
 			"poolid":        poolid,
+			"createdtime":   bson.M{"$gt": from.Unix()},
 		},
 	}
 
 	groupOp := bson.M{
 		"$group": bson.M{
-			//	"_id": bson.M{
-			//		"applicationid": "$applicationid",
-			//		"title":         "$title",
-			//		"version":       "$version",
-			//		"name":          "$name",
-			//	},
 			"_id": bson.M{
 				"applicationid": "$applicationid",
 			},
@@ -288,11 +283,7 @@ func getMostApplication(deploymentCol *mgo.Collection, poolid, operationtype str
 
 	projectOp := bson.M{
 		"$project": bson.M{
-			//	"_id": bson.NewObjectId(),
-			"id": "$_id.applicationid",
-			//	"version" :  "$_id.version",
-			//	"title" :  "$_id.title",
-			//	"name" :  "$_id.name",
+			"id":    "$_id.applicationid",
 			"count": 1,
 		},
 	}

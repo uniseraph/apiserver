@@ -5,9 +5,11 @@ export function alert(msg, type='warning') {
     store.dispatch('alertType', type)
     store.dispatch('alertMsg', msg)
 
-    setTimeout(() => {
-        store.dispatch('alertArea', null); 
-    }, type == 'success' ? 1500 : 2500);
+    if (type == 'success') {
+	    setTimeout(() => {
+	        store.dispatch('alertArea', null); 
+	    }, 1500);
+	}
 }
 
 export function showAlertAt(area='global') {

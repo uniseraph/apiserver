@@ -333,8 +333,10 @@
                           v-model="props.item.Value"
                           :ref="'Env_Value_' + props.item.index"
                           required
-                          class="completer-field"
+                          :class="{ 'completer-field' : true, 'last-field': item.Envs.length == (props.item.index + 1) }"
                           :rel="'Env_Value_' + props.item.index"
+                          add_func="addEnv"
+                          :add_params="item.Id"
                         ></v-text-field>
                       </td>
                       <td>
@@ -380,8 +382,17 @@
                       </td>
                       <td>
                         <v-text-field
+                          v-model="props.item.LoadBalancerId"
+                          placeholder="若无需负载均衡则留空"
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-text-field
                           v-model="props.item.TargetGroupArn"
                           placeholder="若无需负载均衡则留空"
+                          :class="{ 'last-field': item.Ports.length == (props.item.index + 1) }"
+                          add_func="addPort"
+                          :add_params="item.Id"
                         ></v-text-field>
                       </td>
                       <td>
@@ -466,6 +477,9 @@
                           :rules="rules.Services[item.Id].Volumns[props.item.Id].Size"
                           @input="rules.Services[item.Id].Volumns[props.item.Id].Size = rules0.Services.Volumns.Size"
                           placeholder="0表示不限制大小"
+                          :class="{ 'last-field': item.Volumns.length == (props.item.index + 1) }"
+                          add_func="addVolumn"
+                          :add_params="item.Id"
                         ></v-text-field>
                       </td>
                       <td>
@@ -514,6 +528,10 @@
                           v-model="props.item.Value"
                           :ref="'Label_Value_' + props.item.index"
                           required
+                          :class="{ 'completer-field' : true, 'last-field': item.Labels.length == (props.item.index + 1) }"
+                          :rel="'Label_Value_' + props.item.index"
+                          add_func="addLabel"
+                          :add_params="item.Id"
                         ></v-text-field>
                       </td>
                       <td>
@@ -546,7 +564,7 @@
             v-bind:info="alertType==='info'" 
             v-bind:warning="alertType==='warning'" 
             v-bind:error="alertType==='error'" 
-            v-model="alertMsg" 
+            v-model="alertDisplay" 
             dismissible>{{ alertMsg }}</v-alert>
     </v-flex>
     <v-flex xs12 class="text-xs-center" mt-4>
@@ -575,6 +593,7 @@
         ],
         headers_ports: [
           { text: '容器端口', sortable: false, left: true },
+          { text: '负载均衡ID', sortable: false, left: true },
           { text: '负载均衡目标群组ARN', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
@@ -729,7 +748,16 @@
           'alertArea',
           'alertType',
           'alertMsg'
-      ])
+      ]),
+
+      alertDisplay: {
+        get() {
+          return this.$store.getters.alertArea != null;
+        },
+        set(v) {
+          this.$store.dispatch('alertArea', null);
+        }
+      }
     },
 
     // 如果用router.replace做跳转，则需watch route，并且重新获取params中的参数
@@ -868,24 +896,49 @@
       initCompleters() {
         this.$nextTick(function() {
             let that = this;
-            jQuery('.completer-field').find('input').completer({
-              url: this.$axios.defaults.baseURL + '/envs/values/search',
-              completeSuggestion: function(e, v) {
-                let rel = e.parents('.completer-field').attr('rel');
-                Object.keys(that.$refs).forEach(k => {
-                  if (k != rel) {
-                    return;
-                  }
-
-                  let r = that.$refs[k];
-                  if (Array.isArray(r)) {
-                    r = r[0];
-                  }
-
-                  r.value = v;
-                  r.inputValue = v;
-                });
+            jQuery('.completer-field').each(function(e) {
+              let input = jQuery(this).find('input');
+              if (input.hasClass('with-completer')) {
+                return;
               }
+
+              input.addClass('with-completer');
+              input.completer({
+                url: that.$axios.defaults.baseURL + '/envs/values/search',
+                completeSuggestion: function(e, v) {
+                  let rel = e.parents('.completer-field').attr('rel');
+                  Object.keys(that.$refs).forEach(k => {
+                    if (k != rel) {
+                      return;
+                    }
+
+                    let r = that.$refs[k];
+                    if (Array.isArray(r)) {
+                      r = r[0];
+                    }
+
+                    r.value = v;
+                    r.inputValue = v;
+                  });
+                }
+              });
+            });
+
+            jQuery('.last-field').each(function() {
+              let input = jQuery(this).find('input');
+              if (input.hasClass('with-hotkey')) {
+                return;
+              }
+
+              input.addClass('with-hotkey');
+              input.keydown(function(e) {
+                if (e.keyCode == 9) {
+                  let j = jQuery(this).parents('.last-field');
+                  let f = j.attr('add_func');
+                  let s = that.Services[j.attr('add_params')];
+                  that[f](s);
+                }
+              });
             });
           });
       },
@@ -964,8 +1017,10 @@
 
         this.$set(this.rules.Services[s.Id].Ports, id, {});
         
-        s.Ports.push({ index: s.Ports.length, Id: id, SourcePort: '', TargetGroupArn: '' });
+        s.Ports.push({ index: s.Ports.length, Id: id, SourcePort: '', LoadBalancerId: '', TargetGroupArn: '' });
         this.patch(s.Ports);
+
+        this.initCompleters();
       },
 
       addVolumn(s) {
@@ -978,6 +1033,8 @@
         
         s.Volumns.push({ index: s.Volumns.length, Id: id, ContainerPath: '', MountType: 'Directory', MediaType: 'SATA', IopsClass: 3, Size: 0 });
         this.patch(s.Volumns);
+
+        this.initCompleters();
       },
 
       addLabel(s) {
@@ -1072,7 +1129,7 @@
           Services: this.Services
         };
 
-        this.TemplateData = JSON.stringify(t);
+        this.TemplateData = JSON.stringify(t, null, 4);
         this.Importing = false;
         this.TemplateDataDlg = true;
       },
@@ -1144,6 +1201,24 @@
           if (!this.validateForm()) {
             ui.alert('请正确填写应用模板');
             return;
+          }
+
+          for (let s of this.Services) {
+            for (let e of s.Envs) {
+              if (e.Value) {
+                e.Value = e.Value.trim();
+              }
+            }
+
+            for (let p of s.Ports) {
+              if (p.LoadBalancerId) {
+                p.LoadBalancerId = p.LoadBalancerId.trim();
+              }
+
+              if (p.TargetGroupArn) {
+                p.TargetGroupArn = p.TargetGroupArn.trim();
+              }
+            }
           }
 
           let a = {

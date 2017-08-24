@@ -5,16 +5,24 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+type PortMapping struct {
+	Proto         string
+	ContainerPort string
+	HostPort      string
+	HostIp        string
+}
+
 // mongodb中Container表，只记录容器创建时间和状态，具体信息需要从集群中获取，避免同步
 type Container struct {
-	Id              bson.ObjectId "_id"
-	ContainerId     string        //这是docker／swarm生成的id
-	Name            string
+	Id          bson.ObjectId "_id"
+	ContainerId string        //这是docker／swarm生成的id
+	Name        string
 	//PoolName        string
 	PoolId          string
 	Service         string
 	Project         string
 	IP              string
+	Ports           []*PortMapping
 	ApplicationId   string
 	ApplicationName string
 	Status          string

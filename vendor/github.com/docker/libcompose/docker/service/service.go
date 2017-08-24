@@ -592,7 +592,7 @@ func (s *Service) recreate(ctx context.Context, c *container.Container) (*contai
 func (s *Service) upgradeRecreate(ctx context.Context, c *container.Container) (*container.Container, error) {
 	name := c.Name()
 	id := c.ID()
-	newName := fmt.Sprintf("%s_%s", name, id[:12])
+	newName := fmt.Sprintf("/old_%s", id[:12])
 	logrus.Debugf("Renaming %s => %s", name, newName)
 	if err := c.Rename(ctx, newName); err != nil {
 		logrus.Errorf("Failed to rename old container %s", c.Name())
@@ -601,6 +601,9 @@ func (s *Service) upgradeRecreate(ctx context.Context, c *container.Container) (
 	namer := NewRecreateNamer(name)
 	newContainer, err := s.createContainer(ctx, namer, id, nil, false)
 	if err != nil {
+		//创建容器失败，原容器名要改回去
+		c.Rename(ctx, name)
+
 		return nil, err
 	}
 	newID := newContainer.ID()

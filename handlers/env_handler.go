@@ -557,7 +557,7 @@ func getTreeValues(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 			page = 0
 		}
 		//找到参数目录树中的全部匹配的KEY
-		if err := cs["env_tree_node_param_key"].Find(data).Skip(page * req.PageSize).Limit(req.PageSize).All(&keys); err != nil {
+		if err := cs["env_tree_node_param_key"].Find(data).Sort("name").Skip(page * req.PageSize).Limit(req.PageSize).All(&keys); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -596,9 +596,9 @@ func getTreeValues(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		}
 
 		//按照名字给results排序
-		if results.Len() > 0 {
-			sort.Sort(results)
-		}
+		//if results.Len() > 0 {
+		//	sort.Sort(results)
+		//}
 
 		//计算一共有多少页
 		pc := c / req.PageSize
