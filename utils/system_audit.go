@@ -15,11 +15,8 @@ func CreateSystemAuditLogWithCtx(ctx context.Context, r *http.Request, module ty
 
 	opUser, ok := ctx.Value(KEY_CURRENT_USER).(*types.User)
 	if !ok {
-		//logrus.Errorf("can't get current user  by %s", utils.KEY_CURRENT_USER)
-		return  errors.New("can't get current user")
+		return errors.New("can't get current user")
 	}
-
-
 
 	mgoSession, err := GetMgoSessionClone(ctx)
 
