@@ -48,6 +48,7 @@ var routers = map[string]map[string]Handler{
 		"/containers/create":                postContainersCreate,
 		"/containers/{idorname:.*}/restart": proxyAsyncWithCallBack(restartContainer),
 		"/containers/{idorname:.*}/start":   proxyAsyncWithCallBack(startContainer),
+		"/containers/{idorname:.*}/stop":   proxyAsyncWithCallBack(stopContainer),
 
 		//"/containers/{name:.*}/kill":   handlers.MgoSessionInject(proxyAsyncWithCallBack(updateContainer)),
 
@@ -810,4 +811,61 @@ func restartContainer(ctx context.Context, req *http.Request, resp *http.Respons
 		logrus.WithFields(logrus.Fields{"idorname": idorname, "poolid": poolInfo.Id}).Error("restart  the  container error")
 		return
 	}
+}
+
+
+
+func stopContainer(ctx context.Context, r *http.Request, resp *http.Response) {
+
+	idorname := mux.Vars(r)["idorname"]
+
+	//Status codes:
+
+	//204 – no error
+	//304 – container already stopped
+	//404 – no such container
+	//500 – server error
+	if resp.StatusCode != http.StatusNoContent {
+		return
+	}
+
+	dockerclient, _ := utils.GetPoolClient(ctx)
+
+	poolInfo, _ := getPoolInfo(ctx)
+
+	containerJSON, err := dockerclient.ContainerInspect(ctx, idorname)
+	if err != nil {
+		logrus.Errorf("inspect the container:%d in the pool:(%s,%s) error:%s", idorname, poolInfo.Id, poolInfo.Name, err.Error())
+		return
+	}
+
+	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	if err != nil {
+		logrus.Errorf("cant get mgo session")
+		return
+	}
+	defer mgoSession.Close()
+
+	mgoDB, _ := getMgoDB(ctx)
+
+	c := mgoSession.DB(mgoDB).C("container")
+
+	selector := bson.M{"poolid": poolInfo.Id.Hex(), "containerid": containerJSON.ID}
+
+	ports := []*PortMapping{}
+
+
+
+	if err := c.Update(selector, bson.M{"$set": bson.M{"ports": ports, "status": "stopped"}}); err != nil {
+		logrus.WithFields(logrus.Fields{"containerid": containerJSON.ID[0:6],
+			"containername": containerJSON.Name,
+			"ports":         ports,
+			"err":           err.Error()}).Debugf("stopContainer success , update port mapping")
+		return
+	}
+
+	logrus.WithFields(logrus.Fields{"containerid": containerJSON.ID[0:6],
+		"containername": containerJSON.Name,
+		"ports":         containerJSON.NetworkSettings.Ports}).Debugf("stopContainer success , update port mapping success")
+
 }

@@ -59,6 +59,8 @@ const (
 	SystemAuditModuleOperationTypeRestartContainer          SystemAuditModuleOperationType = "RestartContainer"          //应用
 	SystemAuditModuleOperationTypeUpgrade                   SystemAuditModuleOperationType = "Upgrade"                   //应用
 	SystemAuditModuleOperationTypeRollback                  SystemAuditModuleOperationType = "Rollback"                  //应用
+	SystemAuditModuleOperationTypeStop                      SystemAuditModuleOperationType = "Stop"                      //应用
+	SystemAuditModuleOperationTypeStart                     SystemAuditModuleOperationType = "Start"                     //应用
 )
 
 type SystemAuditModuleEnvUpdatePoolValueItem struct {
