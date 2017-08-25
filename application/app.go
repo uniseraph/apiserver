@@ -125,7 +125,7 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			//Ports:       s.Ports,
 		}
 		if as.NetworkMode == "host" {
-			as.NetworkMode = "host"
+			sc.NetworkMode = "host"
 		}
 
 		if as.Memory != "" {
