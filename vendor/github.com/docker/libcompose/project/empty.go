@@ -139,7 +139,7 @@ func (e *EmptyNetworks) Remove(ctx context.Context) error {
 }
 
 // Upgrade implements Service.Up but does nothing.
-func (e *EmptyService) Upgrade(ctx context.Context, options options.Up) error {
+func (e *EmptyService) Upgrade(ctx context.Context, options options.Upgrade) error {
 	return nil
 }
 

@@ -273,6 +273,15 @@
                   <v-checkbox label="使用宿主机网络" v-model="item.NetworkMode" true-value="host" false-value="bridge" dark @change="NetworkModeWarning = true"></v-checkbox>
                 </v-flex>
                 <v-flex xs2>
+                  <v-subheader>服务启动等待时间 (s)</v-subheader>
+                </v-flex>
+                <v-flex xs3>
+                  <v-text-field
+                    v-model="item.ServiceTimeout"
+                    value="10"
+                  ></v-text-field>
+                </v-flex>
+                <v-flex xs2>
                   <v-subheader>说明</v-subheader>
                 </v-flex>
                 <v-flex xs10>
@@ -709,6 +718,12 @@
                 return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) > 0 && parseInt(v) <= 1000 ? true : '容器个数必须为1-1000的整数') : '请输入容器个数')
               }
             ],
+            ServiceTimeout: [
+              function(o) {
+                  let v = o ? o.toString() : '';
+                  return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) > 0 && parseInt(v) <= 1000 ? true : '服务启动超时时间必须为1-1000的整数') : '请输入服务启动超时时间')
+                }
+              ],
             Envs: { 
               Name: [
                 v => (v && v.length > 0 ? (v.match(/\s/) ? '环境变量名称不允许包含空格' : true) : '请输入环境变量名称')
@@ -824,6 +839,7 @@
               CPU: this.rules0.Services.CPU,
               Memory: this.rules0.Services.Memory,
               ReplicaCount: this.rules0.Services.ReplicaCount,
+              ServiceTimeout: this.rules0.Services.ServiceTimeout,
               Envs: [],
               Ports: [],
               Volumns: [],

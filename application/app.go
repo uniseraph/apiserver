@@ -46,10 +46,22 @@ func UpgradeApplication(ctx context.Context, app *types.Application, pool *types
 	if err != nil {
 		return err
 	}
-	err = p.Upgrade(ctx, options.Up{
-		options.Create{ForceRecreate: false,
-			NoBuild:    true,
-			ForceBuild: false},
+	serviceTimeouts := map[string]int{}
+	for _, s := range app.Services {
+		if s.ServiceTimeout <= 0 {
+			s.ServiceTimeout = 10
+		}
+
+		serviceTimeouts[s.Name] = s.ServiceTimeout
+	}
+
+	err = p.Upgrade(ctx, options.Upgrade{
+		Create: options.Create{
+			ForceRecreate: false,
+			NoBuild:       true,
+			ForceBuild:    false,
+		},
+		ServiceTimeouts: serviceTimeouts,
 	})
 
 	if err != nil {
