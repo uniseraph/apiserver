@@ -34,7 +34,7 @@ echo "INSTALL MONGO at ${host}"
 cat <<-EOF | ssh -q root@${host}
 if type apt-get >/dev/null 2>&1; then
   echo 'using apt-get '
-  sudo apt-get update && apt-get install -y mongodb
+  sudo apt-get update && sudo apt-get install -y mongodb
 
 elif type yum >/dev/nul 2>&1; then
   echo 'using yum'
