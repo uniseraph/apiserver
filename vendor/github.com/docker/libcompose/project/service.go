@@ -28,7 +28,7 @@ type Service interface {
 	Stop(ctx context.Context, timeout int) error
 	Unpause(ctx context.Context) error
 	Up(ctx context.Context, options options.Up) error
-	Upgrade(ctx context.Context, options options.Up) error
+	Upgrade(ctx context.Context, options options.Upgrade) error
 	UpgradeCreate(ctx context.Context, options options.Create) error
 
 	RemoveImage(ctx context.Context, imageType options.ImageType) error

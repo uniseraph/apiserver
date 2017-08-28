@@ -38,6 +38,11 @@ type Up struct {
 	Create
 }
 
+type Upgrade struct {
+	Create
+	ServiceTimeouts map[string]int
+}
+
 // ImageType defines the type of image (local, all)
 type ImageType string
 
