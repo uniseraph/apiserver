@@ -117,7 +117,6 @@ type ClusterInfo struct {
 type Node struct {
 	//Id             bson.ObjectId "_id"
 	PoolId string
-	//PoolName       string
 	Hostname       string
 	Endpoint       string
 	NodeId         string
@@ -160,7 +159,7 @@ type Port struct {
 	SourcePort int `json:",string"`
 	//LoadBalancerId string
 	TargetGroupArn string //aliyun slb vservergroupId or aws elbv2 targetGroupArn
-	LoadBalancerId string //aliyun slb lbid
+	//LoadBalancerId string //aliyun slb lbid
 }
 type Env struct {
 	Label

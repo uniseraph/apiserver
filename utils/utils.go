@@ -290,7 +290,7 @@ func GetClusterInfo(ctx context.Context, endpoint string) (*types.ClusterInfo, e
 //"1.12.6"
 //]
 //],
-func ParseNodes(input [][]string, poolId string) (string, string, []types.Node, error) {
+func ParseNodes(input [][]string, pool *types.PoolInfo) (string, string, []types.Node, error) {
 
 	strategy := input[1][1]
 	filters := input[2][1]
@@ -301,8 +301,7 @@ func ParseNodes(input [][]string, poolId string) (string, string, []types.Node, 
 
 	for i := 0; i < nodes; i++ {
 		result[i] = types.Node{
-			PoolId: poolId,
-			//PoolName: poolName,
+			PoolId: pool.Id.Hex(),
 		}
 
 		result[i].Hostname = input[4+i*9][0]
@@ -314,7 +313,7 @@ func ParseNodes(input [][]string, poolId string) (string, string, []types.Node, 
 		result[i].ReservedCPUs = input[8+i*9][1]
 		result[i].ReservedMemory = input[9+i*9][1]
 
-		result[i].Labels = parseLabels(input[10+i*9][1])
+		result[i].Labels = parseLabels(input[10+i*9][1] , pool)
 
 		//ignore 11-UpdateAt
 		result[i].ServerVersion = input[12+i*9][1]
@@ -323,7 +322,7 @@ func ParseNodes(input [][]string, poolId string) (string, string, []types.Node, 
 
 	return strategy, filters, result, nil
 }
-func parseLabels(labels string) map[string]string {
+func parseLabels(labels string , pool *types.PoolInfo) map[string]string {
 
 	result := make(map[string]string)
 
@@ -334,6 +333,10 @@ func parseLabels(labels string) map[string]string {
 		if len(key2value) != 2 {
 			logrus.Debugf("parseLabels:: err lable :%s", value)
 			continue
+		}
+
+		if key2value[0] == "provider" {
+			pool.Provider = key2value[1]
 		}
 
 		result[key2value[0]] = key2value[1]
