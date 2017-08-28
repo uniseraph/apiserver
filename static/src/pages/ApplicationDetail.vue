@@ -184,7 +184,7 @@
                   <v-checkbox label="使用宿主机网络" v-model="item.NetworkMode" true-value="host" false-value="bridge" dark disabled></v-checkbox>
                 </v-flex>
                 <v-flex xs2>
-                  <v-subheader>服务启动等待时间 (秒)</v-subheader>
+                  <v-subheader>启动等待 (秒)</v-subheader>
                 </v-flex>
                 <v-flex xs3>
                   <v-text-field
