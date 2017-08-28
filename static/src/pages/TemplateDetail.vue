@@ -273,12 +273,15 @@
                   <v-checkbox label="使用宿主机网络" v-model="item.NetworkMode" true-value="host" false-value="bridge" dark @change="NetworkModeWarning = true"></v-checkbox>
                 </v-flex>
                 <v-flex xs2>
-                  <v-subheader>服务启动等待时间 (s)</v-subheader>
+                  <v-subheader>服务启动等待时间 (秒)</v-subheader>
                 </v-flex>
                 <v-flex xs3>
                   <v-text-field
+                    :ref="'Service_ServiceTimeout_' + item.Id"
                     v-model="item.ServiceTimeout"
-                    value="10"
+                    required
+                    :rules="rules.Services[item.Id].ServiceTimeout"
+                    @input="rules.Services[item.Id].ServiceTimeout = rules0.Services.ServiceTimeout"
                   ></v-text-field>
                 </v-flex>
                 <v-flex xs2>
@@ -992,6 +995,7 @@
           ExclusiveCPU: false,
           Memory: '',
           ReplicaCount: '',
+          ServiceTimeout: 10,
           NetworkMode: 'bridge',
           Description: '',
           Command: '',
@@ -1186,6 +1190,7 @@
             CPU: this.rules0.Services.CPU,
             Memory: this.rules0.Services.Memory,
             ReplicaCount: this.rules0.Services.ReplicaCount,
+            ServiceTimeout: this.rules0.Services.ServiceTimeout,
             Envs: [],
             Ports: [],
             Volumns: [],
