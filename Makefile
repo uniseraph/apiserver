@@ -25,7 +25,8 @@ autodeploy:clean-deploy
 	cd tools && CGO_ENABLED=0  go build -a -installsuffix cgo -v -ldflags "-X ${PROJECT_NAME}/pkg/logging.ProjectName=${PROJECT_NAME}" -o autodeploy && cd ..
 
 portal:
-	cd static && npm install && npm run build && cd ..
+#	docker run -ti --rm -v $(shell pwd)/static:/usr/src/app node:8-onbuild bash -c "npm config set registry https://registry.npm.taobao.org && npm install && npm run build"
+	cd static && npm config set registry  https://registry.npm.taobao.org && npm install && npm run build && cd ..
 
 build:
 	docker run --rm -v $(shell pwd):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} ${BUILD_IMAGE} make apiserver
@@ -60,9 +61,7 @@ publish:release
 	ssh -q root@${TARGET_HOST}  "mkdir -p /opt/zanecloud"
 	scp release/apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz  root@${TARGET_HOST}:/opt/zanecloud
 	ssh -q root@${TARGET_HOST}  "cd /opt/zanecloud && rm -rf apiserver && tar zxvf apiserver-${MAJOR_VERSION}-${GIT_VERSION}.tar.gz"
-	ssh -q root@${TARGET_HOST}  "systemctl stop apiserver"
-	ssh -q root@${TARGET_HOST}  "systemctl start apiserver"
-
+	ssh -q root@${TARGET_HOST}  "systemctl restart apiserver"
 clean:
 	rm -rf apiserver
 

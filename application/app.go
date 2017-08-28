@@ -46,10 +46,22 @@ func UpgradeApplication(ctx context.Context, app *types.Application, pool *types
 	if err != nil {
 		return err
 	}
-	err = p.Upgrade(ctx, options.Up{
-		options.Create{ForceRecreate: false,
-			NoBuild:    true,
-			ForceBuild: false},
+	serviceTimeouts := map[string]int{}
+	for _, s := range app.Services {
+		if s.ServiceTimeout <= 0 {
+			s.ServiceTimeout = 10
+		}
+
+		serviceTimeouts[s.Name] = s.ServiceTimeout
+	}
+
+	err = p.Upgrade(ctx, options.Upgrade{
+		Create: options.Create{
+			ForceRecreate: false,
+			NoBuild:       true,
+			ForceBuild:    false,
+		},
+		ServiceTimeouts: serviceTimeouts,
 	})
 
 	if err != nil {
@@ -114,73 +126,92 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 		Volumes:  buildDefaultVolumes(),
 	}
 
-	for _, appService := range app.Services {
+	for _, as := range app.Services {
 
-		composeService := &config.ServiceConfig{
-			Image:       appService.ImageName + ":" + appService.ImageTag,
-			Restart:     appService.Restart,
+		sc := &config.ServiceConfig{
+			Image:       as.ImageName + ":" + as.ImageTag,
+			Restart:     as.Restart,
 			NetworkMode: "bridge",
-			CPUSet:      appService.CPU,
+			//	CPUSet:      as.CPU,
+			Expose: []string{},
 			//Ports:       s.Ports,
 		}
 
-		if appService.NetworkMode == "host" {
-			composeService.NetworkMode = "host"
-		}
-
-		if appService.Memory != "" {
-			mem, err := strconv.ParseInt(appService.Memory, 10, 64)
-
+		if as.Memory != "" {
+			mem, err := strconv.ParseInt(as.Memory, 10, 64)
 			if err == nil {
-				composeService.MemLimit = composeyml.MemStringorInt(mem << 20)
+				sc.MemLimit = composeyml.MemStringorInt(mem << 20)
 			}
 		}
+
+		if as.NetworkMode == "host" {
+			sc.NetworkMode = "host"
+		}
+
+
 
 		capNetAdmin := false
-		composeService.Ports = make([]string, len(appService.Ports))
-		for i, _ := range appService.Ports {
-			composeService.Ports[i] = strconv.Itoa(appService.Ports[i].SourcePort)
-			if appService.Ports[i].SourcePort < 1024 && appService.NetworkMode == "host" && !capNetAdmin {
-				composeService.CapAdd = append(composeService.CapAdd, "NET_ADMIN")
+
+		sc.Ports = make([]string, len(as.Ports))
+		for i, _ := range as.Ports {
+			sc.Ports[i] = strconv.Itoa(as.Ports[i].SourcePort)
+			if as.Ports[i].SourcePort < 1024 && as.NetworkMode == "host" && !capNetAdmin {
+				sc.CapAdd = append(sc.CapAdd, "NET_ADMIN")
 				capNetAdmin = true
 			}
+
+			//expose
+			//Expose ports without publishing them to the host machine - they’ll only be accessible to linked services. Only the internal port can be specified.
+
+			//if appService.NetworkMode == "host" {
+			//	composeService.Expose = append(composeService.Expose, composeService.Ports[i])
+			//}
 		}
 
-		composeService.Labels = map[string]string{}
-		for i, _ := range appService.Labels {
-
-			composeService.Labels[appService.Labels[i].Name] = strings.Replace(appService.Labels[i].Value, "$", "$$", -1)
+		sc.Labels = map[string]string{}
+		for i, _ := range as.Labels {
+			sc.Labels[as.Labels[i].Name] = strings.Replace(as.Labels[i].Value, "$", "$$", -1)
 		}
-		composeService.Labels[swarm.LABEL_APPLICATION_ID] = app.Id.Hex()
+		sc.Labels[swarm.LABEL_APPLICATION_ID] = app.Id.Hex()
 
-		//TODO 加上cpuset的label
-		if appService.CPU != "" && appService.ExclusiveCPU == true {
-			composeService.Labels[types.LABEL_CONTAINER_CPUS] = appService.CPU
-			//	composeService.Labels[swarm.LABEL_CONTAINER_EXCLUSIVE] = appService.ExclusiveCPU
+		if as.ExclusiveCPU == true {
+			sc.Labels[types.LABEL_CONTAINER_EXCLUSIVE] = "true"
 		}
-
-		composeService.Environment = make([]string, 0, len(appService.Envs))
-		for i, _ := range appService.Envs {
-
-			parsedValue := strings.Replace(appService.Envs[i].Value, "$", "$$", -1)
-			composeService.Environment = append(composeService.Environment, fmt.Sprintf("%s=%s", appService.Envs[i].Name, parsedValue))
+		if as.CPU != "" {
+			sc.Labels[types.LABEL_CONTAINER_CPUS] = as.CPU
 		}
 
-		composeService.Volumes = &composeyml.Volumes{
-			Volumes: make([]*composeyml.Volume, 0, len(appService.Volumns)),
+		sc.Environment = make([]string, 0, len(as.Envs))
+		for i, _ := range as.Envs {
+			parsedValue := strings.Replace(as.Envs[i].Value, "$", "$$", -1)
+			sc.Environment = append(sc.Environment, fmt.Sprintf("%s=%s", as.Envs[i].Name, parsedValue))
 		}
 
-		for i, _ := range appService.Volumns {
-
-			composeService.Volumes.Volumes = append(composeService.Volumes.Volumes, &composeyml.Volume{
-				Destination: appService.Volumns[i].ContainerPath,
-				//				AccessMode: "rw",
-
-			})
+		sc.Volumes = &composeyml.Volumes{
+			Volumes: make([]*composeyml.Volume, 0, len(as.Volumns)),
 		}
 
-		ec.Services[appService.Name] = composeService
+		for i, _ := range as.Volumns {
+			if as.Volumns[i].HostPath == "" { // 不指定宿主机目录，随便挂 ,匿名卷
+				sc.Volumes.Volumes = append(sc.Volumes.Volumes, &composeyml.Volume{
+					Destination: as.Volumns[i].ContainerPath,
+				})
+			} else if as.Volumns[i].HostPath[0:2] == "./" { //指定宿主机目录
+				sc.Volumes.Volumes = append(sc.Volumes.Volumes, &composeyml.Volume{
+					Destination: as.Volumns[i].ContainerPath,
+					Source:      as.Volumns[i].HostPath,
+				})
 
+			} else { //有名卷方式，
+				sc.Volumes.Volumes = append(sc.Volumes.Volumes, &composeyml.Volume{
+					Destination: as.Volumns[i].ContainerPath,
+					Source:      as.Volumns[i].HostPath,
+				})
+
+				ec.Volumes[as.Volumns[i].HostPath] = &config.VolumeConfig{}
+			}
+		}
+		ec.Services[as.Name] = sc
 	}
 
 	buf, err = yaml.Marshal(ec)

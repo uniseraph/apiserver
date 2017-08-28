@@ -266,7 +266,7 @@ func getApplicationHistory(ctx context.Context, w http.ResponseWriter, r *http.R
 
 		logrus.Debugf("getApplication::符合条件的deployment有%d个", total)
 
-		if err := colDeployment.Find(selector).Sort("createdtime").Limit(req.PageSize).Skip(req.PageSize * (req.Page - 1)).All(&deployments); err != nil {
+		if err := colDeployment.Find(selector).Sort("-createdtime").Limit(req.PageSize).Skip(req.PageSize * (req.Page - 1)).All(&deployments); err != nil {
 			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -484,9 +484,11 @@ func scaleApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		}
 
 		found := false
+		var service *types.Service
 		for i, _ := range app.Services {
 			if app.Services[i].Name == req.ServiceName {
 				app.Services[i].ReplicaCount = req.ReplicaCount
+				service = &app.Services[i]
 				found = true
 				break
 			}
@@ -531,6 +533,15 @@ func scaleApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		}
 
 		HttpOK(w, "")
+
+		/*
+			系统审计
+		*/
+
+		//OldReplicaCount怎么取到,通过service获取
+		//req.ReplicaCount是目标值
+
+		utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeUpdateServiceReplicaCount, app.PoolId, app.Id.Hex(), map[string]interface{}{"Application": app, "ServiceName": req.ServiceName, "OldReplicaCount": service.ReplicaCount, "NewReplicaCount": req.ReplicaCount})
 	})
 
 }
@@ -767,6 +778,12 @@ func stopApplication(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 		HttpOK(w, app)
 
+		/*
+			系统审计
+		*/
+
+		utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeStop, pool.Id.Hex(), app.Id.Hex(), map[string]interface{}{"Application": app})
+
 	})
 
 }
@@ -829,6 +846,12 @@ func startApplication(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		}
 
 		HttpOK(w, app)
+
+		/*
+			系统审计
+		*/
+
+		utils.CreateSystemAuditLogWithCtx(ctx, r, types.SystemAuditModuleTypeApplication, types.SystemAuditModuleOperationTypeStart, app.PoolId, app.Id.Hex(), map[string]interface{}{"Application": app})
 
 	})
 

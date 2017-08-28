@@ -42,6 +42,11 @@ Vue.filter('dividedBy1024', function(value, scale=2) {
     return Math.round(value * e / 1024) / e;
 });
 
+router.beforeEach((to, from, next) => {
+  store.dispatch('alertArea', null);
+  next();
+});
+
 new Vue({
   el: '#app',
   store,

@@ -64,6 +64,13 @@
           <td>{{ props.item.Node ? props.item.Node.Name : '' }}</td>
           <td>{{ props.item.Node ? props.item.Node.IP : '' }}</td>
           <td>
+            <div v-if="props.item.Ports">
+              <div v-for="p in props.item.Ports" style="white-space:nowrap;">
+                容器{{ p.ContainerPort }}: 宿主机{{ p.HostPort }}
+              </div>
+            </div>
+          </td>
+          <td>
             <router-link :to="'/applications/logs/' + ApplicationId + '/' + ServiceName + '/' + props.item.Id + '/' + encodeURIComponent(PoolName) + '/' + encodeURIComponent(ApplicationTitle) + '/' + encodeURIComponent(ServiceTitle)">
               <v-btn outline small icon class="blue blue--text" title="容器日志">
                   <v-icon>description</v-icon>
@@ -99,6 +106,7 @@
           { text: 'IP', sortable: false, left: true },
           { text: '宿主机名', sortable: false, left: true },
           { text: '宿主机IP', sortable: false, left: true },
+          { text: '端口映射列表', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
         items: [],

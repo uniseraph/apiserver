@@ -86,7 +86,7 @@
                     v-bind:info="alertType==='info'" 
                     v-bind:warning="alertType==='warning'" 
                     v-bind:error="alertType==='error'" 
-                    v-model="alertMsg" 
+                    v-model="alertDisplay" 
                     dismissible>{{ alertMsg }}</v-alert>
             </v-flex>
             <v-flex v-if="!Submitting" xs12 mt-4 class="text-md-center">
@@ -161,7 +161,16 @@
           'alertArea',
           'alertType',
           'alertMsg'
-      ])
+      ]),
+
+      alertDisplay: {
+        get() {
+          return this.$store.getters.alertArea != null;
+        },
+        set(v) {
+          this.$store.dispatch('alertArea', null);
+        }
+      }
     },
 
     watch: {

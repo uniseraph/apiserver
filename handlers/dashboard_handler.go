@@ -137,7 +137,7 @@ func poolDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 			year, month, day := time.Unix(deployments[i].CreatedTime, 0).Date()
 
 			daystr := buildDayStr(year, month, day)
-			logrus.Debugf("daystr  is %s", daystr)
+			//	logrus.Debugf("daystr  is %s", daystr)
 
 			if deployments[i].OperationType == types.DEPLOYMENT_OPERATION_CREATE {
 				count, ok := creates[daystr]

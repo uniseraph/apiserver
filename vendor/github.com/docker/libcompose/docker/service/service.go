@@ -272,7 +272,7 @@ func (s *Service) Up(ctx context.Context, options options.Up) error {
 
 // Upgrade implements Service.Up. It builds the image if needed, creates a container
 // and start it.
-func (s *Service) Upgrade(ctx context.Context, options options.Up) error {
+func (s *Service) Upgrade(ctx context.Context, options options.Upgrade) error {
 	containers, err := s.collectContainers(ctx)
 	if err != nil {
 		return err
@@ -396,7 +396,7 @@ func (s *Service) up(ctx context.Context, imageName string, create bool, options
 	})
 }
 
-func (s *Service) upgrade(ctx context.Context, imageName string, create bool, options options.Up) error {
+func (s *Service) upgrade(ctx context.Context, imageName string, create bool, options options.Upgrade) error {
 	containers, err := s.collectContainers(ctx)
 	if err != nil {
 		return err
@@ -416,7 +416,8 @@ func (s *Service) upgrade(ctx context.Context, imageName string, create bool, op
 		containers = []*container.Container{c}
 	}
 
-	return s.eachContainer(ctx, containers, func(c *container.Container) error {
+	// every container upgrade wait for service ready timeout
+	for i, c := range containers {
 		var err error
 		if create {
 			c, err = s.upgradeRecreateIfNeeded(ctx, c, options.NoRecreate, options.ForceRecreate)
@@ -430,15 +431,22 @@ func (s *Service) upgrade(ctx context.Context, imageName string, create bool, op
 		}
 
 		err = c.Start(ctx)
-
-		if err == nil {
-			s.project.Notify(events.ContainerStarted, s.name, map[string]string{
-				"name": c.Name(),
-			})
+		if err != nil {
+			return err
 		}
 
-		return err
-	})
+		s.project.Notify(events.ContainerStarted, s.name, map[string]string{
+			"name": c.Name(),
+		})
+
+		// wait for service ready
+		if i < len(containers)-1 {
+			if v, exists := options.ServiceTimeouts[s.name]; exists {
+				time.Sleep(time.Second * time.Duration(v))
+			}
+		}
+	}
+	return nil
 }
 
 func (s *Service) connectContainerToNetworks(ctx context.Context, c *container.Container, oneOff bool) error {
@@ -592,7 +600,7 @@ func (s *Service) recreate(ctx context.Context, c *container.Container) (*contai
 func (s *Service) upgradeRecreate(ctx context.Context, c *container.Container) (*container.Container, error) {
 	name := c.Name()
 	id := c.ID()
-	newName := fmt.Sprintf("%s_%s", name, id[:12])
+	newName := fmt.Sprintf("/old_%s", id[:12])
 	logrus.Debugf("Renaming %s => %s", name, newName)
 	if err := c.Rename(ctx, newName); err != nil {
 		logrus.Errorf("Failed to rename old container %s", c.Name())
@@ -601,6 +609,9 @@ func (s *Service) upgradeRecreate(ctx context.Context, c *container.Container) (
 	namer := NewRecreateNamer(name)
 	newContainer, err := s.createContainer(ctx, namer, id, nil, false)
 	if err != nil {
+		//创建容器失败，原容器名要改回去
+		c.Rename(ctx, name)
+
 		return nil, err
 	}
 	newID := newContainer.ID()

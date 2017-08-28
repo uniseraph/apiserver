@@ -93,7 +93,7 @@
                   v-bind:info="alertType==='info'" 
                   v-bind:warning="alertType==='warning'" 
                   v-bind:error="alertType==='error'" 
-                  v-model="alertMsg" 
+                  v-model="alertDisplay"
                   dismissible>{{ alertMsg }}</v-alert>
           </div>
           <div v-show="!item.hidden">
@@ -180,8 +180,17 @@
                 <v-flex xs2 v-if="Scaling">
                   <v-progress-linear v-bind:indeterminate="true"></v-progress-linear>
                 </v-flex>
-                <v-flex xs7>
+                <v-flex xs2>
                   <v-checkbox label="使用宿主机网络" v-model="item.NetworkMode" true-value="host" false-value="bridge" dark disabled></v-checkbox>
+                </v-flex>
+                <v-flex xs2>
+                  <v-subheader>启动等待 (秒)</v-subheader>
+                </v-flex>
+                <v-flex xs3>
+                  <v-text-field
+                    v-model="item.ServiceTimeout"
+                    readonly
+                  ></v-text-field>
                 </v-flex>
                 <v-flex xs2>
                   <v-subheader>说明</v-subheader>
@@ -254,6 +263,12 @@
                       <td>
                         <v-text-field
                           v-model="props.item.SourcePort"
+                          readonly
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-text-field
+                          v-model="props.item.LoadBalancerId"
                           readonly
                         ></v-text-field>
                       </td>
@@ -348,6 +363,7 @@
                       <td>
                         <v-text-field
                           v-model="props.item.Name"
+                        ></v-text-field>
                       </td>
                       <td>
                         <v-text-field
@@ -376,7 +392,7 @@
               v-bind:info="alertType==='info'" 
               v-bind:warning="alertType==='warning'" 
               v-bind:error="alertType==='error'" 
-              v-model="alertMsg" 
+              v-model="alertDisplay"
               dismissible>{{ alertMsg }}</v-alert>
       </div>
       <v-layout row wrap>
@@ -477,6 +493,7 @@
         ],
         headers_ports: [
           { text: '容器端口', sortable: false, left: true },
+          { text: '负载均衡ID', sortable: false, left: true },
           { text: '负载均衡目标群组ARN', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
@@ -562,7 +579,16 @@
           'alertArea',
           'alertType',
           'alertMsg'
-      ])
+      ]),
+
+      alertDisplay: {
+        get() {
+          return this.$store.getters.alertArea != null;
+        },
+        set(v) {
+          this.$store.dispatch('alertArea', null);
+        }
+      }
     },
 
     mounted() {
