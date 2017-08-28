@@ -180,11 +180,11 @@
                 <v-flex xs2 v-if="Scaling">
                   <v-progress-linear v-bind:indeterminate="true"></v-progress-linear>
                 </v-flex>
-                <v-flex xs7>
+                <v-flex xs3>
                   <v-checkbox label="使用宿主机网络" v-model="item.NetworkMode" true-value="host" false-value="bridge" dark disabled></v-checkbox>
                 </v-flex>
                 <v-flex xs2>
-                  <v-subheader>服务启动等待时间</v-subheader>
+                  <v-subheader>启动等待时间 (s)</v-subheader>
                 </v-flex>
                 <v-flex xs3>
                   <v-text-field
