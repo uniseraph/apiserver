@@ -124,9 +124,6 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			Expose: []string{},
 			//Ports:       s.Ports,
 		}
-		if as.NetworkMode == "host" {
-			sc.NetworkMode = "host"
-		}
 
 		if as.Memory != "" {
 			mem, err := strconv.ParseInt(as.Memory, 10, 64)
@@ -134,6 +131,12 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 				sc.MemLimit = composeyml.MemStringorInt(mem << 20)
 			}
 		}
+
+		if as.NetworkMode == "host" {
+			sc.NetworkMode = "host"
+		}
+
+
 
 		capNetAdmin := false
 
