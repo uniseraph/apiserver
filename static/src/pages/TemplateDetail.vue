@@ -724,7 +724,7 @@
             ServiceTimeout: [
               function(o) {
                   let v = o ? o.toString() : '';
-                  return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) > 0 && parseInt(v) <= 1000 ? true : '服务启动超时时间必须为1-1000的整数') : '请输入服务启动超时时间')
+                  return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) > 0 && parseInt(v) <= 1000 ? true : '服务启动等待时间必须为1-1000的整数') : '请输入服务启动等待时间')
                 }
               ],
             Envs: { 
@@ -995,7 +995,7 @@
           ExclusiveCPU: false,
           Memory: '',
           ReplicaCount: '',
-          ServiceTimeout: 10,
+          ServiceTimeout: '10',
           NetworkMode: 'bridge',
           Description: '',
           Command: '',
