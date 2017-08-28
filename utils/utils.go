@@ -328,6 +328,7 @@ func parseLabels(labels string , pool *types.PoolInfo) map[string]string {
 
 	for _, value := range strings.Split(labels, ",") {
 
+
 		key2value := strings.Split(value, "=")
 
 		if len(key2value) != 2 {
@@ -335,7 +336,7 @@ func parseLabels(labels string , pool *types.PoolInfo) map[string]string {
 			continue
 		}
 
-		if key2value[0] == "provider" {
+		if strings.TrimSpace(key2value[0]) == "provider" {
 			pool.Provider = key2value[1]
 		}
 
