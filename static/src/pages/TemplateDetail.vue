@@ -269,11 +269,15 @@
                     @input="rules.Services[item.Id].ReplicaCount = rules0.Services.ReplicaCount"
                   ></v-text-field>
                 </v-flex>
-                <v-flex xs8>
+                <v-flex xs3>
                   <v-checkbox label="使用宿主机网络" v-model="item.NetworkMode" true-value="host" false-value="bridge" dark @change="NetworkModeWarning = true"></v-checkbox>
                 </v-flex>
                 <v-flex xs2>
+<<<<<<< HEAD
                   <v-subheader>服务启动等待时间 (秒)</v-subheader>
+=======
+                  <v-subheader>启动等待时间 (s)</v-subheader>
+>>>>>>> 073e902ef1c32a2e632b511c35d4b594f65ca5f6
                 </v-flex>
                 <v-flex xs3>
                   <v-text-field

@@ -417,7 +417,7 @@ func (s *Service) upgrade(ctx context.Context, imageName string, create bool, op
 	}
 
 	// every container upgrade wait for service ready timeout
-	for _, c := range containers {
+	for i, c := range containers {
 		var err error
 		if create {
 			c, err = s.upgradeRecreateIfNeeded(ctx, c, options.NoRecreate, options.ForceRecreate)
@@ -440,8 +440,10 @@ func (s *Service) upgrade(ctx context.Context, imageName string, create bool, op
 		})
 
 		// wait for service ready
-		if v, exists := options.ServiceTimeouts[s.name]; exists {
-			time.Sleep(time.Second * time.Duration(v))
+		if i < len(containers)-1 {
+			if v, exists := options.ServiceTimeouts[s.name]; exists {
+				time.Sleep(time.Second * time.Duration(v))
+			}
 		}
 	}
 	return nil
