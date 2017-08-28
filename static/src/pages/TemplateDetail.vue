@@ -269,16 +269,16 @@
                     @input="rules.Services[item.Id].ReplicaCount = rules0.Services.ReplicaCount"
                   ></v-text-field>
                 </v-flex>
-                <v-flex xs2>
+                <v-flex xs3>
                   <v-checkbox label="使用宿主机网络" v-model="item.NetworkMode" true-value="host" false-value="bridge" dark @change="NetworkModeWarning = true"></v-checkbox>
                 </v-flex>
-                <v-flex xs6>
+                <v-flex xs5>
                   <v-checkbox label="分布在不同宿主机" v-model="item.Mutex" true-value="Nodes" false-value="None" dark></v-checkbox>
                 </v-flex>
                 <v-flex xs2>
                   <v-subheader>启动等待 (秒)</v-subheader>
                 </v-flex>
-                <v-flex xs10>
+                <v-flex xs2>
                   <v-text-field
                     :ref="'Service_ServiceTimeout_' + item.Id"
                     v-model="item.ServiceTimeout"
@@ -286,6 +286,8 @@
                     :rules="rules.Services[item.Id].ServiceTimeout"
                     @input="rules.Services[item.Id].ServiceTimeout = rules0.Services.ServiceTimeout"
                   ></v-text-field>
+                </v-flex>
+                <v-flex xs8>
                 </v-flex>
                 <v-flex xs2>
                   <v-subheader>说明</v-subheader>
