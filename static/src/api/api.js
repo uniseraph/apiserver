@@ -5,7 +5,7 @@ import * as ui from '../util/ui'
 import store from '../vuex/store'
 
 // axios默认配置
-axios.defaults.timeout = 60000;
+axios.defaults.timeout = 600000;
 axios.defaults.baseURL = '/api';
 
 // 仅测试用
