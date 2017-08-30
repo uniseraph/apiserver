@@ -25,6 +25,22 @@
     </v-card-title>
     <div>
       <v-layout row justify-center>
+        <v-dialog v-model="StopConfirmDlg" persistent>
+          <v-card>
+            <v-card-row>
+              <v-card-title>提示</v-card-title>
+            </v-card-row>
+            <v-card-row>
+              <v-card-text>你确认要停止应用{{ SelectedApplication.Name }}吗？</v-card-text>
+            </v-card-row>
+            <v-card-row actions>
+              <v-btn class="green--text darken-1" flat="flat" @click.native="stopApplication">确认</v-btn>
+              <v-btn class="green--text darken-1" flat="flat" @click.native="StopConfirmDlg = false">取消</v-btn>
+            </v-card-row>
+          </v-card>
+        </v-dialog>
+      </v-layout>
+      <v-layout row justify-center>
         <v-dialog v-model="RemoveConfirmDlg" persistent>
           <v-card>
             <v-card-row>
@@ -57,7 +73,7 @@
           <td>{{ props.item.UpdatedTime | formatDateTime }}</td>
           <td>{{ props.item.UpdaterName }}</td>
           <td>
-            <v-btn v-if="props.item.Status==='running'" outline small icon class="red red--text" @click.native="stopApplication(props.item)" title="停止应用">
+            <v-btn v-if="props.item.Status==='running'" outline small icon class="red red--text" @click.native="confirmBeforeStop(props.item)" title="停止应用">
               <v-icon>pause</v-icon>
             </v-btn>
             <v-btn v-if="props.item.Status==='stopped'" outline small icon class="blue blue--text" @click.native="startApplication(props.item)" title="启动应用">
@@ -108,6 +124,7 @@
         Keyword: this.$route.query ? (this.$route.query.Keyword || '') : '',
 
         RemoveConfirmDlg: false,
+        StopConfirmDlg: false,
         SelectedApplication: {}
       }
     },
@@ -182,8 +199,14 @@
         })
       },
 
-      stopApplication(application) {
-        api.StopApplication(application.Id).then(data => {
+      confirmBeforeStop(application) {
+        this.SelectedApplication = application;
+        this.StopConfirmDlg = true;
+      },
+
+      stopApplication() {
+        this.StopConfirmDlg = false;
+        api.StopApplication(this.SelectedApplication.Id).then(data => {
           this.getDataFromApi();
         })
       },
