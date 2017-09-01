@@ -30,6 +30,10 @@ const LABEL_SLB_ENABLE = "com.zanecloud.slb.enable"
 const LABEL_SLB_VSERVER_GROUP_ID = "com.zanecloud.slb.vservergroupid"
 const LABEL_SLB_PORT = "com.zanecloud.slb.port"
 
+const LABEL_ZLB_ENABLE = "com.zanecloud.zlb.enable"
+const LABEL_ZLB_DOMAINNAME = "com.zanecloud.zlb.domainame"
+const LABEL_ZLB_PORT = "com.zanecloud.zlb.port"
+
 //需要根据pool的驱动不同，调用不同的接口创建容器／应用，暂时只管swarm/compose
 func UpApplication(ctx context.Context, app *types.Application, pool *types.PoolInfo) error {
 
@@ -161,18 +165,23 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 				capNetAdmin = true
 			}
 
-			if as.Ports[i].TargetGroupArn != "" && pool.Provider == "aliyun" {
-				// aliyun slb
-				sc.Labels[LABEL_SLB_ENABLE] = "true"
-				sc.Labels[LABEL_SLB_VSERVER_GROUP_ID] = as.Ports[i].TargetGroupArn
-				sc.Labels[LABEL_SLB_PORT] = strconv.Itoa(as.Ports[i].SourcePort)
-			}
+			if as.Ports[i].TargetGroupArn != "" {
+				if pool.Provider == "aliyun" {
+					sc.Labels[LABEL_SLB_ENABLE] = "true"
+					sc.Labels[LABEL_SLB_VSERVER_GROUP_ID] = as.Ports[i].TargetGroupArn
+					sc.Labels[LABEL_SLB_PORT] = strconv.Itoa(as.Ports[i].SourcePort)
 
-			if as.Ports[i].TargetGroupArn != "" && pool.Provider == "aws" {
-				// aws elbv2
-				sc.Labels[LABEL_ELBV2_ENABLE] = "true"
-				sc.Labels[LABEL_ELBV2_TARGET_GROUP_ARN] = as.Ports[i].TargetGroupArn
-				sc.Labels[LABEL_ELBV2_TARGET_PORT] = strconv.Itoa(as.Ports[i].SourcePort)
+				} else if pool.Provider == "aws" {
+					sc.Labels[LABEL_ELBV2_ENABLE] = "true"
+					sc.Labels[LABEL_ELBV2_TARGET_GROUP_ARN] = as.Ports[i].TargetGroupArn
+					sc.Labels[LABEL_ELBV2_TARGET_PORT] = strconv.Itoa(as.Ports[i].SourcePort)
+
+				} else if pool.Provider == "native" {
+					sc.Labels[LABEL_ZLB_ENABLE] = "true"
+					sc.Labels[LABEL_ZLB_DOMAINNAME] = as.Ports[i].TargetGroupArn
+					sc.Labels[LABEL_ZLB_PORT] = strconv.Itoa(as.Ports[i].SourcePort)
+
+				}
 			}
 
 			//expose
