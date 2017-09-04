@@ -31,7 +31,7 @@ const LABEL_SLB_VSERVER_GROUP_ID = "com.zanecloud.slb.vservergroupid"
 const LABEL_SLB_PORT = "com.zanecloud.slb.port"
 
 const LABEL_ZLB_ENABLE = "com.zanecloud.zlb.enable"
-const LABEL_ZLB_DOMAINNAME = "com.zanecloud.zlb.domainame"
+const LABEL_ZLB_DOMAINNAME = "com.zanecloud.zlb.domain"
 const LABEL_ZLB_PORT = "com.zanecloud.zlb.port"
 
 //需要根据pool的驱动不同，调用不同的接口创建容器／应用，暂时只管swarm/compose
@@ -167,8 +167,6 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 		if as.NetworkMode == "host" {
 			sc.NetworkMode = "host"
 		}
-
-
 
 		capNetAdmin := false
 
