@@ -37,6 +37,7 @@ const LABEL_CPUEXCLUSIVE = "com.zanecloud.omega.container.exclusive"
 const LABEL_COMPOSE_PROJECT = "com.docker.compose.project"
 const LABEL_COMPOSE_SERVICE = "com.docker.compose.service"
 const LABEL_APPLICATION_ID = "com.zanecloud.compose.application.id"
+const LABEL_SWARM_AFFINITIES = "com.docker.swarm.affinities"
 
 var routers = map[string]map[string]Handler{
 	"HEAD": {},
@@ -48,7 +49,7 @@ var routers = map[string]map[string]Handler{
 		"/containers/create":                postContainersCreate,
 		"/containers/{idorname:.*}/restart": proxyAsyncWithCallBack(restartContainer),
 		"/containers/{idorname:.*}/start":   proxyAsyncWithCallBack(startContainer),
-		"/containers/{idorname:.*}/stop":   proxyAsyncWithCallBack(stopContainer),
+		"/containers/{idorname:.*}/stop":    proxyAsyncWithCallBack(stopContainer),
 
 		//"/containers/{name:.*}/kill":   handlers.MgoSessionInject(proxyAsyncWithCallBack(updateContainer)),
 
@@ -853,8 +854,6 @@ func restartContainer(ctx context.Context, req *http.Request, resp *http.Respons
 		"ports":         containerJSON.NetworkSettings.Ports}).Debugf("restarting container , update ports  mapping success")
 }
 
-
-
 func stopContainer(ctx context.Context, r *http.Request, resp *http.Response) {
 
 	idorname := mux.Vars(r)["idorname"]
@@ -893,8 +892,6 @@ func stopContainer(ctx context.Context, r *http.Request, resp *http.Response) {
 	selector := bson.M{"poolid": poolInfo.Id.Hex(), "containerid": containerJSON.ID}
 
 	ports := []*PortMapping{}
-
-
 
 	if err := c.Update(selector, bson.M{"$set": bson.M{"ports": ports, "status": "stopped"}}); err != nil {
 		logrus.WithFields(logrus.Fields{"containerid": containerJSON.ID[0:6],

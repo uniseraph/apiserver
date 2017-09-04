@@ -116,7 +116,7 @@ type ClusterInfo struct {
 
 type Node struct {
 	//Id             bson.ObjectId "_id"
-	PoolId string
+	PoolId         string
 	Hostname       string
 	Endpoint       string
 	NodeId         string
@@ -154,6 +154,7 @@ type Service struct {
 	Privileged bool
 	CapAdd     []string
 	CapDrop    []string
+	Mutex      string
 }
 
 type Port struct {

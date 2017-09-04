@@ -164,6 +164,15 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 		}
 		sc.Labels[swarm.LABEL_APPLICATION_ID] = app.Id.Hex()
 
+		if as.Mutex != "" {
+			//TODO 常量
+			if as.Mutex == "nodes" {
+				//["container!=*nginx_service*"]
+				sc.Labels[swarm.LABEL_SWARM_AFFINITIES] = fmt.Sprintf("[\"container!=*%s_%s*\"]", app.Name, as.Name)
+			}
+
+		}
+
 		if as.NetworkMode == "host" {
 			sc.NetworkMode = "host"
 		}
