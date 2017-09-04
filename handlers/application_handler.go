@@ -632,6 +632,29 @@ func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			scaleMap[app.Services[i].Name] = app.Services[i].ReplicaCount
 		}
 
+		// add need remove service
+		needRemoveList := []string{}
+		for oldServiceName, _ := range scaleMap {
+			exist := false
+			for _, s := range ms {
+				if s.Name == oldServiceName {
+					exist = true
+				}
+			}
+			if !exist {
+				needRemoveList = append(needRemoveList, oldServiceName)
+			}
+		}
+
+		mr := make(map[string]int)
+		for _, oldServiceName := range needRemoveList {
+			mr[oldServiceName] = 0
+		}
+		if err := application.ScaleApplication(context.Background(), app, pool, mr); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		app.Services = ms
 
 		for i, _ := range app.Services {
@@ -649,6 +672,15 @@ func upgradeApplication(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 		if err := application.UpgradeApplication(ctx, app, pool); err != nil {
 			HttpError(w, "升级失败:"+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		m := make(map[string]int)
+		for _, service := range app.Services {
+			m[service.Name] = service.ReplicaCount
+		}
+		if err := application.ScaleApplication(context.Background(), app, pool, m); err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 

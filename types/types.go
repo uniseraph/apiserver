@@ -133,21 +133,22 @@ type Node struct {
 }
 
 type Service struct {
-	Title        string
-	Name         string
-	ImageName    string
-	ImageTag     string
-	CPU          string
-	ExclusiveCPU bool
-	Memory       string
-	NetworkMode  string
-	ReplicaCount int `json:",string"`
-	Description  string
-	Restart      string
-	Command      string
-	Envs         []Env
-	Volumns      []Volumne
-	Labels       []Label
+	Title          string
+	Name           string
+	ImageName      string
+	ImageTag       string
+	CPU            string
+	ExclusiveCPU   bool
+	Memory         string
+	NetworkMode    string
+	ReplicaCount   int `json:",string"`
+	ServiceTimeout int `json:",string"`
+	Description    string
+	Restart        string
+	Command        string
+	Envs           []Env
+	Volumns        []Volumne
+	Labels         []Label
 	//Ports        []string
 	Ports      []Port
 	Privileged bool

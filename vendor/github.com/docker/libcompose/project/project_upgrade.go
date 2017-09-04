@@ -8,7 +8,7 @@ import (
 )
 
 // Up creates and starts the specified services (kinda like docker run).
-func (p *Project) Upgrade(ctx context.Context, options options.Up, services ...string) error {
+func (p *Project) Upgrade(ctx context.Context, options options.Upgrade, services ...string) error {
 	if err := p.initialize(ctx); err != nil {
 		return err
 	}

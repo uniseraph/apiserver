@@ -3,6 +3,8 @@
 
 ## 第一次安装
 
+下载地址：http://zanecloud-apiserver.oss-cn-beijing.aliyuncs.com/apiserver-1.0.1-e3e3b04.tar.gz
+
 ### 解压apiserver安装文件到/opt/zanelcoud目录下
 ```
 mkdir -p /opt/zanecloud  && cd /opt/zanecloud  && tar zxvf apiserver-1.0.1-xxxxx.tar.gz

@@ -61,10 +61,22 @@ func UpgradeApplication(ctx context.Context, app *types.Application, pool *types
 	if err != nil {
 		return err
 	}
-	err = p.Upgrade(ctx, options.Up{
-		options.Create{ForceRecreate: false,
-			NoBuild:    true,
-			ForceBuild: false},
+	serviceTimeouts := map[string]int{}
+	for _, s := range app.Services {
+		if s.ServiceTimeout <= 0 {
+			s.ServiceTimeout = 10
+		}
+
+		serviceTimeouts[s.Name] = s.ServiceTimeout
+	}
+
+	err = p.Upgrade(ctx, options.Upgrade{
+		Create: options.Create{
+			ForceRecreate: false,
+			NoBuild:       true,
+			ForceBuild:    false,
+		},
+		ServiceTimeouts: serviceTimeouts,
 	})
 
 	if err != nil {
@@ -140,9 +152,6 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			Labels: make(map[string]string),
 			//Ports:       s.Ports,
 		}
-		if as.NetworkMode == "host" {
-			sc.NetworkMode = "host"
-		}
 
 		if as.Memory != "" {
 			mem, err := strconv.ParseInt(as.Memory, 10, 64)
@@ -154,6 +163,12 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			sc.Labels[as.Labels[i].Name] = strings.Replace(as.Labels[i].Value, "$", "$$", -1)
 		}
 		sc.Labels[swarm.LABEL_APPLICATION_ID] = app.Id.Hex()
+
+		if as.NetworkMode == "host" {
+			sc.NetworkMode = "host"
+		}
+
+
 
 		capNetAdmin := false
 

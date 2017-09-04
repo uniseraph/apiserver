@@ -198,6 +198,15 @@
                 <v-flex xs8>
                 </v-flex>
                 <v-flex xs2>
+                  <v-subheader>启动等待 (秒)</v-subheader>
+                </v-flex>
+                <v-flex xs3>
+                  <v-text-field
+                    v-model="item.ServiceTimeout"
+                    readonly
+                  ></v-text-field>
+                </v-flex>
+                <v-flex xs2>
                   <v-subheader>说明</v-subheader>
                 </v-flex>
                 <v-flex xs10>

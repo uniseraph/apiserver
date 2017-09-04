@@ -33,7 +33,7 @@ type APIProject interface {
 	Stop(ctx context.Context, timeout int, services ...string) error
 	Unpause(ctx context.Context, services ...string) error
 	Up(ctx context.Context, options options.Up, services ...string) error
-	Upgrade(ctx context.Context, options options.Up, services ...string) error
+	Upgrade(ctx context.Context, options options.Upgrade, services ...string) error
 
 	Parse() error
 	CreateService(name string) (Service, error)
