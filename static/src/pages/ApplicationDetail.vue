@@ -180,8 +180,22 @@
                 <v-flex xs2 v-if="Scaling">
                   <v-progress-linear v-bind:indeterminate="true"></v-progress-linear>
                 </v-flex>
-                <v-flex xs2>
+                <v-flex xs3>
                   <v-checkbox label="使用宿主机网络" v-model="item.NetworkMode" true-value="host" false-value="bridge" dark disabled></v-checkbox>
+                </v-flex>
+                <v-flex xs4>
+                  <v-checkbox label="分布在不同宿主机" v-model="item.Mutex" true-value="Nodes" false-value="None" dark disabled></v-checkbox>
+                </v-flex>
+                <v-flex xs2>
+                  <v-subheader>启动等待 (秒)</v-subheader>
+                </v-flex>
+                <v-flex xs2>
+                  <v-text-field
+                    v-model="item.ServiceTimeout"
+                    readonly
+                  ></v-text-field>
+                </v-flex>
+                <v-flex xs8>
                 </v-flex>
                 <v-flex xs2>
                   <v-subheader>启动等待 (秒)</v-subheader>
@@ -263,12 +277,6 @@
                       <td>
                         <v-text-field
                           v-model="props.item.SourcePort"
-                          readonly
-                        ></v-text-field>
-                      </td>
-                      <td>
-                        <v-text-field
-                          v-model="props.item.LoadBalancerId"
                           readonly
                         ></v-text-field>
                       </td>
@@ -493,7 +501,6 @@
         ],
         headers_ports: [
           { text: '容器端口', sortable: false, left: true },
-          { text: '负载均衡ID', sortable: false, left: true },
           { text: '负载均衡目标群组ARN', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
@@ -627,6 +634,10 @@
             for (let st of services) {
               st.index = st.Id = this.svcIdStart++;
               st.hidden = true;
+
+              if (!st.Mutex) {
+                st.Mutex = 'Nodes';
+              }
 
               let r = {
                 ReplicaCount: this.rules0.Services.ReplicaCount

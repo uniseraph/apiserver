@@ -272,6 +272,23 @@
                 <v-flex xs3>
                   <v-checkbox label="使用宿主机网络" v-model="item.NetworkMode" true-value="host" false-value="bridge" dark @change="NetworkModeWarning = true"></v-checkbox>
                 </v-flex>
+                <v-flex xs5>
+                  <v-checkbox label="分布在不同宿主机" v-model="item.Mutex" true-value="Nodes" false-value="None" dark></v-checkbox>
+                </v-flex>
+                <v-flex xs2>
+                  <v-subheader>启动等待 (秒)</v-subheader>
+                </v-flex>
+                <v-flex xs2>
+                  <v-text-field
+                    :ref="'Service_ServiceTimeout_' + item.Id"
+                    v-model="item.ServiceTimeout"
+                    required
+                    :rules="rules.Services[item.Id].ServiceTimeout"
+                    @input="rules.Services[item.Id].ServiceTimeout = rules0.Services.ServiceTimeout"
+                  ></v-text-field>
+                </v-flex>
+                <v-flex xs8>
+                </v-flex>
                 <v-flex xs2>
                   <v-subheader>启动等待 (秒)</v-subheader>
                 </v-flex>
@@ -390,12 +407,6 @@
                           required
                           :rules="rules.Services[item.Id].Ports[props.item.Id].SourcePort"
                           @input="rules.Services[item.Id].Ports[props.item.Id].SourcePort = rules0.Services.Ports.SourcePort"
-                        ></v-text-field>
-                      </td>
-                      <td>
-                        <v-text-field
-                          v-model="props.item.LoadBalancerId"
-                          placeholder="若无需负载均衡则留空"
                         ></v-text-field>
                       </td>
                       <td>
@@ -605,7 +616,6 @@
         ],
         headers_ports: [
           { text: '容器端口', sortable: false, left: true },
-          { text: '负载均衡ID', sortable: false, left: true },
           { text: '负载均衡目标群组ARN', sortable: false, left: true },
           { text: '操作', sortable: false, left: true }
         ],
@@ -723,10 +733,10 @@
             ],
             ServiceTimeout: [
               function(o) {
-                  let v = o ? o.toString() : '';
-                  return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) > 0 && parseInt(v) <= 1000 ? true : '服务启动等待时间必须为1-1000的整数') : '请输入服务启动等待时间')
-                }
-              ],
+                let v = o ? o.toString() : '';
+                return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) > 0 && parseInt(v) <= 1000 ? true : '服务启动等待时间必须为1-1000的整数') : '请输入服务启动等待时间')
+              }
+            ],
             Envs: { 
               Name: [
                 v => (v && v.length > 0 ? (v.match(/\s/) ? '环境变量名称不允许包含空格' : true) : '请输入环境变量名称')
@@ -833,6 +843,10 @@
             st.index = st.Id = this.svcIdStart++;
             st.hidden = true;
             st.NetworkModeWarning = false;
+
+            if (!st.Mutex) {
+              st.Mutex = 'Nodes';
+            }
 
             let r = {
               Title: this.rules0.Services.Title,
@@ -997,6 +1011,7 @@
           ReplicaCount: '',
           ServiceTimeout: '10',
           NetworkMode: 'bridge',
+          Mutex: 'Nodes',
           Description: '',
           Command: '',
           Restart: 'always',
@@ -1037,7 +1052,7 @@
 
         this.$set(this.rules.Services[s.Id].Ports, id, {});
         
-        s.Ports.push({ index: s.Ports.length, Id: id, SourcePort: '', LoadBalancerId: '', TargetGroupArn: '' });
+        s.Ports.push({ index: s.Ports.length, Id: id, SourcePort: '', TargetGroupArn: '' });
         this.patch(s.Ports);
 
         this.initCompleters();
@@ -1232,10 +1247,6 @@
             }
 
             for (let p of s.Ports) {
-              if (p.LoadBalancerId) {
-                p.LoadBalancerId = p.LoadBalancerId.trim();
-              }
-
               if (p.TargetGroupArn) {
                 p.TargetGroupArn = p.TargetGroupArn.trim();
               }
