@@ -166,7 +166,7 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 
 		if as.Mutex != "" {
 			//TODO 常量
-			if as.Mutex == "nodes" {
+			if as.Mutex == "Nodes" {
 				//["container!=*nginx_service*"]
 				sc.Labels[swarm.LABEL_SWARM_AFFINITIES] = fmt.Sprintf("[\"container!=*%s_%s*\"]", app.Name, as.Name)
 			}
