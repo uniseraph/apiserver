@@ -19,6 +19,21 @@ import (
 	"strings"
 )
 
+//from watchdog elbv2
+const LABEL_ELBV2_ENABLE = "com.zanecloud.elbv2.enable"
+const LABEL_ELBV2_TARGET_GROUP_ARN = "com.zanecloud.elbv2.target.grouparn"
+const LABEL_ELBV2_TARGET_PORT = "com.zanecloud.elbv2.target.port"
+
+//from watchdog slb
+
+const LABEL_SLB_ENABLE = "com.zanecloud.slb.enable"
+const LABEL_SLB_VSERVER_GROUP_ID = "com.zanecloud.slb.vservergroupid"
+const LABEL_SLB_PORT = "com.zanecloud.slb.port"
+
+const LABEL_ZLB_ENABLE = "com.zanecloud.zlb.enable"
+const LABEL_ZLB_DOMAINNAME = "com.zanecloud.zlb.domain"
+const LABEL_ZLB_PORT = "com.zanecloud.zlb.port"
+
 //需要根据pool的驱动不同，调用不同的接口创建容器／应用，暂时只管swarm/compose
 func UpApplication(ctx context.Context, app *types.Application, pool *types.PoolInfo) error {
 
@@ -132,8 +147,9 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			Image:       as.ImageName + ":" + as.ImageTag,
 			Restart:     as.Restart,
 			NetworkMode: "bridge",
-			//	CPUSet:      as.CPU,
+			//CPUSet:      as.CPU,
 			Expose: []string{},
+			Labels: make(map[string]string),
 			//Ports:       s.Ports,
 		}
 
@@ -143,12 +159,23 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 				sc.MemLimit = composeyml.MemStringorInt(mem << 20)
 			}
 		}
+		for i, _ := range as.Labels {
+			sc.Labels[as.Labels[i].Name] = strings.Replace(as.Labels[i].Value, "$", "$$", -1)
+		}
+		sc.Labels[swarm.LABEL_APPLICATION_ID] = app.Id.Hex()
+
+		if as.Mutex != "" {
+			//TODO 常量
+			if as.Mutex == "Nodes" {
+				//["container!=*nginx_service*"]
+				sc.Labels[swarm.LABEL_SWARM_AFFINITIES] = fmt.Sprintf("[\"container!=*%s_%s*\"]", app.Name, as.Name)
+			}
+
+		}
 
 		if as.NetworkMode == "host" {
 			sc.NetworkMode = "host"
 		}
-
-
 
 		capNetAdmin := false
 
@@ -160,19 +187,33 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 				capNetAdmin = true
 			}
 
+			if as.Ports[i].TargetGroupArn != "" {
+				if pool.Provider == "aliyun" {
+					sc.Labels[LABEL_SLB_ENABLE] = "true"
+					sc.Labels[LABEL_SLB_VSERVER_GROUP_ID] = as.Ports[i].TargetGroupArn
+					sc.Labels[LABEL_SLB_PORT] = strconv.Itoa(as.Ports[i].SourcePort)
+
+				} else if pool.Provider == "aws" {
+					sc.Labels[LABEL_ELBV2_ENABLE] = "true"
+					sc.Labels[LABEL_ELBV2_TARGET_GROUP_ARN] = as.Ports[i].TargetGroupArn
+					sc.Labels[LABEL_ELBV2_TARGET_PORT] = strconv.Itoa(as.Ports[i].SourcePort)
+
+				} else if pool.Provider == "native" {
+					sc.Labels[LABEL_ZLB_ENABLE] = "true"
+					sc.Labels[LABEL_ZLB_DOMAINNAME] = as.Ports[i].TargetGroupArn
+					sc.Labels[LABEL_ZLB_PORT] = strconv.Itoa(as.Ports[i].SourcePort)
+
+				}
+			}
+
 			//expose
-			//Expose ports without publishing them to the host machine - they’ll only be accessible to linked services. Only the internal port can be specified.
+			//Expose ports without publishing them to the host machine - they’ll only be accessible to linked services.
+			// Only the internal port can be specified.
 
 			//if appService.NetworkMode == "host" {
 			//	composeService.Expose = append(composeService.Expose, composeService.Ports[i])
 			//}
 		}
-
-		sc.Labels = map[string]string{}
-		for i, _ := range as.Labels {
-			sc.Labels[as.Labels[i].Name] = strings.Replace(as.Labels[i].Value, "$", "$$", -1)
-		}
-		sc.Labels[swarm.LABEL_APPLICATION_ID] = app.Id.Hex()
 
 		if as.ExclusiveCPU == true {
 			sc.Labels[types.LABEL_CONTAINER_EXCLUSIVE] = "true"

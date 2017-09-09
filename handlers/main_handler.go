@@ -172,7 +172,7 @@ var routers = map[string]map[string]*MyHandler{
 
 		"/logs/list": &MyHandler{h: getSystemAuditList, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 
-		"/containers/{id:.*}/inspect": &MyHandler{h: getContainerJSON, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/containers/{id:.*}/inspect": &MyHandler{h: getContainerJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 		"/containers/{id:.*}/logs":    &MyHandler{h: getContainerLogs, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 		"/containers/list":            &MyHandler{h: getContainerList, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 
