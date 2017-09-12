@@ -248,23 +248,7 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			Volumes: make([]*composeyml.Volume, 0, len(as.Volumns)),
 		}
 
-		index := 0
 		for i, _ := range as.Volumns {
-			if as.Volumns[i].HostPath == "" && as.Volumns[i].Driver == "" {
-				// use multi-volume
-				index++
-				sc.Labels[fmt.Sprintf("%s.%d.%s", types.LABEL_VOLUME_PREFIX, index, types.LABEL_VOLUME_MOUNTPOINT)] = as.Volumns[i].ContainerPath
-				if as.Volumns[i].MediaType == "SATA" {
-					sc.Labels[fmt.Sprintf("%s.%d.%s", types.LABEL_VOLUME_PREFIX, index, types.LABEL_VOLUME_MEDIATYPE)] = "HDD"
-				} else {
-					sc.Labels[fmt.Sprintf("%s.%d.%s", types.LABEL_VOLUME_PREFIX, index, types.LABEL_VOLUME_MEDIATYPE)] = "SSD"
-				}
-				sc.Labels[fmt.Sprintf("%s.%d.%s", types.LABEL_VOLUME_PREFIX, index, types.LABEL_VOLUME_IOCLASS)] = strconv.Itoa(as.Volumns[i].IopsClass)
-				sc.Labels[fmt.Sprintf("%s.%d.%s", types.LABEL_VOLUME_PREFIX, index, types.LABEL_VOLUME_SIZE)] = strconv.FormatInt(int64(as.Volumns[i].Size)*1024*1024, 10)
-				sc.Labels[fmt.Sprintf("%s.%d.%s", types.LABEL_VOLUME_PREFIX, index, types.LABEL_VOLUME_EXCLUSIVE)] = "0"
-				continue
-			}
-
 			if as.Volumns[i].HostPath == "" { // 不指定宿主机目录，随便挂 ,匿名卷
 				sc.Volumes.Volumes = append(sc.Volumes.Volumes, &composeyml.Volume{
 					Destination: as.Volumns[i].ContainerPath,
