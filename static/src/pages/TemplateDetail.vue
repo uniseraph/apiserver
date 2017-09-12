@@ -269,8 +269,25 @@
                     @input="rules.Services[item.Id].ReplicaCount = rules0.Services.ReplicaCount"
                   ></v-text-field>
                 </v-flex>
-                <v-flex xs8>
+                <v-flex xs3>
                   <v-checkbox label="使用宿主机网络" v-model="item.NetworkMode" true-value="host" false-value="bridge" dark @change="NetworkModeWarning = true"></v-checkbox>
+                </v-flex>
+                <v-flex xs5>
+                  <v-checkbox label="分布在不同宿主机" v-model="item.Mutex" true-value="Nodes" false-value="None" dark></v-checkbox>
+                </v-flex>
+                <v-flex xs2>
+                  <v-subheader>启动等待 (秒)</v-subheader>
+                </v-flex>
+                <v-flex xs2>
+                  <v-text-field
+                    :ref="'Service_ServiceTimeout_' + item.Id"
+                    v-model="item.ServiceTimeout"
+                    required
+                    :rules="rules.Services[item.Id].ServiceTimeout"
+                    @input="rules.Services[item.Id].ServiceTimeout = rules0.Services.ServiceTimeout"
+                  ></v-text-field>
+                </v-flex>
+                <v-flex xs8>
                 </v-flex>
                 <v-flex xs2>
                   <v-subheader>说明</v-subheader>
@@ -702,6 +719,12 @@
                 return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) > 0 && parseInt(v) <= 1000 ? true : '容器个数必须为1-1000的整数') : '请输入容器个数')
               }
             ],
+            ServiceTimeout: [
+              function(o) {
+                let v = o ? o.toString() : '';
+                return (v && v.length > 0 ? (/^\d+$/.test(v) && parseInt(v) > 0 && parseInt(v) <= 1000 ? true : '服务启动等待时间必须为1-1000的整数') : '请输入服务启动等待时间')
+              }
+            ],
             Envs: { 
               Name: [
                 v => (v && v.length > 0 ? (v.match(/\s/) ? '环境变量名称不允许包含空格' : true) : '请输入环境变量名称')
@@ -809,6 +832,10 @@
             st.hidden = true;
             st.NetworkModeWarning = false;
 
+            if (!st.Mutex) {
+              st.Mutex = 'Nodes';
+            }
+
             let r = {
               Title: this.rules0.Services.Title,
               Name: this.rules0.Services.Name,
@@ -817,6 +844,7 @@
               CPU: this.rules0.Services.CPU,
               Memory: this.rules0.Services.Memory,
               ReplicaCount: this.rules0.Services.ReplicaCount,
+              ServiceTimeout: this.rules0.Services.ServiceTimeout,
               Envs: [],
               Ports: [],
               Volumns: [],
@@ -969,7 +997,9 @@
           ExclusiveCPU: false,
           Memory: '',
           ReplicaCount: '',
+          ServiceTimeout: '10',
           NetworkMode: 'bridge',
+          Mutex: 'Nodes',
           Description: '',
           Command: '',
           Restart: 'always',
@@ -1163,6 +1193,7 @@
             CPU: this.rules0.Services.CPU,
             Memory: this.rules0.Services.Memory,
             ReplicaCount: this.rules0.Services.ReplicaCount,
+            ServiceTimeout: this.rules0.Services.ServiceTimeout,
             Envs: [],
             Ports: [],
             Volumns: [],
@@ -1198,7 +1229,15 @@
 
           for (let s of this.Services) {
             for (let e of s.Envs) {
-              e.Value = e.Value.trim();
+              if (e.Value) {
+                e.Value = e.Value.trim();
+              }
+            }
+
+            for (let p of s.Ports) {
+              if (p.TargetGroupArn) {
+                p.TargetGroupArn = p.TargetGroupArn.trim();
+              }
             }
           }
 

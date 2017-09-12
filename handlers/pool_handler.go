@@ -112,6 +112,7 @@ type PoolsRegisterRequest struct {
 	Driver     string
 	EnvTreeId  string
 	DriverOpts types.DriverOpts
+	Provider   string
 	Labels     []string `json:",omitempty"`
 }
 
@@ -243,7 +244,9 @@ func refreshPool(ctx context.Context, id string) (*PoolsFlushResponse, error) {
 		result.PoolInfo.ClusterAdvertise = clusterInfo.ClusterAdvertise
 		result.PoolInfo.Containers = clusterInfo.Containers
 
-		strategy, filters, nodes, err := utils.ParseNodes(clusterInfo.SystemStatus, result.PoolInfo.Id.Hex())
+		result.PoolInfo.Provider = "native"
+
+		strategy, filters, nodes, err := utils.ParseNodes(clusterInfo.SystemStatus, &result.PoolInfo)
 		if err != nil {
 			return errors.New("解析集群节点信息错误" + err.Error())
 		}
@@ -277,6 +280,7 @@ func refreshPool(ctx context.Context, id string) (*PoolsFlushResponse, error) {
 			"tunneldaddr":       result.PoolInfo.TunneldAddr,
 			"tunneldport":       result.PoolInfo.TunneldPort,
 			"nodecount":         len(nodes),
+			"provider": result.PoolInfo.Provider,
 		}}); err != nil {
 			return err
 		}

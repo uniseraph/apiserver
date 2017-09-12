@@ -5,10 +5,14 @@
 if type apt-get >/dev/null 2>&1; then
   echo 'using apt-get '
   sudo apt-get update && apt-get install -y mongodb mongodb-server redis-server
+  sudo systemctl restart mongodb
+  sudo systemctl enable mongodb
 
 elif type yum >/dev/nul 2>&1; then
   echo 'using yum'
   sudo yum install -y redis  mongodb mongodb-server
+  sudo systemctl restart mongod
+  sudo systemctl enable mongod
 
 else
   echo "no apt-get and no yum, exit"
@@ -16,10 +20,7 @@ else
 fi
 
 systemctl restart redis
-systemctl restart mongod
-
 systemctl enable redis
-systemctl enable mongod
 
 
 

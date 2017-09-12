@@ -9,7 +9,7 @@ import (
 )
 
 // Upgrade upgrade and create-start the specified services.
-func (p *Project) Upgrade(ctx context.Context, options options.Up, upgradeServices map[string]int) error {
+func (p *Project) Upgrade(ctx context.Context, options options.Upgrade, upgradeServices map[string]int) error {
 	if err := p.initialize(ctx); err != nil {
 		return err
 	}

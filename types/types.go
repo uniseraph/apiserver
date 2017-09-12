@@ -52,9 +52,9 @@ type DriverOpts struct {
 type PoolInfo struct {
 	Id bson.ObjectId "_id"
 
-	Name   string
-	Status string
-
+	Name             string
+	Status           string
+	Provider         string
 	CPUs             int
 	Memory           int64
 	Disk             int64
@@ -123,8 +123,7 @@ type ClusterInfo struct {
 
 type Node struct {
 	//Id             bson.ObjectId "_id"
-	PoolId string
-	//PoolName       string
+	PoolId         string
 	Hostname       string
 	Endpoint       string
 	NodeId         string
@@ -141,32 +140,35 @@ type Node struct {
 }
 
 type Service struct {
-	Title        string
-	Name         string
-	ImageName    string
-	ImageTag     string
-	CPU          string
-	ExclusiveCPU bool
-	Memory       string
-	NetworkMode  string
-	ReplicaCount int `json:",string"`
-	Description  string
-	Restart      string
-	Command      string
-	Envs         []Env
-	Volumns      []Volumne
-	Labels       []Label
+	Title          string
+	Name           string
+	ImageName      string
+	ImageTag       string
+	CPU            string
+	ExclusiveCPU   bool
+	Memory         string
+	NetworkMode    string
+	ReplicaCount   int `json:",string"`
+	ServiceTimeout int `json:",string"`
+	Description    string
+	Restart        string
+	Command        string
+	Envs           []Env
+	Volumns        []Volumne
+	Labels         []Label
 	//Ports        []string
 	Ports      []Port
 	Privileged bool
 	CapAdd     []string
 	CapDrop    []string
+	Mutex      string
 }
 
 type Port struct {
 	SourcePort int `json:",string"`
 	//LoadBalancerId string
-	TargetGroupArn string
+	TargetGroupArn string //aliyun slb vservergroupId or aws elbv2 targetGroupArn
+	//LoadBalancerId string //aliyun slb lbid
 }
 type Env struct {
 	Label

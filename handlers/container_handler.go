@@ -19,6 +19,7 @@ import (
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/zanecloud/apiserver/types"
 	"io"
+	"strings"
 	"time"
 )
 
@@ -199,9 +200,9 @@ func getContainerList(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		req.PageSize = 20
 	}
 
-	utils.GetMgoCollections(ctx, w, []string{"container"}, func(cs map[string]*mgo.Collection) {
+	utils.GetMgoCollections(ctx, w, []string{"container", "pool"}, func(cs map[string]*mgo.Collection) {
 		colContainer := cs["container"]
-
+		colPool := cs["pool"]
 		result := ContainerListResponse{
 			Data: make([]*swarm.Container, 200),
 		}
@@ -237,6 +238,82 @@ func getContainerList(ctx context.Context, w http.ResponseWriter, r *http.Reques
 			return
 		}
 
+		if len(result.Data) != 0 {
+
+			//不会有跨pool的container查询
+			poolId := result.Data[0].PoolId
+
+			poolInfo := &types.PoolInfo{}
+			if err := colPool.FindId(bson.ObjectIdHex(poolId)).One(poolInfo); err != nil {
+				if err == mgo.ErrNotFound {
+					http.Error(w, "No such a pool:"+poolId, http.StatusNotFound)
+					return
+				}
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			var client *http.Client
+			if poolInfo.DriverOpts.TlsConfig != nil {
+				tlsc, err := tlsconfig.Client(*poolInfo.DriverOpts.TlsConfig)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				client = &http.Client{
+					Transport: &http.Transport{
+						TLSClientConfig: tlsc,
+					},
+					CheckRedirect: client.CheckRedirect,
+				}
+			}
+
+			cli, err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint, poolInfo.DriverOpts.APIVersion, client, nil)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			defer cli.Close()
+
+			for _, c := range result.Data {
+
+				containerJSON, err := cli.ContainerInspect(ctx, c.ContainerId)
+
+				if err != nil {
+					logrus.Debugf("getContainerList inspect the container:%s error:%s", c.ContainerId[0:6], err.Error())
+					continue
+				}
+
+				c.IP = containerJSON.NetworkSettings.IPAddress
+				c.Status = containerJSON.State.Status
+				c.State = containerJSON.State
+
+				c.Ports = []*swarm.PortMapping{}
+				for port, bindings := range containerJSON.NetworkSettings.Ports {
+
+					if len(bindings) == 0 {
+						continue
+					}
+					s := strings.Split(string(port), "/")
+					if len(s) != 2 {
+						continue
+					}
+
+					for i, _ := range bindings {
+						pm := &swarm.PortMapping{
+							ContainerPort: s[0],
+							Proto:         s[1],
+							HostPort:      bindings[i].HostPort,
+							HostIp:        bindings[i].HostIP,
+						}
+						c.Ports = append(c.Ports, pm)
+
+					}
+
+				}
+			}
+
+		}
 		result.Keyword = req.Keyword
 		result.Page = req.Page
 		result.PageSize = req.PageSize
@@ -250,15 +327,6 @@ func getContainerList(ctx context.Context, w http.ResponseWriter, r *http.Reques
 func restartContainer(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	id := mux.Vars(r)["id"]
-
-	//config:=utils.GetAPIServerConfig(ctx)
-	//
-	//poolInfo := config.
-	//cli, err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint, poolInfo.DriverOpts.APIVersion, client, nil)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//defer cli.Close()
 
 	utils.GetMgoCollections(ctx, w, []string{"container", "pool"}, func(cs map[string]*mgo.Collection) {
 
@@ -301,7 +369,7 @@ func restartContainer(ctx context.Context, w http.ResponseWriter, r *http.Reques
 			}
 		}
 
-		cli, err := dockerclient.NewClient(poolInfo.DriverOpts.EndPoint, poolInfo.DriverOpts.APIVersion, client, nil)
+		cli, err := dockerclient.NewClient(poolInfo.ProxyEndpoint, poolInfo.DriverOpts.APIVersion, client, nil)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

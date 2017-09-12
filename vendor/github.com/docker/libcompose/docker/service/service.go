@@ -245,7 +245,7 @@ func (s *Service) Up(ctx context.Context, options options.Up) error {
 
 // Upgrade implements Service.Upgrade. It builds the image if needed, upgrade a container
 // and start it.
-func (s *Service) Upgrade(ctx context.Context, options options.Up) error {
+func (s *Service) Upgrade(ctx context.Context, options options.Upgrade) error {
 	containers, err := s.collectContainers(ctx)
 	if err != nil {
 		return err
@@ -269,7 +269,7 @@ func (s *Service) Upgrade(ctx context.Context, options options.Up) error {
 	config, hostConfig, err := Convert(s.serviceConfig, s.context.Context, s.clientFactory)
 
 	// loop all containers
-	for _, c := range containers {
+	for i, c := range containers {
 		// 1. docker update
 		updateLabels := map[string]string{}
 		const LABEL_CPUS = "com.zanecloud.omega.container.cpus"
@@ -320,6 +320,13 @@ func (s *Service) Upgrade(ctx context.Context, options options.Up) error {
 		s.project.Notify(events.ContainerStarted, s.name, map[string]string{
 			"name": c.Name(),
 		})
+
+		// wait for service ready
+		if i < len(containers)-1 {
+			if v, exists := options.ServiceTimeouts[s.name]; exists {
+				time.Sleep(time.Second * time.Duration(v))
+			}
+		}
 	}
 
 	return nil
