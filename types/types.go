@@ -67,6 +67,7 @@ type PoolInfo struct {
 	Containers       int
 	UpdatedTime      int64
 	CreatedTime      int64
+	LB               string
 }
 
 type Roleset uint64

@@ -280,7 +280,8 @@ func refreshPool(ctx context.Context, id string) (*PoolsFlushResponse, error) {
 			"tunneldaddr":       result.PoolInfo.TunneldAddr,
 			"tunneldport":       result.PoolInfo.TunneldPort,
 			"nodecount":         len(nodes),
-			"provider": result.PoolInfo.Provider,
+			"provider":          result.PoolInfo.Provider,
+			"lb":                result.PoolInfo.LB,
 		}}); err != nil {
 			return err
 		}
