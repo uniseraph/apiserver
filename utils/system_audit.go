@@ -90,7 +90,7 @@ func CreateSystemAuditLog(db *mgo.Database, r *http.Request, userId string, modu
 func getIpFromReuqest(r *http.Request) string {
 	var ip string
 
-	xff := r.Header.Get("X-Forward-For")
+	xff := r.Header.Get("X-Forwarded-For")
 	if xff != "" {
 		forwards := strings.Split(xff, ",")
 		ip = forwards[0]
