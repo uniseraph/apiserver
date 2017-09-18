@@ -8,17 +8,24 @@ import (
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/zanecloud/apiserver/proxy"
 	store "github.com/zanecloud/apiserver/types"
-	"github.com/zanecloud/apiserver/utils"
 	"gopkg.in/mgo.v2"
 	"net"
 	"net/http"
 	"strings"
+	"gopkg.in/mgo.v2/bson"
 )
 
+
+
+
 type Proxy struct {
-	PoolInfo        *store.PoolInfo
+	//PoolInfo        *store.PoolInfo
+	PoolId          string
 	APIServerConfig *store.APIServerConfig
+	session *mgo.Session
+	dockerClient *dockerclient.Client
 	endpoint        string
+
 	server          *http.Server
 	ctx             context.Context
 	cancel          context.CancelFunc
@@ -30,35 +37,27 @@ func init() {
 
 func NewProxy(config *store.APIServerConfig, pool *store.PoolInfo) (proxy.Proxy, error) {
 
-	proxy := &Proxy{
-		PoolInfo:        pool,
+	p := &Proxy{
+		PoolId: pool.Id.Hex(),
 		APIServerConfig: config,
+		endpoint: pool.DriverOpts.EndPoint,
 	}
 
-	ctx := context.WithValue(context.Background(), utils.KEY_PROXY_SELF, proxy)
-	ctx, cancel := context.WithCancel(ctx)
 
-	proxy.ctx = ctx
-	proxy.cancel = cancel
-
-	return proxy, nil
-
-}
-
-func (p *Proxy) preparePoolContext(key2value map[string]interface{}) {
-
-	for k, v := range key2value {
-		p.ctx = context.WithValue(p.ctx, k, v)
+	session, err := mgo.Dial(config.MgoURLs)
+	if err != nil {
+		return nil , err
 	}
+	session.SetMode(mgo.Monotonic, true)
+	p.session = session
 
-}
-func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
+
 
 	var client *http.Client
-	if p.PoolInfo.DriverOpts.TlsConfig != nil {
-		tlsc, err := tlsconfig.Client(*p.PoolInfo.DriverOpts.TlsConfig)
+	if pool.DriverOpts.TlsConfig != nil {
+		tlsc, err := tlsconfig.Client(*pool.DriverOpts.TlsConfig)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		client = &http.Client{
 			Transport: &http.Transport{
@@ -67,20 +66,29 @@ func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 			CheckRedirect: client.CheckRedirect,
 		}
 	}
-	cli, err := dockerclient.NewClient(p.PoolInfo.DriverOpts.EndPoint, p.PoolInfo.DriverOpts.APIVersion, client, nil)
+	cli, err := dockerclient.NewClient(pool.DriverOpts.EndPoint, pool.DriverOpts.APIVersion, client, nil)
 	if err != nil {
-		return err
+		session.Close()
+		return nil ,err
 	}
 
-	session, err := mgo.Dial(p.APIServerConfig.MgoURLs)
-	if err != nil {
-		return err
-	}
-	session.SetMode(mgo.Monotonic, true)
+	p.dockerClient = cli
 
-	p.preparePoolContext(map[string]interface{}{utils.KEY_POOL_CLIENT: cli, utils.KEY_MGO_SESSION: session})
+	ctx := context.WithValue(context.Background(), proxy.KEY_PROXY_SELF, p)
+	ctx, cancel := context.WithCancel(ctx)
 
-	h, err := NewPoolHandler(p.ctx, p.PoolInfo)
+	p.ctx = ctx
+	p.cancel = cancel
+
+	return p, nil
+
+}
+
+
+func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
+
+
+	h, err := NewPoolHandler(p.ctx, opts.PoolInfo)
 	if err != nil {
 		return err
 	}
@@ -90,10 +98,12 @@ func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 
 	var paddr string
 
-	if p.PoolInfo.ProxyEndpoint != "" {
+
+
+	if opts.PoolInfo.ProxyEndpoint != "" {
 		//TODO 有可能apiserver换了一台机器重启，所以proxy的ip会发送变化,这种情况下也没必要保存端口不变
 		//目前保持端口不变
-		if parts := strings.SplitN(p.PoolInfo.ProxyEndpoint, "://", 2); len(parts) == 2 {
+		if parts := strings.SplitN(opts.PoolInfo.ProxyEndpoint, "://", 2); len(parts) == 2 {
 			paddr = parts[1]
 		} else {
 			paddr = parts[0]
@@ -127,14 +137,14 @@ func (p *Proxy) Start(opts *proxy.StartProxyOpts) error {
 		//负责回收ctx中的资源
 		select {
 		case <-p.ctx.Done():
-			if err := cli.Close(); err != nil {
-				logrus.Debugf("close the pool:%s  docker client , err:%s", p.PoolInfo.Name, err.Error())
+			if err := p.dockerClient.Close(); err != nil {
+				logrus.Debugf("close the pool:%s  docker client , err:%s", p.PoolId, err.Error())
 			} else {
-				logrus.Debugf("close the pool:%s docker client success", p.PoolInfo.Name)
+				logrus.Debugf("close the pool:%s docker client success", p.PoolId)
 			}
 
-			logrus.Debugf("close the pool:%s mgo session", p.PoolInfo.Name)
-			session.Close()
+			logrus.Debugf("close the pool:%s mgo session", p.PoolId)
+			p.session.Close()
 			return
 		}
 
@@ -160,6 +170,19 @@ func (p *Proxy) Endpoint() string {
 	return p.endpoint
 }
 
-func (p *Proxy) Pool() *store.PoolInfo {
-	return p.PoolInfo
+func (p *Proxy) Pool() (*store.PoolInfo , error ) {
+
+
+	session := p.session.Clone()
+	defer session.Close()
+
+	pool := &store.PoolInfo{}
+
+
+	if err := session.DB(p.APIServerConfig.MgoDB).C("pool").FindId(bson.ObjectIdHex(p.PoolId)).One(pool) ; err !=nil {
+		return nil , err
+	}
+
+
+	return pool,nil
 }

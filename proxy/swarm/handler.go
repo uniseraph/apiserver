@@ -15,7 +15,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	apiserver "github.com/zanecloud/apiserver/types"
-	"github.com/zanecloud/apiserver/utils"
 	"io"
 	"net"
 	"net/http"
@@ -28,6 +27,9 @@ import (
 
 	"gopkg.in/mgo.v2"
 	//"io/ioutil"
+	//"github.com/zanecloud/apiserver/utils"
+	"github.com/zanecloud/apiserver/proxy"
+	"github.com/zanecloud/apiserver/utils"
 )
 
 var eventshandler = newEventsHandler()
@@ -83,12 +85,7 @@ func deleteContainer(ctx context.Context, req *http.Request, resp *http.Response
 	if resp.StatusCode != http.StatusNoContent {
 		return
 	}
-	mgoSession, err := utils.GetMgoSessionClone(ctx)
-	if err != nil {
-		logrus.Errorf("cant get mgo session")
-		return
-	}
-	defer mgoSession.Close()
+
 
 	poolInfo, err := getPoolInfo(ctx)
 	if err != nil {
@@ -101,7 +98,9 @@ func deleteContainer(ctx context.Context, req *http.Request, resp *http.Response
 		return
 	}
 
-	c := mgoSession.DB(mgoDB).C("container")
+	p, _ := ctx.Value(proxy.KEY_PROXY_SELF).(*Proxy)
+
+	c := p.session.DB(mgoDB).C("container")
 
 	//TODO or 删除
 	if err := c.Remove(bson.M{"poolid": poolInfo.Id.Hex(), "containerid": nameOrId}); err != nil {
@@ -224,7 +223,7 @@ func hijack(tlsConfig *tls.Config, endpoint string, w http.ResponseWriter, r *ht
 
 type Handler func(c context.Context, w http.ResponseWriter, r *http.Request)
 
-func NewPoolHandler(ctx context.Context, poolInfo *apiserver.PoolInfo) (http.Handler, error) {
+func NewPoolHandler(ctx context.Context, poolInfo *apiserver.PoolInfo ) (http.Handler, error) {
 
 	r := mux.NewRouter()
 	for method, mappings := range routers {
@@ -251,8 +250,8 @@ func NewPoolHandler(ctx context.Context, poolInfo *apiserver.PoolInfo) (http.Han
 	rootfunc := func(w http.ResponseWriter, req *http.Request) {
 		logrus.WithFields(logrus.Fields{"method": req.Method,
 			"uri":                      req.RequestURI,
-			"pool.Name":                poolInfo.Name,
-			"pool.DriverOpts.Endpoint": poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in proxy rootfunc")
+			"pool.Name":                  poolInfo.Name,
+			"pool.Endpoint": 			poolInfo.DriverOpts.EndPoint}).Debug("HTTP request received in proxy rootfunc")
 
 		if err := proxyAsync(ctx, w, req, nil); err != nil {
 			httpError(w, err.Error(), http.StatusInternalServerError)
@@ -264,13 +263,7 @@ func NewPoolHandler(ctx context.Context, poolInfo *apiserver.PoolInfo) (http.Han
 	return r, nil
 }
 
-//func preparePoolContext(p *Proxy, session *mgo.Session, cli *dockerclient.Client)  {
-//	p.ctx = context.WithValue(p.ctx, utils.KEY_PROXY_SELF, p)
-//	p.ctx = context.WithValue(p.ctx, utils.KEY_APISERVER_CONFIG, p.APIServerConfig)
-//	p.ctx = context.WithValue(p.ctx, utils.KEY_MGO_SESSION, session)
-//	p.ctx = context.WithValue(p.ctx, utils.KEY_POOL_CLIENT, cli)
-//
-//}
+
 
 func proxyAsyncWithCallBack(callback func(context.Context, *http.Request, *http.Response)) Handler {
 
@@ -288,38 +281,45 @@ func proxyAsyncWithCallBack(callback func(context.Context, *http.Request, *http.
 
 }
 
+func getDockerClient(ctx context.Context) (*dockerclient.Client, error){
+
+	p, _ := ctx.Value(proxy.KEY_PROXY_SELF).(*Proxy)
+
+	return p.dockerClient , nil
+
+}
+
+
+func getSessionClone(ctx context.Context) ( *mgo.Session , error){
+	p, _ := ctx.Value(proxy.KEY_PROXY_SELF).(*Proxy)
+	return p.session.Clone(),nil
+}
+
+
 func getMgoDB(ctx context.Context) (string, error) {
 
-	p, _ := ctx.Value(utils.KEY_PROXY_SELF).(*Proxy)
+	p, _ := ctx.Value(proxy.KEY_PROXY_SELF).(*Proxy)
 
 	return p.APIServerConfig.MgoDB, nil
 }
 
 func getPoolInfo(ctx context.Context) (*apiserver.PoolInfo, error) {
-	p, ok := ctx.Value(utils.KEY_PROXY_SELF).(*Proxy)
+	p, ok := ctx.Value(proxy.KEY_PROXY_SELF).(*Proxy)
 
 	if !ok {
 		logrus.Errorf("can't get proxy.self form ctx:%#v", ctx)
 		return nil, errors.Errorf("can't get proxy.self form ctx:%#v", ctx)
 	}
 
-	return p.PoolInfo, nil
+	return p.Pool()
 }
 
-//
-//func getDockerClient(ctx context.Context) (dockerclient.APIClient, error) {
-//	client, ok := ctx.Value(utils.KEY_POOL_CLIENT).(dockerclient.APIClient)
-//
-//	if !ok {
-//		logrus.Errorf("can't get pool.client from ctx:%#v", ctx)
-//		return nil, errors.Errorf("can't get pool.client from ctx:%#v", ctx)
-//	}
-//
-//	return client, nil
-//}
 
 func httpError(w http.ResponseWriter, err string, status int) {
-	utils.HttpError(w, err, status)
+	//utils.HttpError(w, err, status)
+
+	logrus.WithField("status", status).Errorf("HTTP error: %v", err)
+	http.Error(w, err, status)
 }
 
 type ContainerCreateConfig struct {
@@ -369,8 +369,9 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 	}
 
 	//logrus.Debugf("postContainersCreate::before create a container , poolInfo is %#v  ", poolInfo)
+	//cli, _ := utils.GetPoolClient(ctx)
 
-	cli, _ := utils.GetPoolClient(ctx)
+	cli,_:= getDockerClient(ctx)
 
 	resp, err := cli.ContainerCreate(ctx, &config.Config, &config.HostConfig, &config.NetworkingConfig, name)
 	if err != nil {
@@ -394,7 +395,7 @@ func postContainersCreate(ctx context.Context, w http.ResponseWriter, r *http.Re
 	logrus.WithFields(logrus.Fields{"resp": resp}).Debugf("create container success!")
 	//TODO save to mongodb
 
-	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	mgoSession, err := getSessionClone(ctx)
 	if err != nil {
 		//TODO 如果清理容器失败，需要记录一下日志，便于人工干预
 		cli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{Force: true})
@@ -452,7 +453,7 @@ func flushContainerInfo(ctx context.Context, container *Container) {
 
 	//utils.GetMgoCollections(ctx, &NoOpResponseWriter{}, []string{"container"}, func(cs map[string]*mgo.Collection) {
 
-	dockerclient, _ := utils.GetPoolClient(ctx)
+	dockerclient, _ := getDockerClient(ctx)
 
 	poolInfo, _ := getPoolInfo(ctx)
 
@@ -702,7 +703,7 @@ func startContainer(ctx context.Context, r *http.Request, resp *http.Response) {
 		return
 	}
 
-	dockerclient, _ := utils.GetPoolClient(ctx)
+	dockerclient, _ := getDockerClient(ctx)
 
 	poolInfo, _ := getPoolInfo(ctx)
 
@@ -712,7 +713,7 @@ func startContainer(ctx context.Context, r *http.Request, resp *http.Response) {
 		return
 	}
 
-	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	mgoSession, err := getSessionClone(ctx)
 	if err != nil {
 		logrus.Errorf("cant get mgo session")
 		return
@@ -775,7 +776,7 @@ func restartContainer(ctx context.Context, req *http.Request, resp *http.Respons
 	if resp.StatusCode != http.StatusNoContent {
 		return
 	}
-	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	mgoSession, err := getSessionClone(ctx)
 	if err != nil {
 		logrus.Errorf("cant get mgo session")
 		return
@@ -797,7 +798,7 @@ func restartContainer(ctx context.Context, req *http.Request, resp *http.Respons
 
 	//container := &Container{}
 
-	dockerclient, _ := utils.GetPoolClient(ctx)
+	dockerclient, _ := getDockerClient(ctx)
 
 	containerJSON, err := dockerclient.ContainerInspect(ctx, idorname)
 	if err != nil {
@@ -868,7 +869,7 @@ func stopContainer(ctx context.Context, r *http.Request, resp *http.Response) {
 		return
 	}
 
-	dockerclient, _ := utils.GetPoolClient(ctx)
+	dockerclient, _ := getDockerClient(ctx)
 
 	poolInfo, _ := getPoolInfo(ctx)
 
@@ -878,7 +879,7 @@ func stopContainer(ctx context.Context, r *http.Request, resp *http.Response) {
 		return
 	}
 
-	mgoSession, err := utils.GetMgoSessionClone(ctx)
+	mgoSession, err := getSessionClone(ctx)
 	if err != nil {
 		logrus.Errorf("cant get mgo session")
 		return
