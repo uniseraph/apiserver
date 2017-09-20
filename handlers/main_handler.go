@@ -116,7 +116,7 @@ var routers = map[string]map[string]*MyHandler{
 		"/users/list":              &MyHandler{h: getUsersJSON, opChecker: checkUserPermission, roleset: types.ROLESET_NORMAL | types.ROLESET_SYSADMIN},
 		"/users/{id:.*}/resetpass": &MyHandler{h: postUserResetPass, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/users/{id:.*}/remove":    &MyHandler{h: postUserRemove, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
-		"/users/{id:.*}/update":    &MyHandler{h: postUserUpdate, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN | types.ROLESET_NORMAL},
+		"/users/{id:.*}/update":    &MyHandler{h: postUserUpdate, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN},
 		"/users/{id:.*}/join":      &MyHandler{h: postUserJoin, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN | types.ROLESET_NORMAL},
 		"/users/{id:.*}/quit":      &MyHandler{h: postUserQuit, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN | types.ROLESET_NORMAL},
 		"/user/pools":              &MyHandler{h: getUserPools, opChecker: checkUserPermission, roleset: types.ROLESET_SYSADMIN | types.ROLESET_NORMAL},
