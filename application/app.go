@@ -163,6 +163,8 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			sc.Labels[as.Labels[i].Name] = strings.Replace(as.Labels[i].Value, "$", "$$", -1)
 		}
 		sc.Labels[swarm.LABEL_APPLICATION_ID] = app.Id.Hex()
+		sc.Labels[swarm.LABEL_COMPOSE_PROJECT] = app.Name
+		sc.Labels[swarm.LABEL_COMPOSE_SERVICE] = as.Name
 
 		if as.Mutex != "" {
 			//TODO 常量
