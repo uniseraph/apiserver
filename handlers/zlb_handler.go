@@ -153,7 +153,7 @@ func getVDomainList(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		} else {
 
 			vdomains := []string{}
-			_ = json.NewDecoder(response.Body).Decode(vdomains)
+			_ = json.NewDecoder(response.Body).Decode(&vdomains)
 
 			HttpOK(w, VDomainListResponse{VDomains: vdomains})
 
