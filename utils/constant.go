@@ -3,7 +3,6 @@ package utils
 import (
 	"context"
 	"github.com/Sirupsen/logrus"
-	"github.com/docker/docker/client"
 	"github.com/go-redis/redis"
 	"github.com/pkg/errors"
 	"github.com/zanecloud/apiserver/types"
@@ -20,8 +19,6 @@ const KEY_MGO_SESSION = "mgo.session"
 const KEY_MGO_DB = "mgo.db"
 
 //const KEY_POOL_NAME = "pool.name"
-const KEY_PROXY_SELF = "proxy.self"
-const KEY_POOL_CLIENT = "pool.client"
 const KEY_LISTENER_ADDR = "addr"
 const KEY_LISTENER_PORT = "port"
 const KEY_APISERVER_CONFIG = "apiserver.config"
@@ -67,15 +64,6 @@ func GetMgoSessionClone(ctx context.Context) (*mgo.Session, error) {
 	return session.Clone(), nil
 }
 
-// 大家公用一个dockerclient，不需要关闭
-func GetPoolClient(ctx context.Context) (*client.Client, error) {
-	cli, ok := ctx.Value(KEY_POOL_CLIENT).(*client.Client)
-	if !ok {
-		return nil, errors.New("can't get the pool client")
-	}
-
-	return cli, nil
-}
 
 func PutMgoSession(ctx context.Context, mgoSession *mgo.Session) context.Context {
 	return context.WithValue(ctx, KEY_MGO_SESSION, mgoSession)

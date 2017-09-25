@@ -14,10 +14,7 @@ import (
 	"time"
 )
 
-type PoolDashboardRequest struct {
-	PoolId    string
-	StartTime string
-}
+
 
 type PoolDashboardResponse struct {
 	Summary *PoolDashboardSummary
@@ -58,6 +55,10 @@ type Record struct {
 	Count int
 }
 
+type PoolDashboardRequest struct {
+	PoolId    string
+	StartTime string
+}
 func poolDashboard(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	req := &PoolDashboardRequest{}

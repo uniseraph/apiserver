@@ -58,7 +58,7 @@
           </v-flex>
           <v-flex xs2>
             <v-select
-                :items="constants.SSH_OP_LIST"
+                :items="OperationList"
                 item-text="Name"
                 item-value="Id"
                 v-model="Operation"
@@ -233,6 +233,7 @@
         PoolList: [],
         ApplicationList: [ { Id: '', Title: '所有应用' } ],
         UserList: [],
+        OperationList: [],
 
         StartTime1: this.$route.query ? (this.$route.query.StartTime1 || '') : '', 
         StartTime2: this.$route.query ? (this.$route.query.StartTime2 || '00:00') : '00:00', 
@@ -270,6 +271,8 @@
         api.Users().then(data => {
           this.UserList = [{ Id: '', Name: '所有用户' }].concat(data);
         });
+
+        OperationList = [{ Id: '', Name: '所有操作' }].concat(this.constants.SSH_OP_LIST);
 
         this.poolChanged(this.PoolId);
 

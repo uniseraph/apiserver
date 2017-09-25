@@ -163,6 +163,8 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			sc.Labels[as.Labels[i].Name] = strings.Replace(as.Labels[i].Value, "$", "$$", -1)
 		}
 		sc.Labels[swarm.LABEL_APPLICATION_ID] = app.Id.Hex()
+		sc.Labels[swarm.LABEL_COMPOSE_PROJECT] = app.Name
+		sc.Labels[swarm.LABEL_COMPOSE_SERVICE] = as.Name
 
 		if as.Mutex != "" {
 			//TODO 常量
@@ -188,17 +190,17 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 			}
 
 			if as.Ports[i].TargetGroupArn != "" {
-				if pool.Provider == "aliyun" {
+				if pool.LB == "slb" {
 					sc.Labels[LABEL_SLB_ENABLE] = "true"
 					sc.Labels[LABEL_SLB_VSERVER_GROUP_ID] = as.Ports[i].TargetGroupArn
 					sc.Labels[LABEL_SLB_PORT] = strconv.Itoa(as.Ports[i].SourcePort)
 
-				} else if pool.Provider == "aws" {
+				} else if pool.LB == "elbv2" {
 					sc.Labels[LABEL_ELBV2_ENABLE] = "true"
 					sc.Labels[LABEL_ELBV2_TARGET_GROUP_ARN] = as.Ports[i].TargetGroupArn
 					sc.Labels[LABEL_ELBV2_TARGET_PORT] = strconv.Itoa(as.Ports[i].SourcePort)
 
-				} else if pool.Provider == "native" {
+				} else if pool.LB == "zlb" {
 					sc.Labels[LABEL_ZLB_ENABLE] = "true"
 					sc.Labels[LABEL_ZLB_DOMAINNAME] = as.Ports[i].TargetGroupArn
 					sc.Labels[LABEL_ZLB_PORT] = strconv.Itoa(as.Ports[i].SourcePort)

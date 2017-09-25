@@ -280,7 +280,8 @@ func refreshPool(ctx context.Context, id string) (*PoolsFlushResponse, error) {
 			"tunneldaddr":       result.PoolInfo.TunneldAddr,
 			"tunneldport":       result.PoolInfo.TunneldPort,
 			"nodecount":         len(nodes),
-			"provider": result.PoolInfo.Provider,
+			"provider":          result.PoolInfo.Provider,
+			"lb":                result.PoolInfo.LB,
 		}}); err != nil {
 			return err
 		}
@@ -432,6 +433,8 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	logrus.Debugf("register pool : no conflict pool")
+
 	colEnvTree := mgoSession.DB(mgoDB).C("env_tree_meta")
 	envTree := &types.EnvTreeMeta{}
 	if err := colEnvTree.FindId(bson.ObjectIdHex(req.EnvTreeId)).One(envTree); err != nil {
@@ -440,6 +443,8 @@ func postPoolsRegister(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	poolInfo.EnvTreeName = envTree.Name
+
+	logrus.Debugf("register pool: set env tree success")
 
 	p, err := proxy.NewProxyInstanceAndStart(utils.GetAPIServerConfig(ctx), poolInfo)
 	if err != nil {

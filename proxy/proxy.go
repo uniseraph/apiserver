@@ -7,6 +7,9 @@ import (
 	"sync"
 )
 
+
+const KEY_PROXY_SELF = "proxy.self"
+
 var driver2FactoryFunc = make(map[string]FactoryFunc)
 
 var id2Proxy = make(map[string]Proxy)
@@ -14,12 +17,13 @@ var id2Proxy = make(map[string]Proxy)
 var mux sync.Mutex
 
 type StartProxyOpts struct {
+	PoolInfo *types.PoolInfo
 }
 
 type Proxy interface {
 	Start(opts *StartProxyOpts) error
 	Stop() error
-	Pool() *types.PoolInfo
+	Pool() (*types.PoolInfo,error)
 	Endpoint() string
 }
 
@@ -49,7 +53,7 @@ func NewProxyInstanceAndStart(config *types.APIServerConfig, poolInfo *types.Poo
 		return nil, err
 	}
 
-	if err := proxy.Start(&StartProxyOpts{}); err != nil {
+	if err := proxy.Start(&StartProxyOpts{PoolInfo:poolInfo}); err != nil {
 		return nil, err
 	}
 
