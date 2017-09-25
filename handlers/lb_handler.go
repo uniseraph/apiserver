@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
@@ -15,10 +16,88 @@ import (
 	"strings"
 )
 
+type VDomainRequestHead struct {
+	PoolId string
+	LbType string
+}
+
+type VDomainSetCookieFilterRequest struct {
+	VDomainRequestHead
+	daemon.CookieFilter
+}
+
+const COOKIE_FILTER_ON = 1
+const COOKIE_FILTER_OFF = 0
+
+//curl -i -X POST -d '{"PoolId":"59c07d76421aa92b96679283"}' http://localhost:8080/api/lb/domains/b.com/set-cookie-filter
+func setVDomainCookieFilter(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+	req := &VDomainSetCookieFilterRequest{}
+	req.Lifecycle = COOKIE_FILTER_ON
+
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	VDomain := mux.Vars(r)["domain"]
+
+	if req.Name == "" {
+		req.Name = "ZANE_GRAY_TAG"
+	}
+
+	if req.Value == "" {
+		req.Value = "coupon"
+	}
+
+	if req.LbType == "" {
+		req.LbType = "zlb"
+	}
+
+	utils.GetMgoCollections(ctx, w, []string{"pool"}, func(cs map[string]*mgo.Collection) {
+		colPool, _ := cs["pool"]
+		pool := types.PoolInfo{}
+
+		if err := colPool.FindId(bson.ObjectIdHex(req.PoolId)).One(&pool); err != nil {
+			if err == mgo.ErrNotFound {
+				// 对错误类型进行区分，有可能只是没有这个pool，不应该用500错误
+				HttpError(w, "没有这样的pool "+err.Error(), http.StatusNotFound)
+				return
+			}
+			HttpError(w, "查询pool失败:"+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if req.LbType != "zlb" {
+			HttpError(w, "no such lbtype:"+req.LbType, http.StatusBadRequest)
+			return
+		}
+
+		postURL := fmt.Sprintf("http://%s:6300/zlb/domains/%s/setCookieFilter", pool.TunneldAddr, VDomain)
+
+		logrus.Debugf("cookiefilter is %#v", req.CookieFilter)
+		buf, _ := json.Marshal(req.CookieFilter)
+
+		response, err := http.Post(postURL, "application/json", strings.NewReader(string(buf)))
+		if err != nil {
+			HttpError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer response.Body.Close()
+
+		if response.StatusCode != http.StatusOK {
+			msg, _ := ioutil.ReadAll(response.Body)
+			http.Error(w, fmt.Sprintf("后端调用失败:%s, statuscode is %d", string(msg), response.StatusCode), http.StatusInternalServerError)
+			return
+		} else {
+			HttpOK(w, nil)
+		}
+
+	})
+}
+
 type VDomainCreateRequest struct {
-	PoolId  string
-	VDomain string
-	LbType  string
+	VDomainRequestHead
 	daemon.HealthCheckCfg
 }
 
@@ -54,7 +133,7 @@ func createVDomain(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		req.Type = "http"
 	}
 
-	req.VDomain = mux.Vars(r)["domain"]
+	VDomain := mux.Vars(r)["domain"]
 
 	utils.GetMgoCollections(ctx, w, []string{"pool"}, func(cs map[string]*mgo.Collection) {
 		colPool, _ := cs["pool"]
@@ -75,7 +154,7 @@ func createVDomain(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		postURL := fmt.Sprintf("http://%s:6300/zlb/domains/%s/create", pool.TunneldAddr, req.VDomain)
+		postURL := fmt.Sprintf("http://%s:6300/zlb/domains/%s/create", pool.TunneldAddr, VDomain)
 		cfg := req.HealthCheckCfg
 		buf, _ := json.Marshal(cfg)
 
@@ -98,8 +177,7 @@ func createVDomain(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 }
 
 type VDomainListRequest struct {
-	PoolId string
-	LbType string
+	VDomainRequestHead
 }
 type VDomainListResponse struct {
 	VDomains []string
@@ -152,10 +230,14 @@ func getVDomainList(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			return
 		} else {
 
-			vdomains := []string{}
+			vdomains := make([]string, 0, 10)
 			_ = json.NewDecoder(response.Body).Decode(&vdomains)
 
-			HttpOK(w, VDomainListResponse{VDomains: vdomains})
+			if len(vdomains) != 0 {
+				HttpOK(w, VDomainListResponse{VDomains: vdomains})
+			} else {
+				HttpOK(w, VDomainListResponse{VDomains: []string{}})
+			}
 
 		}
 	})
@@ -163,9 +245,10 @@ func getVDomainList(ctx context.Context, w http.ResponseWriter, r *http.Request)
 }
 
 type VDomainInspectRequest struct {
-	PoolId  string
-	VDomain string
-	LbType  string
+	//PoolId string
+	//VDomain string
+	//LbType string
+	VDomainRequestHead
 }
 
 type VDomainInspectResponse struct {
@@ -175,6 +258,7 @@ type VDomainInspectResponse struct {
 	daemon.HealthCheckCfg
 }
 
+//curl -i -X POST -d '{"PoolId":"59c07d76421aa92b96679283"}' http://localhost:8080/api/lb/domains/b.com/inspect
 func inspectVDomain(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	req := &VDomainInspectRequest{}
 
@@ -187,7 +271,7 @@ func inspectVDomain(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		req.LbType = "zlb"
 	}
 
-	req.VDomain = mux.Vars(r)["domain"]
+	VDomain := mux.Vars(r)["domain"]
 
 	utils.GetMgoCollections(ctx, w, []string{"pool"}, func(cs map[string]*mgo.Collection) {
 		colPool, _ := cs["pool"]
@@ -208,7 +292,7 @@ func inspectVDomain(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			return
 		}
 
-		postURL := fmt.Sprintf("http://%s:6300/zlb/domains/%s/inspect", pool.TunneldAddr, req.VDomain)
+		postURL := fmt.Sprintf("http://%s:6300/zlb/domains/%s/inspect", pool.TunneldAddr, VDomain)
 
 		response, err := http.Post(postURL, "application/json", nil)
 		if err != nil {
@@ -226,7 +310,7 @@ func inspectVDomain(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			cfg := daemon.HealthCheckCfg{}
 			_ = json.NewDecoder(response.Body).Decode(&cfg)
 
-			HttpOK(w, VDomainInspectResponse{HealthCheckCfg: cfg, PoolId: req.PoolId, LbType: req.LbType, VDomain: req.VDomain})
+			HttpOK(w, VDomainInspectResponse{HealthCheckCfg: cfg, PoolId: req.PoolId, LbType: req.LbType, VDomain: VDomain})
 
 		}
 	})
@@ -236,6 +320,8 @@ func inspectVDomain(ctx context.Context, w http.ResponseWriter, r *http.Request)
 type VDomainDeleteRequest struct {
 	VDomainInspectRequest
 }
+
+//curl -i -X POST -d '{"PoolId":"59c07d76421aa92b96679283"}' http://localhost:8080/api/lb/domains/b.com/remove
 
 func removeVDomain(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	req := &VDomainDeleteRequest{}
@@ -249,7 +335,7 @@ func removeVDomain(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		req.LbType = "zlb"
 	}
 
-	req.VDomain = mux.Vars(r)["domain"]
+	VDomain := mux.Vars(r)["domain"]
 
 	utils.GetMgoCollections(ctx, w, []string{"pool"}, func(cs map[string]*mgo.Collection) {
 		colPool, _ := cs["pool"]
@@ -270,7 +356,7 @@ func removeVDomain(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		postURL := fmt.Sprintf("http://%s:6300/zlb/domains/%s/remove", pool.TunneldAddr, req.VDomain)
+		postURL := fmt.Sprintf("http://%s:6300/zlb/domains/%s/remove", pool.TunneldAddr, VDomain)
 
 		response, err := http.Post(postURL, "application/json", nil)
 		if err != nil {

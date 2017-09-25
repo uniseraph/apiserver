@@ -196,11 +196,12 @@ var routers = map[string]map[string]*MyHandler{
 		"/applications/containers/{id:[A-Za-z0-9-_]+}/restart": &MyHandler{h: restartContainer, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 		"/applications/{id:.*}/remove":                         &MyHandler{h: removeApplication, opChecker: checkUserPermission, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
 
-		"/lb/domains/{domain:.*}/create":  &MyHandler{h: createVDomain, opChecker: nil, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/lb/domains/{domain:.*}/inspect": &MyHandler{h: inspectVDomain, opChecker: nil, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/lb/domains/{domain:.*}/update":  &MyHandler{h: createVDomain, opChecker: nil, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/lb/domains/{domain:.*}/remove":  &MyHandler{h: removeVDomain, opChecker: nil, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
-		"/lb/domains/list":                &MyHandler{h: getVDomainList, opChecker: nil, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN | types.ROLESET_NORMAL},
+		"/lb/domains/{domain:.*}/create":            &MyHandler{h: createVDomain, opChecker: nil, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/lb/domains/{domain:.*}/set-cookie-filter": &MyHandler{h: setVDomainCookieFilter, opChecker: nil, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/lb/domains/{domain:.*}/inspect":           &MyHandler{h: inspectVDomain, opChecker: nil, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/lb/domains/{domain:.*}/update":            &MyHandler{h: createVDomain, opChecker: nil, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/lb/domains/{domain:.*}/remove":            &MyHandler{h: removeVDomain, opChecker: nil, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN},
+		"/lb/domains/list":                          &MyHandler{h: getVDomainList, opChecker: nil, roleset: types.ROLESET_APPADMIN | types.ROLESET_SYSADMIN | types.ROLESET_NORMAL},
 
 		"/templates/list":            &MyHandler{h: getTemplateList},
 		"/templates/{id:.*}/inspect": &MyHandler{h: getTemplate},
