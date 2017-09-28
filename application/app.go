@@ -32,6 +32,7 @@ const LABEL_SLB_PORT = "com.zanecloud.slb.port"
 
 const LABEL_ZLB_ENABLE = "com.zanecloud.zlb.enable"
 const LABEL_ZLB_DOMAINNAME = "com.zanecloud.zlb.domain"
+const LABEL_ZLB_PATH = "com.zanecloud.zlb.path"
 const LABEL_ZLB_PORT = "com.zanecloud.zlb.port"
 
 //需要根据pool的驱动不同，调用不同的接口创建容器／应用，暂时只管swarm/compose
@@ -202,8 +203,18 @@ func buildComposeFileBinary(app *types.Application, pool *types.PoolInfo) (buf [
 
 				} else if pool.LB == "zlb" {
 					sc.Labels[LABEL_ZLB_ENABLE] = "true"
-					sc.Labels[LABEL_ZLB_DOMAINNAME] = as.Ports[i].TargetGroupArn
 					sc.Labels[LABEL_ZLB_PORT] = strconv.Itoa(as.Ports[i].SourcePort)
+
+
+					if index:= strings.Index(as.Ports[i].TargetGroupArn,"／") ; index==-1 {
+						//没有 /
+						sc.Labels[LABEL_ZLB_DOMAINNAME] = as.Ports[i].TargetGroupArn
+						sc.Labels[LABEL_ZLB_PATH]="/"
+					} else {
+						sc.Labels[LABEL_ZLB_DOMAINNAME] = as.Ports[i].TargetGroupArn[0:index]
+						sc.Labels[LABEL_ZLB_PATH] = as.Ports[i].TargetGroupArn[index:]
+					}
+
 
 				}
 			}
