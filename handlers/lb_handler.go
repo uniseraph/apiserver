@@ -8,13 +8,29 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/zanecloud/apiserver/types"
 	"github.com/zanecloud/apiserver/utils"
-	"github.com/zanecloud/zlb/api/daemon"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"net/http"
 	"strings"
 )
+
+type HealthCheckCfg struct {
+	Type           string `json:"Type"`
+	Uri            string `json:"Uri,omitempty"`
+	Valid_statuses string `json:"Valid_statuses,omitempty"`
+	Interval       int    `json:"Interval,omitempty"`
+	Timeout        int    `json:"Timeout,omitempty"`
+	Fall           int    `json:"Fall,omitempty"`
+	Rise           int    `json:"Rise,omitempty"`
+	Concurrency    int    `json:"Concurrency,omitempty"`
+}
+
+type CookieFilter struct {
+	Name      string `json:"Name"`
+	Value     string `json:"Value"`
+	Lifecycle int64  `json:"Lifecycle"`
+}
 
 type VDomainRequestHead struct {
 	PoolId string
@@ -23,7 +39,7 @@ type VDomainRequestHead struct {
 
 type VDomainSetCookieFilterRequest struct {
 	VDomainRequestHead
-	daemon.CookieFilter
+	CookieFilter
 }
 
 const COOKIE_FILTER_ON = 1
@@ -98,7 +114,7 @@ func setVDomainCookieFilter(ctx context.Context, w http.ResponseWriter, r *http.
 
 type VDomainCreateRequest struct {
 	VDomainRequestHead
-	daemon.HealthCheckCfg
+	HealthCheckCfg
 }
 
 //curl -i -X POST -d '{"PoolId":"59c07d76421aa92b96679283"}' http://localhost:8080/api/lb/domains/b.com/create
@@ -255,7 +271,7 @@ type VDomainInspectResponse struct {
 	PoolId  string
 	VDomain string
 	LbType  string
-	daemon.HealthCheckCfg
+	HealthCheckCfg
 }
 
 //curl -i -X POST -d '{"PoolId":"59c07d76421aa92b96679283"}' http://localhost:8080/api/lb/domains/b.com/inspect
@@ -307,7 +323,7 @@ func inspectVDomain(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			return
 		} else {
 
-			cfg := daemon.HealthCheckCfg{}
+			cfg := HealthCheckCfg{}
 			_ = json.NewDecoder(response.Body).Decode(&cfg)
 
 			HttpOK(w, VDomainInspectResponse{HealthCheckCfg: cfg, PoolId: req.PoolId, LbType: req.LbType, VDomain: VDomain})
