@@ -313,7 +313,7 @@ func ParseNodes(input [][]string, pool *types.PoolInfo) (string, string, []types
 		result[i].ReservedCPUs = input[8+i*9][1]
 		result[i].ReservedMemory = input[9+i*9][1]
 
-		result[i].Labels = parseLabels(input[10+i*9][1] , pool)
+		result[i].Labels = parseLabels(input[10+i*9][1], pool)
 
 		//ignore 11-UpdateAt
 		result[i].ServerVersion = input[12+i*9][1]
@@ -322,12 +322,11 @@ func ParseNodes(input [][]string, pool *types.PoolInfo) (string, string, []types
 
 	return strategy, filters, result, nil
 }
-func parseLabels(labels string , pool *types.PoolInfo) map[string]string {
+func parseLabels(labels string, pool *types.PoolInfo) map[string]string {
 
 	result := make(map[string]string)
 
 	for _, value := range strings.Split(labels, ",") {
-
 
 		key2value := strings.Split(value, "=")
 
@@ -338,6 +337,10 @@ func parseLabels(labels string , pool *types.PoolInfo) map[string]string {
 
 		if strings.TrimSpace(key2value[0]) == "provider" {
 			pool.Provider = key2value[1]
+		}
+
+		if strings.TrimSpace(key2value[0]) == "lb" {
+			pool.LB = key2value[1]
 		}
 
 		result[key2value[0]] = key2value[1]
