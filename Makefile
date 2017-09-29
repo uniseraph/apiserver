@@ -49,7 +49,7 @@ release:portal build
 	rm -rf release && mkdir -p release/apiserver/bin
 	cp -r static/public     release/apiserver/
 	cp -r static/dist       release/apiserver/
-	mv release/apiserver/dist/index.html release/apiserver/
+	mv release/apiserver/dist/index.html    release/apiserver/
 	cp -r scripts/sbin     release/apiserver/
 	cp -r scripts/systemd     release/apiserver/
 	cp apiserver release/apiserver/bin/
