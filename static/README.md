@@ -5,13 +5,27 @@
 ## Build Setup
 
 ``` bash
-# install dependencies
+#install dependencies
 npm install
+```
 
-# serve with hot reload at localhost:8080
+## Develop with hot reload 
+``` bash
+# with localhost:8080
 npm run dev
 
-# build for production with minification
+# with live apiServer 8080
+npm run dev -- -s 192.168.56.2
+
+# with live apiServer and other port
+npm run dev -- -s 192.168.56.2 -p 8090
+
+# mock apiServer 
+npm run dev -- -m
+
+```
+## build for production with minification
+``` bash
 npm run build
 ```
 
