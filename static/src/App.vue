@@ -350,7 +350,7 @@
   @import './stylus/main'
 
   .login-ui
-    background-color: #2196f3
+    background-color: #254a74
     width: 100%
     height: 100%
 
