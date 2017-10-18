@@ -151,7 +151,7 @@
               </v-list-tile-content>
             </v-list-tile>
           </v-list-item>
-          <v-list-item>
+          <!--<v-list-item>
             <v-list-tile ripple to="/cicd" router>
               <v-list-tile-avatar>
                 <v-icon light>cloud_upload</v-icon>
@@ -160,7 +160,7 @@
                 <v-list-tile-title>集成交付</v-list-tile-title>
               </v-list-tile-content>
             </v-list-tile>
-          </v-list-item>
+          </v-list-item>-->
           <v-list-item>
             <v-list-tile ripple to="/logs" router>
               <v-list-tile-avatar>
