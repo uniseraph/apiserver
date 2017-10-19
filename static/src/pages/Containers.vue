@@ -59,7 +59,7 @@
         <template slot="items" scope="props">
           <td>{{ props.item.Id }}</td>
           <td>{{ props.item.Name }}</td>
-          <td><router-link :to="'/applications/logs/' + ApplicationId + '/' + ServiceName + '/' + props.item.Id + '/' + encodeURIComponent(PoolName) + '/' + encodeURIComponent(ApplicationTitle) + '/' + encodeURIComponent(ServiceTitle)" style="text-decoration:none;"><span :class="applicationClass(props.item.Status)">{{ applicationStatus(props.item.Status) }}</span></router-link></td>
+          <td><router-link :to="'/applications/logs/' + ApplicationId + '/' + ServiceName + '/' + props.item.Id + '/' + encodeURIComponent(PoolName) + '/' + encodeURIComponent(ApplicationTitle) + '/' + encodeURIComponent(ServiceTitle)" style="text-decoration:none;"><span :class="containerClass(props.item.Status)">{{ containerStatus(props.item.Status) }}</span></router-link></td>
           <td>{{ props.item.IP }}</td>
           <td>{{ props.item.Node ? props.item.Node.Name : '' }}</td>
           <td>{{ props.item.Node ? props.item.Node.IP : '' }}</td>

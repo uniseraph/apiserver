@@ -2,7 +2,7 @@ export default {
   install(Vue, options) {
     Vue.prototype.constants = {
 
-        COMPANY: '峥云网络',
+        COMPANY: '美的云',
 
     	ROLE_NORMAL_USER: 0x01,
     	ROLE_APP_ADMIN: 0x02,
@@ -27,12 +27,14 @@ export default {
     	CONTAINER_STATUS_MAP: {
     	  "running": "运行中",
     	  "stopped": "已停止",
+				"exited" : "已停止",
     	  "*": "未知错误"
     	},
 
     	CONTAINER_CLASS_MAP: {
     	  "running": "green--text",
     	  "stopped": "orange--text",
+    	  "exited": "orange--text",
     	  "*": "red--text"
     	},
 
