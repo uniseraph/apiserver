@@ -2,7 +2,7 @@ export default {
   install(Vue, options) {
     Vue.prototype.constants = {
 
-        COMPANY: '峥云网络',
+        COMPANY: '美的云',
 
     	ROLE_NORMAL_USER: 0x01,
     	ROLE_APP_ADMIN: 0x02,
