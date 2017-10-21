@@ -27,12 +27,14 @@ export default {
     	CONTAINER_STATUS_MAP: {
     	  "running": "运行中",
     	  "stopped": "已停止",
+				"exited" : "已停止",
     	  "*": "未知错误"
     	},
 
     	CONTAINER_CLASS_MAP: {
     	  "running": "green--text",
     	  "stopped": "orange--text",
+    	  "exited": "orange--text",
     	  "*": "red--text"
     	},
 
